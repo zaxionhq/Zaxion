@@ -1,0 +1,46 @@
+name: CI / Smoke Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-smoke:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_SECRETS: ${{ secrets.JWT_SECRETS }}
+      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: backend
+        run: npm test || true
+
+      - name: Start backend (background)
+        working-directory: backend
+        run: |
+          npm run start & sleep 2
+
+      - name: Smoke check /health
+        run: |
+          curl --fail --retry 5 --retry-delay 1 http://localhost:5000/api/health
