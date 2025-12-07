@@ -1,0 +1,39 @@
+import { execSync } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from the root .env file
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+// Construct the DATABASE_URL explicitly for sequelize-cli --url
+const dbUser = process.env.DB_USER;
+const dbPassword = process.env.DB_PASSWORD;
+const dbHost = process.env.LOCAL_DB_HOST || process.env.DB_HOST;
+const dbPort = process.env.DB_PORT;
+const dbName = process.env.DB_NAME;
+
+const databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+
+// Construct the sequelize-cli command with all necessary arguments, using --url
+const sequelizeCliCommand = `sequelize-cli db:migrate --url ${databaseUrl} --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
+
+try {
+  console.log('Running Sequelize migrations...');
+  // Execute the command synchronously with environment variables
+  execSync(sequelizeCliCommand, {
+    stdio: 'inherit',
+    cwd: path.resolve(__dirname, '..'), // Set CWD to the backend directory
+    env: {
+      ...process.env,
+      // DATABASE_URL is now passed via --url, so no need to explicitly pass individual vars here
+    },
+  });
+  console.log('Sequelize migrations completed successfully.');
+} catch (error) {
+  console.error('Error running Sequelize migrations:', error.message);
+  process.exit(1);
+}

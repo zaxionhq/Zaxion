@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8080",
+  "executionArgs": {
+    "projectName": "github-testcase-generator-app",
+    "projectPath": "c:\\Users\\hamza\\OneDrive\\Desktop\\hamza\\github-testcase-generator-app\\frontend",
+    "testIds": [],
+    "additionalInstruction": "Focus on testing the core components, error handling, and API integration.",
+    "envs": {
+      "API_KEY": "sk-user-kpqYT-IrhwNQr1NNspXkhT5qRbYAyR7GK6Ctz74Ur6QaOwHxmwDkCxa6rlfJXxULZ30fhG-EaFRq76OxeTw1RsnUw75BrBMtLxDF7EJH3jB_U35SBlKh2g1P2P_goGNxqRg"
+    }
+  },
+  "proxy": "http://9c8cbf3b-add1-49be-ab26-d4a3dfe05b8f:lC1wWa4VFQnVwy3MSs58C45kCJMQJRdJ@tun.testsprite.com:8080"
+}

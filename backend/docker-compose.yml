@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    image: my-testcase-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: testcase_backend
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./.env
+    depends_on:
+      - postgres
+    # Optionally, add a healthcheck if the backend is not immediately ready
+
+  postgres:
+    image: postgres:13
+    container_name: testcase_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}   # ⚠️ must match your .env DB_PASSWORD
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  prometheus:
+    image: prom/prometheus
+    container_name: testcase_prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend # Prometheus needs backend to scrape metrics
+
+  grafana:
+    image: grafana/grafana
+    container_name: testcase_grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      # Configure Grafana to allow anonymous access or default user/password
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus # Grafana needs Prometheus as a data source
+
+volumes:
+  postgres_data:
+  grafana_data:

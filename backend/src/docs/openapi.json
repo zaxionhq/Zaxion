@@ -1,0 +1,109 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GitHub Test Case Generator API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/api/v1" }
+  ],
+  "paths": {
+    "/auth/login": {
+      "get": {
+        "summary": "Start GitHub OAuth login",
+        "responses": { "302": { "description": "Redirect to GitHub" } }
+      }
+    },
+    "/auth/callback": {
+      "get": {
+        "summary": "GitHub OAuth callback",
+        "parameters": [
+          { "in": "query", "name": "code", "schema": {"type":"string"}, "required": true },
+          { "in": "query", "name": "state", "schema": {"type":"string"}, "required": true }
+        ],
+        "responses": { "302": { "description": "Redirect to frontend with cookie" } }
+      }
+    },
+    "/github/repos": {
+      "get": {
+        "summary": "List user repositories",
+        "responses": {
+          "200": { "description": "List of repos" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/github/repos/{owner}/{repo}/files": {
+      "get": {
+        "summary": "List files in repo path",
+        "parameters": [
+          { "in": "path", "name": "owner", "required": true, "schema": {"type":"string"} },
+          { "in": "path", "name": "repo", "required": true, "schema": {"type":"string"} },
+          { "in": "query", "name": "path", "required": false, "schema": {"type":"string"} }
+        ],
+        "responses": {
+          "200": { "description": "Files" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/testcases/generate/summaries": {
+      "post": {
+        "summary": "Generate test summaries",
+        "requestBody": { "required": true },
+        "responses": { "200": { "description": "Summaries" } }
+      }
+    },
+    "/testcases/generate/code": {
+      "post": {
+        "summary": "Generate test code from a summary",
+        "requestBody": { "required": true },
+        "responses": { "200": { "description": "Generated code" } }
+      }
+    },
+    "/testcases/execute": {
+      "post": {
+        "summary": "Execute tests in sandbox and return structured results",
+        "requestBody": { "required": true },
+        "responses": { "200": { "description": "Execution results" } }
+      }
+    },
+    "/chatbot/chat": {
+      "post": {
+        "summary": "Chat with AI assistant",
+        "requestBody": { "required": true },
+        "responses": { "200": { "description": "Assistant reply" } }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Service health",
+        "servers": [ { "url": "/" } ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "object", "additionalProperties": true },
+          "traceId": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  }
+}

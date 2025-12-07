@@ -1,0 +1,70 @@
+{
+  "tech_stack": {
+    "frontend": {
+      "framework": "React",
+      "build_tool": "Vite",
+      "language": "TypeScript",
+      "ui_library": "shadcn/ui",
+      "testing": {
+        "framework": "Vitest",
+        "libraries": ["@testing-library/react", "@testing-library/jest-dom"]
+      },
+      "state_management": "React Hooks",
+      "routing": "React Router"
+    }
+  },
+  "features": {
+    "authentication": {
+      "type": "GitHub OAuth",
+      "implementation": "Custom hook (useSession)"
+    },
+    "repository_management": {
+      "list_repositories": true,
+      "select_repository": true,
+      "file_browsing": true
+    },
+    "test_generation": {
+      "file_selection": true,
+      "test_summary": true,
+      "code_generation": true,
+      "code_review": true
+    },
+    "pull_request": {
+      "creation": true
+    },
+    "error_handling": {
+      "error_boundary": true,
+      "toast_notifications": true,
+      "api_error_handling": true
+    },
+    "ui_components": {
+      "theme_toggle": true,
+      "loading_indicators": true,
+      "code_viewer": true,
+      "chatbot": true
+    }
+  },
+  "architecture": {
+    "components": {
+      "ui": "Reusable UI components based on shadcn/ui",
+      "pages": "Main application pages",
+      "functional": "Feature-specific components"
+    },
+    "hooks": {
+      "useSession": "Authentication and user session management",
+      "useTestGeneration": "Test generation workflow management",
+      "useApiErrorHandler": "Centralized API error handling"
+    },
+    "api": {
+      "centralized_client": true,
+      "error_handling": true,
+      "retry_mechanism": true,
+      "csrf_protection": true
+    },
+    "testing": {
+      "component_tests": true,
+      "hook_tests": true,
+      "integration_tests": true
+    }
+  }
+}
