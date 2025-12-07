@@ -1,0 +1,406 @@
+{
+  "meta": {
+    "project": "GitHub Test Case Generator",
+    "date": "2025-09-05",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "GitHub Test Case Generator is a developer productivity tool that automates the generation of meaningful test cases for GitHub repositories. It integrates directly with GitHub through OAuth, analyzes codebases using AI, and generates unit, integration, and functional tests. The product streamlines developers' workflows by reducing manual test writing, increasing test coverage, and supporting pull request automation for easy team reviews.",
+  "core_goals": [
+    "Automate test case generation to reduce developer effort and save time.",
+    "Improve software quality by increasing test coverage and reducing regressions.",
+    "Seamlessly integrate with GitHub for authentication, repository access, and pull request creation.",
+    "Leverage AI to analyze code structure and generate production-ready test cases.",
+    "Provide a user-friendly dashboard for managing repositories, reviewing test cases, and tracking coverage improvements."
+  ],
+  "key_features": [
+    "OAuth-based GitHub authentication enabling secure login and repository access.",
+    "Repository management with listing and selecting GitHub repositories for analysis.",
+    "AI-powered code analysis identifying functions, classes, endpoints, and uncovered code areas.",
+    "Automated generation of unit, integration, and functional test cases tailored to selected files.",
+    "Editable test case review and save functionality before committing changes.",
+    "Pull request creation to submit generated tests for team review within GitHub workflows.",
+    "Chatbot integration providing AI assistance for test case explanations and guidance.",
+    "Security measures including CSRF protection, rate limiting, and centralized error handling."
+  ],
+  "user_flow_summary": [
+    "User logs in securely via GitHub OAuth authentication flow.",
+    "User selects a GitHub repository to analyze from their authenticated repositories.",
+    "Backend fetches repository files and analyzes the code with AI.",
+    "User requests generation of test cases for selected files through the interface.",
+    "User reviews, edits, and saves generated test cases as needed.",
+    "User initiates creation of a pull request which includes the new tests.",
+    "Team reviews the pull request within GitHub before merging changes into main branch.",
+    "User can interact with AI chatbot for explanation or help with generated test cases."
+  ],
+  "validation_criteria": [
+    "Successful user authentication with GitHub and secure token management.",
+    "Accurate listing and retrieval of user repositories and repository files.",
+    "Generated test cases correctly correspond to analyzed code and meet quality standards.",
+    "Test case edits are saved correctly and persist across sessions.",
+    "Pull requests are created in the correct repository with proper branch and descriptions.",
+    "Chatbot responses are relevant and meaningful regarding test case questions.",
+    "Security protections like CSRF and rate limiting are operational and prevent abuse.",
+    "Error handling mechanisms provide clear feedback to users on failures or invalid inputs."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "JavaScript",
+      "TypeScript",
+      "Node.js",
+      "Express.js",
+      "React",
+      "Vite",
+      "PostgreSQL",
+      "Sequelize ORM",
+      "Zod",
+      "React Query",
+      "ShadCN UI",
+      "Tailwind CSS"
+    ],
+    "features": [
+      {
+        "name": "Authentication",
+        "description": "GitHub OAuth authentication flow with JWT tokens and refresh tokens",
+        "files": [
+          "backend/src/routes/auth.routes.js",
+          "backend/src/controllers/auth.controller.js",
+          "backend/src/middleware/authorize.js",
+          "frontend/src/hooks/useSession.tsx",
+          "frontend/src/pages/OAuthCallback.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/v1/auth/github": {
+              "get": {
+                "summary": "Initiate GitHub OAuth flow",
+                "responses": {
+                  "302": {
+                    "description": "Redirect to GitHub authorization page"
+                  }
+                }
+              }
+            },
+            "/api/v1/auth/github/callback": {
+              "get": {
+                "summary": "GitHub OAuth callback handler",
+                "responses": {
+                  "302": {
+                    "description": "Redirect to frontend with auth token"
+                  }
+                }
+              }
+            },
+            "/api/v1/auth/me": {
+              "get": {
+                "summary": "Get current authenticated user",
+                "responses": {
+                  "200": {
+                    "description": "User information"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            },
+            "/api/v1/auth/refresh": {
+              "post": {
+                "summary": "Refresh access token",
+                "responses": {
+                  "200": {
+                    "description": "New access token"
+                  },
+                  "401": {
+                    "description": "Invalid refresh token"
+                  }
+                }
+              }
+            },
+            "/api/v1/auth/logout": {
+              "post": {
+                "summary": "Logout user and invalidate tokens",
+                "responses": {
+                  "200": {
+                    "description": "Logout successful"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "GitHub Repository Management",
+        "description": "List, select, and access GitHub repositories for test generation",
+        "files": [
+          "backend/src/routes/github.routes.js",
+          "backend/src/controllers/github.controller.js",
+          "frontend/src/components/RepoSelector.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/v1/github/repos": {
+              "get": {
+                "summary": "List authenticated user's GitHub repositories",
+                "responses": {
+                  "200": {
+                    "description": "List of repositories"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            },
+            "/api/v1/github/files": {
+              "get": {
+                "summary": "Get files from a GitHub repository",
+                "parameters": [
+                  {
+                    "name": "repo",
+                    "in": "query",
+                    "required": true,
+                    "schema": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "name": "path",
+                    "in": "query",
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "List of files in repository"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  },
+                  "404": {
+                    "description": "Repository or path not found"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Test Case Generation",
+        "description": "Generate, review, and manage test cases for GitHub repositories",
+        "files": [
+          "backend/src/routes/testcase.routes.js",
+          "backend/src/controllers/testcase.controller.js",
+          "frontend/src/components/TestGenerator.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/v1/testcases/generate": {
+              "post": {
+                "summary": "Generate test cases for selected files",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "repo": {
+                            "type": "string"
+                          },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Generated test cases"
+                  },
+                  "400": {
+                    "description": "Invalid request"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            },
+            "/api/v1/testcases/save": {
+              "post": {
+                "summary": "Save edited test cases",
+                "responses": {
+                  "200": {
+                    "description": "Test cases saved"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            },
+            "/api/v1/testcases/history": {
+              "get": {
+                "summary": "Get test case generation history",
+                "responses": {
+                  "200": {
+                    "description": "Test case history"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Pull Request Creation",
+        "description": "Create GitHub Pull Requests with generated test cases",
+        "files": [
+          "backend/src/routes/github.routes.js",
+          "backend/src/controllers/github.controller.js",
+          "frontend/src/components/PRCreator.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/v1/github/create-pr": {
+              "post": {
+                "summary": "Create a Pull Request with generated tests",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "repo": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "branch": {
+                            "type": "string"
+                          },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string"
+                                },
+                                "content": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "201": {
+                    "description": "Pull Request created"
+                  },
+                  "400": {
+                    "description": "Invalid request"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Chatbot Integration",
+        "description": "AI chatbot for test case assistance and explanations",
+        "files": [
+          "backend/src/routes/chatbot.routes.js",
+          "backend/src/controllers/chatbot.controller.js",
+          "frontend/src/components/ChatInterface.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/v1/chatbot/chat": {
+              "post": {
+                "summary": "Chat with AI assistant about test cases",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "type": "string"
+                          },
+                          "context": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "AI assistant response"
+                  },
+                  "400": {
+                    "description": "Invalid request"
+                  },
+                  "401": {
+                    "description": "Unauthorized"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Security & Error Handling",
+        "description": "CSRF protection, rate limiting, and centralized error handling",
+        "files": [
+          "backend/src/app.js",
+          "backend/src/middleware/csrf.js",
+          "backend/src/middleware/zodValidate.js",
+          "frontend/src/lib/api.ts",
+          "frontend/src/components/ErrorToast.tsx",
+          "frontend/src/components/ErrorBoundary.tsx"
+        ],
+        "api_doc": {
+          "paths": {
+            "/api/csrf-token": {
+              "get": {
+                "summary": "Get CSRF token for protected requests",
+                "responses": {
+                  "200": {
+                    "description": "CSRF token"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

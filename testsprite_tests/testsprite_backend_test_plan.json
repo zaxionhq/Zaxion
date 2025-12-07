@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "initiate github oauth flow",
+    "description": "Test the GET /api/v1/auth/github endpoint to ensure it correctly initiates the GitHub OAuth flow by redirecting the user to the GitHub authorization page."
+  },
+  {
+    "id": "TC002",
+    "title": "handle github oauth callback",
+    "description": "Test the GET /api/v1/auth/github/callback endpoint to verify it correctly handles the OAuth callback from GitHub, processes the authorization code, and redirects to the frontend with a valid authentication token."
+  },
+  {
+    "id": "TC003",
+    "title": "get current authenticated user",
+    "description": "Test the GET /api/v1/auth/me endpoint to ensure it returns the authenticated user's information when provided with a valid token, and returns 401 Unauthorized when no or invalid token is provided."
+  },
+  {
+    "id": "TC004",
+    "title": "refresh access token",
+    "description": "Test the POST /api/v1/auth/refresh endpoint to verify it accepts a valid refresh token and returns a new access token, and returns 401 Unauthorized for invalid or expired refresh tokens."
+  },
+  {
+    "id": "TC005",
+    "title": "logout user and invalidate tokens",
+    "description": "Test the POST /api/v1/auth/logout endpoint to ensure it successfully logs out the user by invalidating tokens and returns a 200 status indicating successful logout."
+  },
+  {
+    "id": "TC006",
+    "title": "list authenticated user github repositories",
+    "description": "Test the GET /api/v1/github/repos endpoint to verify it returns a list of repositories accessible by the authenticated user, and returns 401 Unauthorized if the user is not authenticated."
+  },
+  {
+    "id": "TC007",
+    "title": "get files from github repository",
+    "description": "Test the GET /api/v1/github/files endpoint with valid repo and optional path parameters to ensure it returns the list of files in the specified repository path, returns 404 if the repository or path is not found, and 401 if unauthorized."
+  },
+  {
+    "id": "TC008",
+    "title": "generate test cases for selected files",
+    "description": "Test the POST /api/v1/testcases/generate endpoint by submitting a valid repository and list of files, verifying that it returns generated test cases, and returns 400 for invalid requests or 401 if unauthorized."
+  },
+  {
+    "id": "TC009",
+    "title": "save edited test cases",
+    "description": "Test the POST /api/v1/testcases/save endpoint to ensure it saves the edited test cases correctly and returns a 200 status, and returns 401 if the user is unauthorized."
+  },
+  {
+    "id": "TC010",
+    "title": "create pull request with generated tests",
+    "description": "Test the POST /api/v1/github/create-pr endpoint by submitting valid repository, branch, title, description, and files, verifying that it creates a pull request successfully with a 201 status, and returns 400 for invalid requests or 401 if unauthorized."
+  }
+]
