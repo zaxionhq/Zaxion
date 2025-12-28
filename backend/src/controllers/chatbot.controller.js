@@ -1,6 +1,7 @@
 import { generateChatResponse } from '../services/ai.service.js';
 import { escapeForLLM, sanitizeCodeString } from '../utils/sanitization.utils.js';
 import { logResourceEvent } from '../services/audit.service.js';
+import { chunkFile } from '../services/chunking.service.js';
 
 export async function chatWithAI(req, res, next) {
   const userId = req.user ? req.user.id : null;
@@ -19,9 +20,33 @@ export async function chatWithAI(req, res, next) {
     const sanitizedCurrentCode = sanitizeCodeString(currentCode); // Use sanitizeCodeString for code
     const sanitizedContext = escapeForLLM(context);
 
+    // Context Builder: Analyze code structure if it's large (> 2000 chars)
+    let structureInfo = "";
+    if (currentCode.length > 2000) {
+      try {
+        // We treat it as a file of the given language
+        const chunks = await chunkFile({ 
+          path: `current_code.${language === 'python' ? 'py' : 'js'}`, 
+          content: currentCode 
+        });
+        
+        const summary = chunks
+          .filter(c => c.type !== 'module_gap')
+          .map(c => `- ${c.type.toUpperCase()} (Lines ${c.startLine}-${c.endLine}): ${c.summary}`)
+          .join('\n');
+          
+        if (summary) {
+          structureInfo = `\nCode Structure Analysis:\n${summary}\n`;
+        }
+      } catch (err) {
+        console.warn('Failed to chunk code for chatbot context:', err.message);
+        // Continue without structure info
+      }
+    }
+
     // Build a prompt for the AI to improve the test code
     const prompt = `As an AI testing expert, help improve this ${language} test code. 
-
+${structureInfo}
 User Request: ${sanitizedMessage}
 
 Current Test Code:
@@ -75,8 +100,30 @@ export async function analyzeTestCoverage(req, res, next) {
     const sanitizedSourceCode = sanitizeCodeString(sourceCode);
     const sanitizedLanguage = escapeForLLM(language);
 
-    const prompt = `Analyze the test coverage for this ${sanitizedLanguage} code.
+    // Context Builder: Analyze source code structure if it's large
+    let sourceStructure = "";
+    if (sourceCode.length > 2000) {
+      try {
+        const chunks = await chunkFile({ 
+          path: `source_code.${language === 'python' ? 'py' : 'js'}`, 
+          content: sourceCode 
+        });
+        
+        const summary = chunks
+          .filter(c => c.type !== 'module_gap')
+          .map(c => `- ${c.type.toUpperCase()} (Lines ${c.startLine}-${c.endLine}): ${c.summary}`)
+          .join('\n');
+          
+        if (summary) {
+          sourceStructure = `\nSource Code Structure:\n${summary}\n`;
+        }
+      } catch (err) {
+        console.warn('Failed to chunk source code for coverage analysis:', err.message);
+      }
+    }
 
+    const prompt = `Analyze the test coverage for this ${sanitizedLanguage} code.
+${sourceStructure}
 Source Code:
 \`\`\`${sanitizedLanguage}
 ${sanitizedSourceCode}

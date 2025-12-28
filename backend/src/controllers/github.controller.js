@@ -2,6 +2,7 @@
 import { Octokit } from "@octokit/rest";
 import { decrypt } from "../utils/crypto.js";
 import { getRepoTree as fetchRepoTreeService, listBranches as fetchBranchesService } from "../services/github.service.js";
+import { formatPRBody } from "../services/prFormatter.service.js";
 
 /**
  * Helper: create Octokit client with token
@@ -110,6 +111,8 @@ export async function listRepoFiles(req, res, next) {
           type: data.type,
           sha: data.sha,
           size: data.size,
+          content: data.content,
+          encoding: data.encoding,
         }];
 
     res.status(200).json(files);
@@ -268,13 +271,24 @@ export async function createPullRequestWithFiles(req, res) {
     }
 
     // Create PR
+    let finalBody = prBody || "Automated test generation PR";
+    
+    // Use formatter if stats are provided
+    if (req.body.stats) {
+      finalBody = formatPRBody(req.body.stats);
+      // Append original body if it has custom content (not just the default)
+      if (prBody && prBody !== "Automated test generation PR") {
+         finalBody += `\n\n### 📝 Additional Notes\n${prBody}`;
+      }
+    }
+
     const pr = await octokit.rest.pulls.create({
       owner,
       repo,
       title: title || `Add generated tests (${new Date().toISOString().split("T")[0]})`,
       head: branchName,
       base: defaultBranch,
-      body: prBody || "Automated test generation PR",
+      body: finalBody,
     });
 
     res.status(200).json({ pr: pr.data });

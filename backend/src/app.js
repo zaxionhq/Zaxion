@@ -86,8 +86,8 @@ export default function createApp(db) { // Accepts db as an argument
   // Only verify CSRF token for API routes that modify data
   // Exclude test generation endpoints from CSRF verification temporarily
   app.use('/api', (req, res, next) => {
-    // Skip CSRF verification for test generation endpoints
-    if (req.path.includes('/testcases/generate')) {
+    // Skip CSRF verification for test generation endpoints and webhooks
+    if (req.path.includes('/testcases/generate') || req.path.includes('/webhooks')) {
       return next();
     }
     return verifyCSRFToken(req, res, next);

@@ -5,7 +5,7 @@ import { api, ApiError } from '@/lib/api';
 import { useApiErrorHandler } from '@/components/ErrorToast';
 
 // Types for GitHub API responses
-interface GitHubRepo {
+export interface GitHubRepo {
   id: number;
   name: string;
   full_name: string;
@@ -17,7 +17,7 @@ interface GitHubRepo {
   default_branch?: string;
 }
 
-interface GitHubBranch {
+export interface GitHubBranch {
   name: string;
   protected: boolean;
   sha: string;
@@ -561,7 +561,7 @@ export const useTestGeneration = () => {
     } finally {
       setIsGeneratingSummaries(false);
     }
-  }, [files, selectedFiles, selectedRepo, handleError, handleSuccess]);
+  }, [files, selectedFiles, selectedRepo, handleError, handleSuccess, handleWarning]);
 
   const generateTestCode = useCallback(async (summary: TestSummary, mode: 'test' | 'explain' = 'test', isRetry = false) => {
     setIsGeneratingCode(true);

@@ -5,6 +5,7 @@ import githubRoutesFactory from "../github.routes.js"; // Import githubRoutesFac
 import testcaseRoutesFactory from "../testcase.routes.js"; // Import testcaseRoutesFactory
 import adminRoutes from "../admin.routes.js";
 import chatbotRoutes from "../chatbot.routes.js";
+import webhookRoutesFactory from "../webhook.routes.js";
 
 export default function v1ApiRoutesFactory(db) {
   const router = Router();
@@ -15,6 +16,7 @@ export default function v1ApiRoutesFactory(db) {
   router.use("/testcases", testcaseRoutesFactory(db)); // Use testcaseRoutesFactory
   router.use("/admin", adminRoutes);
   router.use("/chatbot", chatbotRoutes);
+  router.use("/webhooks", webhookRoutesFactory());
 
   return router;
 }

@@ -75,8 +75,19 @@ function shutdown(server) {
   });
 }
 
+import { initPrAnalysisWorker } from "./workers/prAnalysis.worker.js";
+
 async function startServer() {
   await assertDatabaseConnectionOk();
+
+  // Initialize PR Analysis Worker (PR Gate)
+  try {
+    initPrAnalysisWorker();
+    console.log("✅ PR Analysis Worker initialized");
+  } catch (err) {
+    logger.error({ err }, "Failed to initialize PR Analysis Worker");
+    // We don't exit process here, as API should still work even if worker fails (though Gate is down)
+  }
 
   const server = app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);

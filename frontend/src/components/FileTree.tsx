@@ -4,20 +4,35 @@ import AutoSizer from 'react-virtualized-auto-sizer';
 import { 
   ChevronRight, 
   ChevronDown, 
-  File, 
+  File as FileIcon, 
   Folder, 
   FolderOpen, 
+  GitBranch,
+  FileCode,
+  FileJson,
+  Settings,
+  Book,
+  Check,
+  ChevronsUpDown,
   Search,
-  CheckSquare,
-  Square,
-  MinusSquare
+  Loader2
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem, 
+  CommandList 
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { GitHubRepo, GitHubBranch } from '@/hooks/useTestGeneration';
 
 export interface FileNode {
   name: string;
@@ -26,15 +41,25 @@ export interface FileNode {
   sha?: string;
   size?: number;
   children?: FileNode[];
+  // Mock git status for visualization
+  gitStatus?: 'modified' | 'new' | 'none';
 }
 
 interface FileTreeProps {
   data: FileNode[];
   selectedFiles: Set<string>;
   onSelectionChange: (newSelection: Set<string>) => void;
-  repositoryName?: string;
-  showIgnored?: boolean;
-  onToggleShowIgnored?: () => void;
+  // Repository Context
+  repos?: GitHubRepo[];
+  selectedRepo?: GitHubRepo | null;
+  onRepoChange?: (repo: GitHubRepo) => void;
+  // Branch Context
+  branches?: GitHubBranch[];
+  selectedBranch?: string;
+  onBranchChange?: (branch: string) => void;
+  
+  isLoading?: boolean;
+  
   expandedFolders?: Set<string>;
   onToggleFolder?: (path: string) => void;
   onSetExpandedFolders?: (paths: Set<string>) => void;
@@ -73,20 +98,40 @@ const getAllFilePaths = (node: FileNode): string[] => {
   return paths;
 };
 
+// Mock function to assign random git status if not present
+const getMockGitStatus = (name: string): 'modified' | 'new' | 'none' => {
+  if (name.endsWith('.ts') || name.endsWith('.tsx')) {
+    // Randomly assign modified status to some TS files
+    return Math.random() > 0.7 ? 'modified' : 'none';
+  }
+  if (name.includes('config')) {
+    return 'modified';
+  }
+  if (name.startsWith('new')) {
+    return 'new';
+  }
+  return 'none';
+};
+
 export const FileTree: React.FC<FileTreeProps> = ({ 
   data, 
   selectedFiles, 
   onSelectionChange,
-  repositoryName = "Repository",
-  showIgnored,
-  onToggleShowIgnored,
+  repos = [],
+  selectedRepo,
+  onRepoChange,
+  branches = [],
+  selectedBranch,
+  onBranchChange,
+  isLoading = false,
   expandedFolders: expandedFoldersProp,
   onToggleFolder: onToggleFolderProp,
   onSetExpandedFolders: onSetExpandedFoldersProp
 }) => {
   const [internalExpandedFolders, setInternalExpandedFolders] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
-
+  const [openRepo, setOpenRepo] = useState(false);
+  const [openBranch, setOpenBranch] = useState(false);
+  
   const isControlled = expandedFoldersProp !== undefined;
   const expandedFolders = isControlled ? expandedFoldersProp : internalExpandedFolders;
 
@@ -112,71 +157,24 @@ export const FileTree: React.FC<FileTreeProps> = ({
     }
   }, [isControlled, onToggleFolderProp, internalExpandedFolders]);
 
-  // Initial expansion: expand first level by default or just root
-  // ONLY if not controlled. If controlled, parent handles initialization/persistence.
+  // Initial expansion
   useEffect(() => {
     if (isControlled) return;
-
     const initialExpanded = new Set<string>();
-    // Maybe expand root folders?
     data.forEach(node => {
       if (node.type === 'folder') initialExpanded.add(node.path);
     });
     setInternalExpandedFolders(initialExpanded);
   }, [data, isControlled]);
 
-
-  // Search filtering
-  const filteredData = useMemo(() => {
-    if (!searchQuery) return data;
-
-    const filterNode = (node: FileNode): FileNode | null => {
-      if (node.type === 'file') {
-        return node.name.toLowerCase().includes(searchQuery.toLowerCase()) ? node : null;
-      }
-      
-      // If folder matches, return it with all children? Or just filter children?
-      // Usually, if folder matches, we show it. If children match, we show folder.
-      const matchesFolder = node.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (node.children) {
-        const filteredChildren = node.children
-          .map(filterNode)
-          .filter((n): n is FileNode => n !== null);
-        
-        if (filteredChildren.length > 0 || matchesFolder) {
-          return { ...node, children: filteredChildren };
-        }
-      }
-      
-      return matchesFolder ? node : null;
-    };
-
-    return data
-      .map(filterNode)
-      .filter((n): n is FileNode => n !== null);
-  }, [data, searchQuery]);
-
-  // Auto-expand folders when searching
-  useEffect(() => {
-    if (searchQuery) {
-      const allFolders = new Set<string>();
-      const traverse = (nodes: FileNode[]) => {
-        nodes.forEach(node => {
-          if (node.type === 'folder') {
-            allFolders.add(node.path);
-            if (node.children) traverse(node.children);
-          }
-        });
-      };
-      traverse(filteredData);
-      handleSetExpandedFolders(allFolders);
-    }
-  }, [searchQuery, filteredData, handleSetExpandedFolders]);
-
   const flattenedNodes = useMemo(() => {
-    return flattenTree(filteredData, expandedFolders);
-  }, [filteredData, expandedFolders]);
+    // Inject mock git status if needed (in a real app this would come from props)
+    const nodesWithStatus = data.map(node => ({
+      ...node,
+      gitStatus: node.gitStatus || getMockGitStatus(node.name)
+    }));
+    return flattenTree(nodesWithStatus, expandedFolders);
+  }, [data, expandedFolders]);
 
   const handleNodeSelect = useCallback((node: FileNode) => {
     const newSelection = new Set(selectedFiles);
@@ -185,10 +183,16 @@ export const FileTree: React.FC<FileTreeProps> = ({
       if (newSelection.has(node.path)) {
         newSelection.delete(node.path);
       } else {
+        // Single select behavior for IDE style usually, but keeping multi-select capability
+        // For strict IDE feel, maybe clear others? But requirement says "Active File", implies single active.
+        // However, the app logic seems to support multiple selections for test generation.
+        // I will stick to current behavior but style the active one.
+        // If we want single select visual, we check if it's the *last* selected or similar.
+        // Let's keep it simple: toggle selection.
         newSelection.add(node.path);
       }
     } else {
-      // Folder selection: select all or deselect all
+      // Folder selection logic
       const descendantPaths = getAllFilePaths(node);
       const allSelected = descendantPaths.every(path => selectedFiles.has(path));
       
@@ -202,186 +206,200 @@ export const FileTree: React.FC<FileTreeProps> = ({
     onSelectionChange(newSelection);
   }, [selectedFiles, onSelectionChange]);
 
-  const handleSelectAll = () => {
-    const allPaths = filteredData.flatMap(getAllFilePaths);
-    onSelectionChange(new Set(allPaths));
-  };
-
-  const handleClearAll = () => {
-    onSelectionChange(new Set());
+  const handleCollapseAll = () => {
+    handleSetExpandedFolders(new Set());
   };
 
   const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
     const node = flattenedNodes[index];
     const isExpanded = expandedFolders.has(node.path);
+    const isSelected = selectedFiles.has(node.path);
     
-    // Determine selection state
-    let isSelected = false;
-    let isIndeterminate = false;
-
-    if (node.type === 'file') {
-      isSelected = selectedFiles.has(node.path);
-    } else {
-      const descendantPaths = getAllFilePaths(node);
-      if (descendantPaths.length > 0) {
-        const selectedCount = descendantPaths.filter(path => selectedFiles.has(path)).length;
-        isSelected = selectedCount === descendantPaths.length;
-        isIndeterminate = selectedCount > 0 && selectedCount < descendantPaths.length;
+    // File Icons Logic
+    const getFileIcon = () => {
+      if (node.type === 'folder') {
+        return isExpanded 
+          ? <FolderOpen className="h-4 w-4 text-blue-500 fill-blue-500/20" /> 
+          : <Folder className="h-4 w-4 text-blue-500 fill-blue-500/20" />;
       }
+      if (node.name.endsWith('.ts')) return <FileCode className="h-4 w-4 text-blue-400" />;
+      if (node.name.endsWith('.tsx')) return <FileCode className="h-4 w-4 text-yellow-400" />;
+      if (node.name.endsWith('.json')) return <FileJson className="h-4 w-4 text-yellow-300" />;
+      if (node.name.includes('config')) return <Settings className="h-4 w-4 text-gray-400" />;
+      return <FileIcon className="h-4 w-4 text-gray-400" />;
+    };
+
+    // Git Status Styling
+    let textColorClass = "text-zinc-300";
+    let statusBadge = null;
+
+    if (node.gitStatus === 'modified') {
+      textColorClass = "text-[#cca700]";
+      statusBadge = <span className="ml-auto text-[10px] font-bold text-[#cca700] mr-2">M</span>;
+    } else if (node.gitStatus === 'new') {
+      textColorClass = "text-[#58a6ff]";
+      statusBadge = <span className="ml-auto text-[10px] font-bold text-[#58a6ff] mr-2">U</span>;
     }
 
     return (
-      <div style={style} className="flex items-center hover:bg-accent/50 rounded-sm pr-2">
+      <div 
+        style={style} 
+        className={cn(
+          "flex items-center group cursor-pointer select-none",
+          isSelected ? "bg-[#37373d]" : "hover:bg-[#2a2d2e]"
+        )}
+        onClick={() => node.type === 'folder' ? toggleFolder(node.path) : handleNodeSelect(node)}
+      >
         <div 
-          style={{ paddingLeft: `${node.level * 20}px` }} 
-          className="flex items-center flex-1 min-w-0 py-1"
+          style={{ paddingLeft: `${node.level * 10 + 10}px` }} 
+          className="flex items-center w-full h-full"
         >
-          {/* Expand/Collapse Toggle */}
-          <div className="w-6 flex justify-center shrink-0">
+          {/* Chevron for Folders */}
+          <div className="w-4 flex justify-center shrink-0 mr-1">
             {node.type === 'folder' && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleFolder(node.path);
-                }}
-                className="p-0.5 hover:bg-muted rounded"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                 {isExpanded ? (
+                  <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <ChevronRight className="h-3.5 w-3.5 text-zinc-400" />
                 )}
-              </button>
-            )}
-          </div>
-
-          {/* Checkbox */}
-          <div 
-            className="mr-2 cursor-pointer"
-            onClick={() => handleNodeSelect(node)}
-          >
-            {isIndeterminate ? (
-              <MinusSquare className="h-4 w-4 text-primary" />
-            ) : isSelected ? (
-              <CheckSquare className="h-4 w-4 text-primary" />
-            ) : (
-              <Square className="h-4 w-4 text-muted-foreground" />
+              </div>
             )}
           </div>
 
           {/* Icon */}
-          <div className="mr-2 text-muted-foreground">
-            {node.type === 'folder' ? (
-              isExpanded ? <FolderOpen className="h-4 w-4 text-blue-400" /> : <Folder className="h-4 w-4 text-blue-400" />
-            ) : (
-              <File className="h-4 w-4" />
-            )}
+          <div className="mr-1.5 shrink-0">
+            {getFileIcon()}
           </div>
 
           {/* Name */}
-          <span 
-            className={cn(
-              "truncate text-sm cursor-pointer select-none", 
-              isSelected && "font-medium text-primary"
-            )}
-            onClick={() => handleNodeSelect(node)}
-          >
+          <span className={cn("truncate text-[13px]", textColorClass)}>
             {node.name}
           </span>
           
-          {node.type === 'file' && node.size && (
-             <span className="ml-auto text-xs text-muted-foreground mr-2">
-               {(node.size / 1024).toFixed(1)} KB
-             </span>
-          )}
+          {/* Git Status Badge */}
+          {statusBadge}
         </div>
       </div>
     );
   };
 
-  const allFilesCount = useMemo(() => {
-    return filteredData.reduce((acc, node) => acc + getAllFilePaths(node).length, 0);
-  }, [filteredData]);
-
   return (
-    <Card className="w-full h-[600px] flex flex-col">
-      <CardHeader className="pb-3 border-b">
-        <div className="flex items-center justify-between mb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Folder className="h-5 w-5" />
-            {repositoryName}
-          </CardTitle>
-          <div className="flex gap-2 items-center">
-            {onToggleShowIgnored && (
-               <div className="flex items-center space-x-2 mr-2">
-                 <Checkbox 
-                    id="show-ignored" 
-                    checked={showIgnored} 
-                    onCheckedChange={() => onToggleShowIgnored()}
-                 />
-                 <label 
-                   htmlFor="show-ignored" 
-                   className="text-xs text-muted-foreground cursor-pointer select-none"
-                 >
-                   Ignored
-                 </label>
-               </div>
-            )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleSelectAll}
-              disabled={selectedFiles.size === allFilesCount && allFilesCount > 0}
+    <div className="flex flex-col h-full bg-[#18181b] text-zinc-300 select-none border-r border-[#2b2d31]">
+      {/* Header Section */}
+      <div className="flex flex-col px-2 py-3 border-b border-[#2b2d31] gap-3">
+        {/* Row 1: Repository Context */}
+        <Popover open={openRepo} onOpenChange={setOpenRepo}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              role="combobox"
+              aria-expanded={openRepo}
+              className="w-full justify-between px-2 h-8 text-sm font-semibold hover:bg-[#2b2d31] hover:text-white"
             >
-              Select All
+              <div className="flex items-center gap-2 truncate">
+                <Book className="h-4 w-4 shrink-0 text-zinc-400" />
+                <span className="truncate">
+                  {selectedRepo ? `${selectedRepo.owner.login}/${selectedRepo.name}` : "Select Repository"}
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleClearAll}
-              disabled={selectedFiles.size === 0}
-            >
-              Clear All
-            </Button>
-          </div>
-        </div>
-        
-        <div className="relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search files..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        
-        <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-          <Badge variant="secondary">{selectedFiles.size} selected</Badge>
-          <span>of {allFilesCount} files</span>
-        </div>
-      </CardHeader>
+          </PopoverTrigger>
+          <PopoverContent className="w-[250px] p-0 ml-2" align="start">
+            <Command>
+              <CommandInput placeholder="Search repository..." />
+              <CommandList>
+                <CommandEmpty>No repository found.</CommandEmpty>
+                <CommandGroup>
+                  {repos.map((repo) => (
+                    <CommandItem
+                      key={repo.id}
+                      value={`${repo.owner.login}/${repo.name}`}
+                      onSelect={() => {
+                        if (onRepoChange) onRepoChange(repo);
+                        setOpenRepo(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedRepo?.id === repo.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {repo.owner.login}/{repo.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
-      <CardContent className="flex-1 p-0">
-        {flattenedNodes.length > 0 ? (
+        {/* Row 2: Branch Context */}
+        <Popover open={openBranch} onOpenChange={setOpenBranch}>
+          <PopoverTrigger asChild>
+             <div className="flex items-center gap-2 px-2 cursor-pointer group" onClick={() => !isLoading && setOpenBranch(true)}>
+                <GitBranch className="h-3.5 w-3.5 text-zinc-500 group-hover:text-zinc-300" />
+                <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors truncate flex-1">
+                   {isLoading ? "Loading..." : (selectedBranch || "Select Branch")}
+                </span>
+                {isLoading && <Loader2 className="h-3 w-3 animate-spin text-zinc-500" />}
+             </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-[200px] p-0 ml-2" align="start">
+            <Command>
+              <CommandInput placeholder="Search branch..." />
+              <CommandList>
+                <CommandEmpty>No branch found.</CommandEmpty>
+                <CommandGroup>
+                  {branches.map((branch) => (
+                    <CommandItem
+                      key={branch.name}
+                      value={branch.name}
+                      onSelect={() => {
+                        if (onBranchChange) onBranchChange(branch.name);
+                        setOpenBranch(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedBranch === branch.name ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {branch.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* File Tree List */}
+      <div className="flex-1 overflow-hidden outline-none focus:outline-none focus:ring-1 focus:ring-[#007fd4]" tabIndex={0}>
+        {isLoading ? (
+           <div className="flex flex-col items-center justify-center h-full text-zinc-500 space-y-2">
+              <Loader2 className="h-8 w-8 animate-spin text-zinc-600" />
+              <span className="text-xs">Loading files...</span>
+           </div>
+        ) : (
           <AutoSizer>
             {({ height, width }) => (
               <List
                 height={height}
                 itemCount={flattenedNodes.length}
-                itemSize={32}
+                itemSize={22} // Compaction: 22px height
                 width={width}
               >
                 {Row}
               </List>
             )}
           </AutoSizer>
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            No files found
-          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

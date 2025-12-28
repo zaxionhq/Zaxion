@@ -45,6 +45,9 @@ const schema = z.object({
   TOKEN_ENCRYPTION_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(), // Added Gemini API Key
   LOCAL_DB_HOST: z.string().optional(), // Added for local development
+  GITHUB_WEBHOOK_SECRET: z.string().optional(), // Added for PR Gate
+  REDIS_URL: z.string().optional().default("redis://localhost:6379"), // Added for BullMQ
+  GITHUB_TOKEN: z.string().optional(), // Added for PR Gate
 });
 
 const parsed = schema.safeParse(process.env);

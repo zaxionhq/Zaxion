@@ -8,9 +8,10 @@ This Enterprise SaaS solution empowers development teams to rapidly generate com
 
 ## ✨ Key Features
 
--   **Intelligent Test Generation**: AI analyzes your code to generate relevant and effective unit and integration tests.
+-   **Intelligent Test Generation**: AI analyzes your code (including Python) to generate relevant and effective unit and integration tests.
+-   **Advanced Code Analysis & Chunking**: Utilizes AST-based parsing and intelligent chunking to understand code structure and provide context for AI, improving test generation accuracy.
 -   **Seamless GitHub Integration**: Connects directly with your GitHub repositories for easy access and management.
--   **Automated Pull Request Creation**: Optionally creates Pull Requests with generated tests, streamlining your code review process.
+-   **Enhanced Automated Pull Request Creation**: Optionally creates Pull Requests with generated tests, featuring structured and informative PR bodies (including test counts, functions covered, and improvements), streamlining your code review process.
 -   **Review & Refine**: Provides a user-friendly interface to review, edit, and accept/reject AI-generated test cases.
 -   **Transparency & Trust**: Offers rationale and confidence scores for generated tests, fostering trust in AI-driven quality assurance.
 -   **Scalable & Secure**: Built with a robust architecture suitable for enterprise environments, ensuring data security and performance.
