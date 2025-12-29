@@ -21,7 +21,6 @@ build/
 # Misc 
 ################################ 
 .DS_Store 
-*.pem 
  
 ################################ 
 # IDEs and Tools 
@@ -36,11 +35,12 @@ build/
 *.swo 
  
 ################################ 
-# Environment variables 
+# Secrets & Sensitive Info 
 ################################ 
 .env 
-.env.* 
-!.env.example 
+.env.local 
+*.pem 
+github_key.pem 
  
 ################################ 
 # Logs 

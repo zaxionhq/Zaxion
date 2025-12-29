@@ -1,42 +1,85 @@
 # GitHub Test Case Generator (Enterprise SaaS)
 
-## 🚀 AI-Powered Test Generation for GitHub Repositories
+[![Status](https://img.shields.io/badge/Status-Phase_2_Development-blue.svg)](https://github.com/your-repo)
+[![Backend](https://img.shields.io/badge/Backend-Node.js_Express-green.svg)](https://expressjs.com/)
+[![Frontend](https://img.shields.io/badge/Frontend-React_Vite-61dafb.svg)](https://vitejs.dev/)
 
-**Elevate your software quality with automated, AI-driven test case generation directly integrated into your GitHub workflow.**
+**An AI-powered PR Gatekeeper and Test Generation engine built for enterprise software teams.**
 
-This Enterprise SaaS solution empowers development teams to rapidly generate comprehensive unit and integration tests for their GitHub repositories. Leveraging advanced AI, it analyzes your codebase, understands its logic, and produces high-quality, maintainable test suites, significantly reducing manual testing effort and accelerating development cycles.
+The GitHub Test Case Generator doesn't just write tests—it enforces quality. By integrating directly into your GitHub Pull Request workflow, it analyzes code changes, identifies high-risk areas, and ensures that critical logic (auth, payments, config) is never merged without adequate test coverage.
+
+---
 
 ## ✨ Key Features
 
--   **Intelligent Test Generation**: AI analyzes your code (including Python) to generate relevant and effective unit and integration tests.
--   **Advanced Code Analysis & Chunking**: Utilizes AST-based parsing and intelligent chunking to understand code structure and provide context for AI, improving test generation accuracy.
--   **Seamless GitHub Integration**: Connects directly with your GitHub repositories for easy access and management.
--   **Enhanced Automated Pull Request Creation**: Optionally creates Pull Requests with generated tests, featuring structured and informative PR bodies (including test counts, functions covered, and improvements), streamlining your code review process.
--   **Review & Refine**: Provides a user-friendly interface to review, edit, and accept/reject AI-generated test cases.
--   **Transparency & Trust**: Offers rationale and confidence scores for generated tests, fostering trust in AI-driven quality assurance.
--   **Scalable & Secure**: Built with a robust architecture suitable for enterprise environments, ensuring data security and performance.
+### 🛡️ PR Gatekeeping (Phase 1)
+- **Deterministic Analysis**: Instantly detects which files changed and identifies missing tests.
+- **Fail-Safe Architecture**: Built-in resilience with Direct Execution fallbacks and Redis-backed queues.
+- **GitHub-Native**: Communicates directly via PR comments and Status Checks—no need to leave GitHub.
+
+### ⚙️ Policy Engine (Phase 2 - In Progress)
+- **Risk-Based Enforcement**: Automatically flags changes to `auth/`, `payment/`, and `.env` files.
+- **PR Size Guardrails**: Prevents "mega-PRs" by warning developers when changes are too large to review effectively.
+- **Context-Aware Rules**: Strict enforcement on `main` branch with flexible warnings for feature branches.
+
+### 🤖 AI Test Generation (Coming Soon)
+- **Context-Aware Tests**: Uses LLMs to generate meaningful unit and integration tests.
+- **AST Parsing**: Deep understanding of your code structure for accurate test assertions.
+
+---
 
 ## 🛠️ Technology Stack
 
 ### Backend
-
--   **Frameworks**: Node.js (Express) or Python (FastAPI)
--   **API**: RESTful services for seamless communication.
+- **Node.js (Express)**: Scalable, service-oriented architecture.
+- **PostgreSQL (Sequelize)**: Reliable persistence for audit logs and policies.
+- **Redis (Upstash)**: Distributed queueing for asynchronous PR analysis.
+- **GitHub API**: Secure integration using GitHub Apps and HMAC verification.
 
 ### Frontend
+- **React (Vite)**: Modern, high-performance UI.
+- **Tailwind CSS & shadcn/ui**: Clean, accessible, and professional design system.
 
--   **Framework**: React with Vite for a fast and modern user experience.
--   **UI Components**: shadcn/ui for accessible and customizable UI elements.
--   **Styling**: Tailwind CSS for efficient and utility-first styling.
+---
 
-### CI/CD
+## 🚀 Getting Started
 
--   **Automation**: GitHub Actions for continuous integration and deployment, with secure handling of secrets.
+### Prerequisites
+- Node.js (v18+)
+- PostgreSQL Database
+- Redis Instance (or Upstash account)
+- GitHub Fine-grained PAT (or GitHub App credentials)
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/github-testcase-generator.git
+   ```
+2. Install dependencies:
+   ```bash
+   # Backend
+   cd backend && npm install
+   # Frontend
+   cd ../frontend && npm install
+   ```
+3. Configure environment variables (see `backend/.env.example`).
+4. Start the development servers:
+   ```bash
+   # In backend/
+   npm run dev
+   # In frontend/
+   npm run dev
+   ```
+
+---
+
+## 🤝 Contributing
+This is an enterprise-focused project. Please ensure all contributions include:
+- Meaningful unit/integration tests.
+- Proper error handling and logging.
+- Compliance with the architectural patterns defined in the [PRODUCT_SPEC.md](./PRODUCT_SPEC.md).
+
+---
 
 ## 🎯 Our Mission
-
-To empower developers with cutting-edge AI tools that enhance code quality, accelerate testing, and foster a more efficient and confident development process.
-
-## 🤝 Get Started
-
-Contact us to learn more about integrating the GitHub Test Case Generator into your enterprise workflow and transform your testing strategy.
+To eliminate the friction of software testing by providing developers with automated tools that ensure quality, security, and speed at scale.

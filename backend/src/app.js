@@ -148,8 +148,16 @@ export default function createApp(db) { // Accepts db as an argument
     }
   });
 
-  // Simple health route (also exposed under /api/health via routes/index.js)
-  app.get("/health", (_req, res) => res.json({ ok: true, env: NODE_ENV }));
+  // Simple health route
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "UP",
+      env: NODE_ENV,
+      time: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    });
+  });
 
   // CSRF token endpoint
   app.get("/api/csrf-token", (_req, res) => {

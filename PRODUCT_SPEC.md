@@ -1,145 +1,49 @@
-📄 Product Specification: GitHub Test Case Generator
-1. Product Overview
-
-The GitHub Test Case Generator is a developer productivity tool that integrates directly with GitHub repositories. Its core purpose is to analyze codebases, generate meaningful test cases (unit, integration, and functional tests), and optionally push these tests back to the repository via pull requests.
-
-The product removes repetitive manual work from developers’ workflows, increases test coverage, and improves software quality without disrupting existing CI/CD pipelines.
-
-2. Purpose & Value Proposition
-
-Reduce Developer Effort: Automates test case writing, saving hours of repetitive coding.
-
-Improve Code Quality: Ensures higher test coverage and fewer regressions.
-
-Seamless GitHub Integration: Works inside GitHub workflows (PRs, commits, actions).
-
-AI-Assisted Analysis: Uses AI to understand code logic, detect gaps, and generate production-ready tests.
-
-3. Target Users
-
-Individual Developers → Save time writing repetitive test cases.
-
-Software Teams → Standardize testing practices across projects.
-
-Open Source Maintainers → Increase test coverage in community-driven repos.
-
-QA Engineers → Automate test case creation for faster validation.
-
-4. Key Features
-🔑 Core Features
-
-Repository Integration
-
-OAuth-based GitHub login.
-
-Ability to connect repositories (private & public).
-
-Code Analysis
-
-AI-powered static code parsing.
-
-Identifies functions, classes, endpoints, and modules.
-
-Detects uncovered or weakly covered areas.
-
-Test Case Generation
-
-Unit tests (per function/class).
-
-Integration tests (cross-module).
-
-API/functional tests (for REST/GraphQL endpoints).
-
-Supports popular frameworks: Jest, PyTest, JUnit, Mocha, etc.
-
-Pull Request Automation
-
-Option to automatically generate a branch with new tests.
-
-Creates a PR for team review before merging.
-
-Dashboard
-
-Displays connected repositories.
-
-Shows coverage statistics (before & after).
-
-Allows manual regeneration of tests.
-
-🚀 Advanced/Optional Features
-
-Custom Test Preferences (e.g., testing library choice, coding style).
-
-CI/CD Integration (GitHub Actions, Jenkins, CircleCI).
-
-Test Coverage Reports (visual charts, % coverage change).
-
-Security-Aware Testing (edge cases like SQL injection, invalid inputs).
-
-5. How It Works (Workflow)
-
-Connect GitHub
-
-User logs in with GitHub OAuth.
-
-Selects a repo to analyze.
-
-Scan Repository
-
-Backend fetches repo code.
-
-AI engine analyzes functions, classes, and uncovered areas.
-
-Generate Tests
-
-AI produces structured test cases.
-
-User can preview and customize before committing.
-
-Commit or PR
-
-User chooses:
-
-Direct commit → push tests to repo branch.
-
-Pull request → open PR for review.
-
-Review & Merge
-
-Developer reviews PR.
-
-Merge into main branch after approval.
-
-6. Technical Considerations
-
-Frontend: React + Tailwind (dashboard, repo selection, preview).
-
-Backend: Node.js / FastAPI (handles GitHub API, AI test generation).
-
-Database: PostgreSQL (user/repo/test history).
-
-AI Engine: Open-source LLMs (Code LLaMA, StarCoder, etc.) for test generation.
-
-Integration: GitHub API (OAuth, Repos, PRs).
-
-Hosting: Dockerized microservices, deployable on AWS/GCP.
-
-7. Success Metrics
-
-% Increase in test coverage after first run.
-
-Average developer time saved per repo.
-
-Number of PRs successfully merged with generated tests.
-
-Adoption rate across active repos.
-
-8. Future Roadmap
-
-Support for multi-language projects.
-
-Marketplace integration (publish test case templates).
-
-AI-driven bug detection + fix suggestions.
-
-Support for enterprise GitHub (self-hosted).
+# 📄 Product Specification: GitHub Test Case Generator (Enterprise SaaS)
+
+## 1. Product Overview
+The **GitHub Test Case Generator** is an enterprise-grade developer productivity and quality enforcement tool. It integrates directly into the GitHub workflow to analyze code changes, enforce testing policies, and automatically generate high-quality test cases. 
+
+Unlike simple AI wrappers, this system acts as a **PR Gatekeeper**, ensuring that critical code changes are accompanied by tests before they can be merged.
+
+## 2. Purpose & Value Proposition
+- **Automated Quality Gates**: Prevent untested "high-risk" code (auth, payments, config) from reaching production.
+- **Developer Productivity**: Automatically generate unit and integration tests, saving hours of manual boilerplate.
+- **Enterprise Resilience**: Built with fail-safe logic, deterministic policy evaluation, and secure webhook handling.
+- **Seamless Workflow**: Works entirely within GitHub (PR comments, Check Runs) without requiring a separate dashboard for every action.
+
+## 3. Target Users
+- **Enterprise Engineering Teams**: Standardize testing requirements across hundreds of repositories.
+- **DevOps/Platform Engineers**: Enforce compliance and quality standards at the organizational level.
+- **Individual Developers**: Rapidly increase test coverage with AI assistance.
+
+## 4. Key Features & Roadmap
+
+### ✅ Phase 1: PR Gate Core (Completed)
+- **Deterministic PR Analysis**: Analyzes PR diffs to identify changed files and test coverage.
+- **Fail-Safe Webhook Architecture**: Resilient webhook handler with Direct Execution fallback if queues (Redis) are unavailable.
+- **GitHub-Native Enforcement**: Uses GitHub API to post results directly to PRs.
+- **Secure Integration**: HMAC-SHA256 signature verification and encrypted token management.
+
+### 🚀 Phase 2: Minimal Policy Engine (In Progress)
+- **Policy 1: High-Risk Protection**: Automatically blocks/warns if critical files (e.g., `auth/`, `payment/`, `config/`, `.env`) are changed without corresponding test updates.
+- **Policy 2: PR Size Control**: Warns developers when a PR exceeds a specific number of changed files to encourage smaller, reviewable changes.
+- **Policy 3: Branch-Specific Rules**: Enforces strict "Block" rules on `main`/`production` while allowing "Warn" flexibility on feature branches.
+- **Enterprise Logging**: Every policy decision is stored in PostgreSQL for audit trails and compliance.
+
+### 🔮 Future Phases
+- **AI-Powered Test Generation**: Intelligent test suite creation using AST-based code understanding.
+- **Advanced Coverage Reports**: Visualizing coverage trends across the entire organization.
+- **Self-Healing Tests**: AI detects broken tests and suggests fixes based on code changes.
+
+## 5. Technical Architecture
+- **Backend**: Node.js (Express) with a service-oriented architecture.
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui.
+- **Database**: PostgreSQL (Sequelize ORM) for users, policies, and audit logs.
+- **Queueing**: Redis (Upstash) for asynchronous PR processing.
+- **Security**: GitHub App integration (moving from PAT), JWT authentication, and HMAC webhook validation.
+
+## 6. Success Metrics
+- **Test Coverage %**: Average increase in coverage per repository.
+- **PR Cycle Time**: Reduction in time spent writing/reviewing tests.
+- **Escaped Defects**: Decrease in bugs reaching production due to missing tests.
+- **Compliance Rate**: Percentage of PRs that pass the "High-Risk" policy on the first try.

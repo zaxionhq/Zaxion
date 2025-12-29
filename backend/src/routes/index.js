@@ -10,8 +10,6 @@ export default function routesFactory(db) {
   const router = Router();
   // console.log('routesFactory called. db.User:', db.User ? 'defined' : 'undefined', 'db.RefreshToken:', db.RefreshToken ? 'defined' : 'undefined');
 
-  router.get("/health", (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
-
   // Mount v1 API routes under /v1
   router.use("/v1", v1ApiRoutesFactory(db));
 

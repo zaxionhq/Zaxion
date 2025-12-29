@@ -1,4 +1,4 @@
-name: CI / Smoke Test
+name: Phase 2 Enterprise CI
 
 on:
   push:
@@ -7,40 +7,119 @@ on:
     branches: [ main ]
 
 jobs:
-  test-and-smoke:
+  backend-validation:
+    name: Backend Lint, Test & Smoke
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: github_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      JWT_SECRETS: ${{ secrets.JWT_SECRETS }}
-      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
-      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PORT: 5000
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      DB_NAME: github_test_db
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      JWT_SECRET: ci_test_secret
+      GITHUB_APP_ID: 12345
+      GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
+      GITHUB_WEBHOOK_SECRET: ${{ secrets.GITHUB_WEBHOOK_SECRET }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Install backend deps
+      - name: Install deps
         working-directory: backend
         run: npm ci
 
-      - name: Run unit tests
+      - name: Lint
         working-directory: backend
-        run: npm test || true
+        run: npm run lint
 
-      - name: Start backend (background)
+      - name: Security audit (non-blocking)
+        working-directory: backend
+        run: npm audit --production --audit-level=critical || true
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/github_test_db
+
+      - name: Run tests
+        working-directory: backend
+        run: npm test
+
+      - name: Start backend
         working-directory: backend
         run: |
-          npm run start & sleep 2
+          nohup npm run start > server.log 2>&1 &
 
-      - name: Smoke check /health
+      - name: Wait for health
         run: |
-          curl --fail --retry 5 --retry-delay 1 http://localhost:5000/api/health
+          for i in {1..10}; do
+            if curl -s http://localhost:5000/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to start"
+          cat backend/server.log
+          exit 1
+
+  frontend-validation:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
