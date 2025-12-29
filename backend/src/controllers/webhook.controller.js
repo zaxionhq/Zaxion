@@ -50,6 +50,9 @@ export async function handleGitHubWebhook(req, res, next) {
           installationId: payload.installation?.id // For GitHub Apps if applicable
         };
 
+        const traceId = `${prData.installationId || 'PAT'}:${prData.headSha}`;
+        console.log(`[webhook] [trace:${traceId}] event: ${event}.${action} pr: #${prData.prNumber}`);
+
         // 3. Queue the job (Immediate ACK - Fire & Forget)
         // CRITICAL: Do NOT connect to Postgres here. Do NOT call GitHub API here.
         try {

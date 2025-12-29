@@ -47,23 +47,23 @@ export class PolicyEngineService {
       name: "PR Size Check",
       passed: true,
       severity: "WARN",
-      message: `PR size is within limits (<${N_LARGE} files).`
+      message: `PR size is within limits (${prContext.totalChanges} files).`
     };
 
     if (prContext.totalChanges > N_LARGE) {
       policy2.passed = false;
-      policy2.message = `**WARNING:** Large PR detected (${prContext.totalChanges} files). Consider splitting.`;
+      policy2.message = `**WARNING:** Large PR detected (${prContext.totalChanges} files). Consider splitting into smaller chunks for better review.`;
       isWarned = true;
     }
     policies.push(policy2);
 
-    // --- POLICY 3: Untested code allowed on feature branches ---
-    const isMainBranch = ["main", "master"].includes(metadata.baseBranch);
+    // --- POLICY 3: Branch Protection Strategy ---
+    const isMainBranch = ["main", "master", "prod", "production"].includes(metadata.baseBranch);
     const policy3 = {
-      name: "Branch Protection Strategy",
-      passed: true, // Always passes, just modifies behavior
+      name: "Branch Protection",
+      passed: true,
       severity: "INFO",
-      message: isMainBranch ? "Merging to protected branch (Strict Mode)." : "Merging to feature branch (Relaxed Mode)."
+      message: isMainBranch ? "Targeting protected branch (Blocking Mode enabled)." : "Targeting feature branch (Warning Mode enabled)."
     };
     policies.push(policy3);
 

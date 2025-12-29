@@ -57,21 +57,60 @@ export class GitHubReporterService {
     }
 
     try {
-      // Create or Update Check Run
-      await this.octokit.checks.create({
+      // 1. Check if a Check Run already exists for this SHA and name
+      const { data: { check_runs } } = await this.octokit.checks.listForRef({
         owner,
         repo,
-        name: this.CHECK_NAME,
-        head_sha: headSha,
-        status,
-        conclusion,
-        output: {
-          title,
-          summary: description,
-          text: details // Markdown body
-        }
+        ref: headSha,
+        check_name: this.CHECK_NAME
       });
-      console.log(`[GitHubReporter] Reported ${decisionState} for ${owner}/${repo} SHA:${headSha.substring(0, 7)}`);
+
+      const existingCheck = check_runs.find(cr => cr.name === this.CHECK_NAME);
+
+      if (existingCheck) {
+        // Update existing check
+        const updateParams = {
+          owner,
+          repo,
+          check_run_id: existingCheck.id,
+          status,
+          output: {
+            title,
+            summary: description,
+            text: details
+          }
+        };
+
+        // GitHub forbids 'conclusion' when status is not 'completed'
+        if (status === "completed") {
+          updateParams.conclusion = conclusion;
+        }
+
+        await this.octokit.checks.update(updateParams);
+        console.log(`[GitHubReporter] Updated check ${existingCheck.id} to ${decisionState} for ${owner}/${repo}`);
+      } else {
+        // Create new check
+        const createParams = {
+          owner,
+          repo,
+          name: this.CHECK_NAME,
+          head_sha: headSha,
+          status,
+          output: {
+            title,
+            summary: description,
+            text: details
+          }
+        };
+
+        // Only add conclusion if we are starting in a completed state (rare but possible)
+        if (status === "completed") {
+          createParams.conclusion = conclusion;
+        }
+
+        await this.octokit.checks.create(createParams);
+        console.log(`[GitHubReporter] Created new check for ${owner}/${repo} SHA:${headSha.substring(0, 7)}`);
+      }
     } catch (error) {
       console.error("[GitHubReporter] Failed to report status:", error);
       throw error; // Propagate error so worker can handle fail-closed if needed

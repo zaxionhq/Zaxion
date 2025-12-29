@@ -48,6 +48,9 @@ const schema = z.object({
   GITHUB_WEBHOOK_SECRET: z.string().optional(), // Added for PR Gate
   REDIS_URL: z.string().optional().default("redis://localhost:6379"), // Added for BullMQ
   GITHUB_TOKEN: z.string().optional(), // Added for PR Gate
+  GITHUB_APP_ID: z.string().optional(), // Phase 2: GitHub App
+  GITHUB_PRIVATE_KEY: z.string().optional(), // Phase 2: GitHub App
+  GITHUB_PRIVATE_KEY_PATH: z.string().optional(), // Phase 2: GitHub App (Cleaner approach)
 });
 
 const parsed = schema.safeParse(process.env);
