@@ -10,7 +10,7 @@
     "db:migrate": "dotenv -e ./.env -- node scripts/run-migrate.js",
     "db:create-raw": "node scripts/create-database.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "lint": "eslint . --ext .js,.ts --cache"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

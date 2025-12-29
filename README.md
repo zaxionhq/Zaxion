@@ -1,85 +1,102 @@
-# GitHub Test Case Generator (Enterprise SaaS)
+# 🚀 How to Run
 
-[![Status](https://img.shields.io/badge/Status-Phase_2_Development-blue.svg)](https://github.com/your-repo)
-[![Backend](https://img.shields.io/badge/Backend-Node.js_Express-green.svg)](https://expressjs.com/)
-[![Frontend](https://img.shields.io/badge/Frontend-React_Vite-61dafb.svg)](https://vitejs.dev/)
+Follow these steps to set up the GitHub Test Case Generator in your local development environment.
 
-**An AI-powered PR Gatekeeper and Test Generation engine built for enterprise software teams.**
-
-The GitHub Test Case Generator doesn't just write tests—it enforces quality. By integrating directly into your GitHub Pull Request workflow, it analyzes code changes, identifies high-risk areas, and ensures that critical logic (auth, payments, config) is never merged without adequate test coverage.
-
----
-
-## ✨ Key Features
-
-### 🛡️ PR Gatekeeping (Phase 1)
-- **Deterministic Analysis**: Instantly detects which files changed and identifies missing tests.
-- **Fail-Safe Architecture**: Built-in resilience with Direct Execution fallbacks and Redis-backed queues.
-- **GitHub-Native**: Communicates directly via PR comments and Status Checks—no need to leave GitHub.
-
-### ⚙️ Policy Engine (Phase 2 - In Progress)
-- **Risk-Based Enforcement**: Automatically flags changes to `auth/`, `payment/`, and `.env` files.
-- **PR Size Guardrails**: Prevents "mega-PRs" by warning developers when changes are too large to review effectively.
-- **Context-Aware Rules**: Strict enforcement on `main` branch with flexible warnings for feature branches.
-
-### 🤖 AI Test Generation (Coming Soon)
-- **Context-Aware Tests**: Uses LLMs to generate meaningful unit and integration tests.
-- **AST Parsing**: Deep understanding of your code structure for accurate test assertions.
+## 📋 Prerequisites
+- **Node.js**: v18 or higher
+- **PostgreSQL**: Local instance or cloud (e.g., Supabase, RDS)
+- **Redis**: Local instance or [Upstash](https://upstash.com/) for queue management
+- **GitHub App**: You will need to create a GitHub App (see [Configuration](#configuration))
 
 ---
 
-## 🛠️ Technology Stack
+## �️ Installation
 
-### Backend
-- **Node.js (Express)**: Scalable, service-oriented architecture.
-- **PostgreSQL (Sequelize)**: Reliable persistence for audit logs and policies.
-- **Redis (Upstash)**: Distributed queueing for asynchronous PR analysis.
-- **GitHub API**: Secure integration using GitHub Apps and HMAC verification.
-
-### Frontend
-- **React (Vite)**: Modern, high-performance UI.
-- **Tailwind CSS & shadcn/ui**: Clean, accessible, and professional design system.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v18+)
-- PostgreSQL Database
-- Redis Instance (or Upstash account)
-- GitHub Fine-grained PAT (or GitHub App credentials)
-
-### Installation
-1. Clone the repository:
+1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-repo/github-testcase-generator.git
+   git clone https://github.com/your-repo/github-testcase-generator-app.git
+   cd github-testcase-generator-app
    ```
-2. Install dependencies:
+
+2. **Backend Setup**
    ```bash
-   # Backend
-   cd backend && npm install
-   # Frontend
-   cd ../frontend && npm install
+   cd backend
+   npm install
+   cp .env.example .env
    ```
-3. Configure environment variables (see `backend/.env.example`).
-4. Start the development servers:
+
+3. **Frontend Setup**
    ```bash
-   # In backend/
-   npm run dev
-   # In frontend/
-   npm run dev
+   cd ../frontend
+   npm install
+   cp .env.example .env
    ```
 
 ---
 
-## 🤝 Contributing
-This is an enterprise-focused project. Please ensure all contributions include:
-- Meaningful unit/integration tests.
-- Proper error handling and logging.
-- Compliance with the architectural patterns defined in the [PRODUCT_SPEC.md](./PRODUCT_SPEC.md).
+## ⚙️ Configuration
+
+### 1. Database & Redis
+Ensure your PostgreSQL and Redis services are running. Update the following in `backend/.env`:
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_NAME=github_test_generator
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+### 2. GitHub App Credentials
+1. Create a GitHub App in your organization/account.
+2. Generate a Private Key (`.pem`) and place it in `backend/secrets/github-app.pem`.
+3. Update `backend/.env`:
+```env
+GITHUB_APP_ID=your_app_id
+GITHUB_WEBHOOK_SECRET=your_webhook_secret
+```
+
+### 3. Database Migrations
+Run the migrations to set up the schema:
+```bash
+cd backend
+npm run db:migrate
+```
 
 ---
 
-## 🎯 Our Mission
-To eliminate the friction of software testing by providing developers with automated tools that ensure quality, security, and speed at scale.
+## 🏃 Running the App
+
+### Option A: Manual (Recommended for Dev)
+
+**Terminal 1: Backend**
+```bash
+cd backend
+npm run dev
+```
+
+**Terminal 2: Frontend**
+```bash
+cd frontend
+npm run dev
+```
+
+**Terminal 3: PR Worker**
+```bash
+cd backend
+node src/workers/prAnalysis.worker.js
+```
+
+### Option B: Docker (Coming Soon)
+```bash
+docker-compose up
+```
+
+---
+
+## 🧪 Verification
+Once running, you can verify the setup by visiting:
+- **Frontend**: `http://localhost:5173`
+- **Backend Health**: `http://localhost:5000/health`

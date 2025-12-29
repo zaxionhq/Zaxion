@@ -1,61 +1,54 @@
-# Welcome to your project
+# 🎨 Frontend: How to Run
 
-## How can I edit this code?
+This is the user interface for the GitHub Test Case Generator, built with **React**, **Vite**, and **shadcn/ui**.
 
-There are several ways of editing your application.
+## 📋 Prerequisites
+- **Node.js**: v18+
+- **Backend**: The backend server must be running at `http://localhost:5000` (by default).
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes.
+## 🚀 Quick Start
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-Follow these steps:
+2. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Ensure VITE_API_URL points to your backend
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. **Open Browser**
+   Visit `http://localhost:5173`
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 🛠️ Project Structure
 
-**Edit a file directly in GitHub**
+- **`/src/components`**: UI components powered by shadcn/ui and Tailwind CSS.
+- **`/src/hooks`**: Custom React hooks for API interaction and state management.
+- **`/src/lib`**: Utility functions and API client configurations.
+- **`/src/components/workbench`**: The core analysis and editor interface.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## ✨ Features
+- **Repo Selector**: Browse and select your GitHub repositories.
+- **Analysis View**: Real-time feedback on PR analysis and policy violations.
+- **Test Editor**: Review, edit, and approve AI-generated test cases.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🛠️ Development Tools
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## Linting and Code Quality
-
-This project enforces code quality and consistency using ESLint and TypeScript. The linting process helps catch errors early and maintain a high standard of code. To run the linter:
-
-```sh
-npm run lint
-```
-
-All linting errors have been resolved, ensuring a clean and maintainable codebase.
+- **Linting**: `npm run lint`
+- **Build**: `npm run build`
+- **Preview**: `npm run preview`
