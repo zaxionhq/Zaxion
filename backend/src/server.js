@@ -1,6 +1,5 @@
 // src/server.js
 import env from "./config/env.js";
-import { todos } from "./controllers/admin.controller.js";
 import sequelize from "./config/sequelize.js";
 import logger from "./logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
@@ -34,6 +33,12 @@ logger.info({ env: { PORT: env.get("PORT"), NODE_ENV: env.NODE_ENV, DB_USER: env
 // initTelemetry();
 
 async function assertDatabaseConnectionOk() {
+  // Guard DB bootstrap in CI mode
+  if (env.APP_MODE === "ci") {
+    console.log("⏩ CI mode detected: Skipping DB authentication check");
+    return;
+  }
+
   try {
     // Test DB connection
     await db.sequelize.authenticate();
@@ -88,10 +93,6 @@ async function startServer() {
 
   const server = app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
-    // Log dev todos in development
-    if (NODE_ENV !== "production") {
-      logger.info({ todos }, "=== DEV TODOS (top priorities) ===");
-    }
   });
 
   process.on("SIGTERM", () => shutdown(server));

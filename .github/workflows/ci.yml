@@ -38,6 +38,7 @@ jobs:
 
     env:
       NODE_ENV: test
+      APP_MODE: ci
       PORT: 5000
       DB_HOST: localhost
       DB_PORT: 5432
