@@ -17,6 +17,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const schema = z.object({
   // --- Core ---
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_MODE: z.enum(["ci", "dev", "prod"]).default("dev"),
   PORT: z.coerce.number().default(5000),
 
   // --- Database ---
