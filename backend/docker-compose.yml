@@ -14,7 +14,12 @@ services:
       - ./.env
     depends_on:
       - postgres
-    # Optionally, add a healthcheck if the backend is not immediately ready
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   postgres:
     image: postgres:13

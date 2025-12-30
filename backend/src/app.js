@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import env from "./config/env.js";
 import cookieParser from "cookie-parser";
 import routesFactory from "./routes/index.js"; // This will now be a factory
+import * as healthController from "./controllers/health.controller.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import logger from "./logger.js";
@@ -148,16 +149,11 @@ export default function createApp(db) { // Accepts db as an argument
     }
   });
 
-  // Simple health route
-  app.get("/health", (_req, res) => {
-    res.json({
-      status: "UP",
-      env: NODE_ENV,
-      time: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-    });
-  });
+  // Liveness check (always 200)
+  app.get("/health", healthController.health);
+
+  // Readiness check (checks deps)
+  app.get("/ready", healthController.ready);
 
   // CSRF token endpoint
   app.get("/api/csrf-token", (_req, res) => {

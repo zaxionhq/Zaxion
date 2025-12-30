@@ -10,87 +10,96 @@ const __dirname = path.dirname(__filename);
 // Load .env from repo root backend/.env (development convenience)
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// Initialize environment: validate env. Kept simple and synchronous — secrets should be provided
-// to the process via platform environment variables (Render/Vercel) or a local .env.
-export function init() {
-  // Validate env immediately. In production the process should be started with correct vars.
-  const parsedNow = schema.safeParse(process.env);
-  if (!parsedNow.success) {
-    const errs = parsedNow.error.format();
-    if ((process.env.NODE_ENV || "development") === "production") {
-      console.error("Env validation failed:", errs);
-      throw new Error("Missing or invalid environment variables");
-    }
-    console.warn("[config/env] Warning: env validation issues:", errs);
-  }
-}
-
+/**
+ * Environment Variables Schema
+ * Uses Zod for validation, type coercion, and deterministic transformations.
+ */
 const schema = z.object({
-  NODE_ENV: z.string().default("development"),
-  PORT: z.string().optional(),
-  DB_NAME: z.string(),
-  APP_DB_USER: z.string(),
-  APP_DB_PASSWORD: z.string(),
-  DB_HOST: z.string(),
-  DB_PORT: z.string().optional(),
-  DB_DIALECT: z.string().optional().default("postgres"),
+  // --- Core ---
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  PORT: z.coerce.number().default(5000),
+
+  // --- Database ---
+  DB_NAME: z.string().optional(),
+  APP_DB_USER: z.string().optional(),
+  APP_DB_PASSWORD: z.string().optional(),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.coerce.number().default(5432),
+  DB_DIALECT: z.string().default("postgres"),
+  LOCAL_DB_HOST: z.string().optional(),
   DATABASE_URL: z.string().optional(),
+
+  // --- App Secrets ---
+  JWT_SECRET: z.string().optional(),
+  JWT_SECRETS: z.string().optional(),
+  JWT_REFRESH_TTL: z.string().default("7d"),
+  TOKEN_ENCRYPTION_KEY: z.string().optional(),
+
+  // --- External Integrations ---
   FRONTEND_URL: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  REDIS_URL: z.string().default("redis://localhost:6379"),
+
+  // --- GitHub App ---
+  GITHUB_APP_ID: z.string().optional(),
+  GITHUB_PRIVATE_KEY: z.string().optional(),
+  GITHUB_PRIVATE_KEY_PATH: z.string().optional(),
+  GITHUB_WEBHOOK_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().optional(),
-  JWT_SECRET: z.string().optional(),
-  JWT_SECRETS: z.string().optional(),
-  JWT_REFRESH_TTL: z.string().optional().default("7d"),
-  TOKEN_ENCRYPTION_KEY: z.string().optional(),
-  GEMINI_API_KEY: z.string().optional(), // Added Gemini API Key
-  LOCAL_DB_HOST: z.string().optional(), // Added for local development
-  GITHUB_WEBHOOK_SECRET: z.string().optional(), // Added for PR Gate
-  REDIS_URL: z.string().optional().default("redis://localhost:6379"), // Added for BullMQ
-  GITHUB_TOKEN: z.string().optional(), // Added for PR Gate
-  GITHUB_APP_ID: z.string().optional(), // Phase 2: GitHub App
-  GITHUB_PRIVATE_KEY: z.string().optional(), // Phase 2: GitHub App
-  GITHUB_PRIVATE_KEY_PATH: z.string().optional(), // Phase 2: GitHub App (Cleaner approach)
+  GITHUB_TOKEN: z.string().optional(),
+})
+.superRefine((env, ctx) => {
+  // DB is required only in non-test environments
+  if (env.NODE_ENV !== "test") {
+    if (!env.DB_NAME) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_NAME"], message: "Required in non-test environment" });
+    if (!env.APP_DB_USER) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_USER"], message: "Required in non-test environment" });
+    if (!env.APP_DB_PASSWORD) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_PASSWORD"], message: "Required in non-test environment" });
+    if (!env.DB_HOST) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_HOST"], message: "Required in non-test environment" });
+  }
+})
+.transform((env) => {
+  const isDev = env.NODE_ENV === "development";
+  const effectiveDbHost = (isDev && env.LOCAL_DB_HOST) ? env.LOCAL_DB_HOST : env.DB_HOST;
+  
+  return {
+    ...env,
+    DB_HOST: effectiveDbHost,
+    DATABASE_URL: env.DATABASE_URL ?? (
+      (env.APP_DB_USER && env.APP_DB_PASSWORD && effectiveDbHost && env.DB_NAME) 
+        ? `postgres://${env.APP_DB_USER}:${env.APP_DB_PASSWORD}@${effectiveDbHost}:${env.DB_PORT}/${env.DB_NAME}`
+        : undefined
+    )
+  };
 });
 
+// 1. Parse and Validate
 const parsed = schema.safeParse(process.env);
+
 if (!parsed.success) {
   const errs = parsed.error.format();
   if ((process.env.NODE_ENV || "development") === "production") {
-    console.error("Env validation failed:", errs);
+    console.error("❌ Critical: Env validation failed in production:", JSON.stringify(errs, null, 2));
     throw new Error("Missing or invalid environment variables");
   }
-  console.warn("[config/env] Warning: env validation issues:", errs);
+  console.warn("⚠️ [config/env] Warning: Env validation issues found (Development):", JSON.stringify(errs, null, 2));
 }
 
-// Dynamically set DB_HOST based on NODE_ENV for local development
-const effectiveDbHost = 
-  (process.env.NODE_ENV || "development") === "development" && process.env.LOCAL_DB_HOST
-    ? process.env.LOCAL_DB_HOST
-    : process.env.DB_HOST;
+// 2. Extract Data (No partial recovery with error objects)
+const data = parsed.success ? parsed.data : process.env;
 
+/**
+ * Enterprise Config Export
+ * Pure, deterministic, and type-safe.
+ */
 const env = {
-  NODE_ENV: (process.env.NODE_ENV || "development"),
-  get: (k) => {
-    if (k === "DB_HOST") {
-      return effectiveDbHost;
-    }
-    // Special handling for DATABASE_URL for local development
-    if (k === "DATABASE_URL") {
-      // Construct DATABASE_URL using the effective DB_HOST and other DB vars
-      const user = process.env.APP_DB_USER;
-      const password = process.env.APP_DB_PASSWORD;
-      const host = effectiveDbHost;
-      const port = process.env.DB_PORT;
-      const name = process.env.DB_NAME;
-      if (!user || !password || !host || !port || !name) {
-        return undefined; // Return undefined if any critical component is missing
-      }
-      return `postgres://${user}:${password}@${host}:${port}/${name}`;
-    }
-    return process.env[k];
-  },
-  all: process.env,
+  ...data,
+  
+  /**
+   * Getter for individual keys (legacy support)
+   */
+  get: (k) => data[k],
 };
 
 export default env;

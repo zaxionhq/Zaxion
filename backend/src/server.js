@@ -1,12 +1,9 @@
 // src/server.js
-import env, { init as initEnv } from "./config/env.js";
+import env from "./config/env.js";
 import { todos } from "./controllers/admin.controller.js";
 import sequelize from "./config/sequelize.js";
 import logger from "./logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
-
-// Initialize env (validate required environment variables)
-await initEnv();
 
 // Initialize DB and get the db object
 const db = await initDb();
@@ -26,8 +23,8 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-const PORT = portArg || env.get("PORT") || 5001; // Use command line port, env PORT, or default to 5001
-const NODE_ENV = env.NODE_ENV || "development";
+const PORT = portArg || env.PORT || 5001;
+const NODE_ENV = env.NODE_ENV;
 
 // Minimal, non-sensitive env check
 const pwd = env.get("DB_PASSWORD") ? `set (len=${env.get("DB_PASSWORD").length})` : "not set";
