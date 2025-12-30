@@ -132,10 +132,10 @@ const Index = () => {
       
       setIsFileLoading(true);
       try {
-        const response = await api.get<any[]>(`/v1/github/repos/${selectedRepo.owner.login}/${selectedRepo.name}/files?path=${encodeURIComponent(activeFile)}`);
+        const response = await api.get<Record<string, unknown>[]>(`/v1/github/repos/${selectedRepo.owner.login}/${selectedRepo.name}/files?path=${encodeURIComponent(activeFile)}${selectedBranch ? `&ref=${selectedBranch}` : ''}`);
         
         if (response && response.length > 0) {
-            const fileData = response[0];
+            const fileData = response[0] as { content?: string; encoding?: string };
             let content = '';
             if (fileData.content && fileData.encoding === 'base64') {
                 content = atob(fileData.content);

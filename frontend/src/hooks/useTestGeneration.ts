@@ -463,7 +463,7 @@ export const useTestGeneration = () => {
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [handleError, handleSuccess, selectedBranch]);
+  }, [handleError, handleSuccess, selectedBranch, showIgnored]);
 
   const generateSummaries = useCallback(async (isRetry = false) => {
     if (selectedFiles.length === 0 || !selectedRepo) return;

@@ -29,11 +29,15 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
 
   // Update tabs when file changes
   React.useEffect(() => {
-    if (fileName && !tabs.find(t => t.name === fileName)) {
-      setTabs(prev => prev.map(t => ({ ...t, active: false })).concat({ name: fileName, active: true, path: filePath }));
-    } else if (fileName) {
-      setTabs(prev => prev.map(t => ({ ...t, active: t.name === fileName })));
-    }
+    setTabs(prev => {
+      const exists = prev.find(t => t.name === fileName);
+      if (fileName && !exists) {
+        return prev.map(t => ({ ...t, active: false })).concat({ name: fileName, active: true, path: filePath });
+      } else if (fileName) {
+        return prev.map(t => ({ ...t, active: t.name === fileName }));
+      }
+      return prev;
+    });
   }, [fileName, filePath]);
 
   return (
