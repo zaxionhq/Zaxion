@@ -154,7 +154,7 @@ const Index = () => {
     };
 
     fetchContent();
-  }, [activeFile, selectedRepo, setSourceFile]);
+  }, [activeFile, selectedRepo, setSourceFile, selectedBranch]);
 
   const handleGitHubConnect = () => {
     // Check if we're in mock mode
