@@ -1,5 +1,11 @@
+# Dependencies
+node_modules
+/dist
+/dist-ssr
+/build
+/out
+
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,9 +13,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.local
 
 # Editor directories and files
@@ -22,139 +31,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-
-# =========================
-# Node.js Backend .gitignore
-# =========================
-
-# Dependency directories
-node_modules/
-jspm_packages/
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Environment variables
-.env
-.env.*.local
-
-# Build output
-dist/
-build/
-.cache/
-.next/
-out/
-
-# Coverage
-coverage/
-*.lcov
-
-# Temporary files
-.tmp/
-temp/
-
-# IDE/Editor
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# OS-specific
-.DS_Store
 Thumbs.db
 
-# =========================
-# Python Backend .gitignore
-# =========================
+# TypeScript
+*.tsbuildinfo
 
-# Byte-compiled / cache
-__pycache__/
-*.py[cod]
-*$py.class
+# Vite
+vite.config.ts.timestamp-*
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Testing
+/coverage
+__snapshots__/
 
-# Virtual environments
-venv/
-ENV/
-env/
-.venv/
-.conda/
-.pyenv/
+# Linting
+.eslintcache
 
-# Environment variables
-*.env
-.env.*.local
-
-# Unit test / coverage
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
+# Misc
 .cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-*.log
-pytest_cache/
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# Django stuff
-*.sqlite3
-db.sqlite3
-media/
-staticfiles/
-
-# Flask instance folder
-instance/
-.webassets-cache
-
-# FastAPI
-__pycache__/
-*.db
-
-# IDE/Editor
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# OS-specific
-.DS_Store
-Thumbs.db
+.tmp
+temp
+lint_output.txt
