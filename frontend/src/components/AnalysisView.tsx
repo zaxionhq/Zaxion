@@ -3,7 +3,10 @@ import { FileTree, FileNode } from '@/components/FileTree';
 import { TestSummaryCard, TestSummary } from '@/components/TestSummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { Brain, FileText, ArrowRight, Loader2, GitPullRequest, Search } from 'lucide-react';
+import { PRGateStatus } from '@/components/PRGateStatus';
+import { PRDecision } from '@/hooks/usePRGate';
+import { Input } from '@/components/ui/input';
 
 interface AnalysisViewProps {
   files: FileNode[];
@@ -16,6 +19,14 @@ interface AnalysisViewProps {
   onGenerateCode: (summary: TestSummary) => void;
   isGeneratingSummaries: boolean;
   isGeneratingCode: boolean;
+  // PR Gate Props
+  prDecision: PRDecision | null;
+  isPrLoading: boolean;
+  onOverride: (reason: string) => Promise<void>;
+  repoOwner?: string;
+  repoName?: string;
+  // Manual PR fetch
+  onFetchPrDecision: (prNumber: number) => void;
 }
 
 export const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -28,8 +39,23 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
   onGenerateSummaries,
   onGenerateCode,
   isGeneratingSummaries,
-  isGeneratingCode
+  isGeneratingCode,
+  prDecision,
+  isPrLoading,
+  onOverride,
+  repoOwner,
+  repoName,
+  onFetchPrDecision
 }) => {
+  const [prNumber, setPrNumber] = React.useState<string>('');
+
+  const handleFetchClick = () => {
+    const num = parseInt(prNumber);
+    if (!isNaN(num)) {
+      onFetchPrDecision(num);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 h-[calc(100vh-80px)]">
       <div className="grid grid-cols-12 gap-6 h-full">
@@ -57,6 +83,39 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
 
         {/* Right Panel: Analysis & Generation */}
         <div className="col-span-8 flex flex-col h-full space-y-4 overflow-hidden">
+           {/* PR Gate Status Fetcher */}
+           <Card className="bg-muted/30 border-dashed">
+             <CardContent className="p-4 flex items-center gap-4">
+               <div className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
+                 <GitPullRequest className="h-4 w-4 text-primary" />
+                 PR Gate Status:
+               </div>
+               <div className="flex items-center gap-2 flex-1 max-w-xs">
+                 <Input 
+                   placeholder="Enter PR Number (e.g. 123)" 
+                   value={prNumber} 
+                   onChange={(e) => setPrNumber(e.target.value)}
+                   className="h-8 text-xs"
+                 />
+                 <Button size="sm" variant="secondary" className="h-8 px-3" onClick={handleFetchClick} disabled={isPrLoading}>
+                   {isPrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                 </Button>
+               </div>
+               <p className="text-[10px] text-muted-foreground italic">
+                 Enter a Pull Request number to check its quality gate status and execute overrides.
+               </p>
+             </CardContent>
+           </Card>
+
+           {/* PR Gate Status (If available) */}
+           {(prDecision || isPrLoading) && (
+             <PRGateStatus 
+               decision={prDecision} 
+               isLoading={isPrLoading} 
+               onOverride={onOverride} 
+             />
+           )}
+
            {/* If no summaries yet, show call to action */}
            {testSummaries.length === 0 ? (
              <Card className="flex-1 flex flex-col items-center justify-center border-dashed shadow-none bg-muted/10">

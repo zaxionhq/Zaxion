@@ -19,6 +19,8 @@ import { useSession } from '@/hooks/useSession';
 import { useFileTreeState } from '@/hooks/useFileTreeState';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { api } from '@/lib/api';
+import { usePRGate } from '@/hooks/usePRGate';
+import { Input } from '@/components/ui/input';
 
 const Index = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -26,6 +28,10 @@ const Index = () => {
   const [editedCode, setEditedCode] = useState<string>(''); // New state for edited code
   const [isChatbotOpen, setIsChatbotOpen] = useState(false); // New state for chatbot
   const [isDemoMode, setIsDemoMode] = useState(import.meta.env.VITE_MOCK === 'true'); // Demo mode state
+  const [prNumberInput, setPrNumberInput] = useState<string>(''); // State for manual PR number entry
+
+  // PR Gate Hook
+  const { latestDecision, isLoading: isPrLoading, fetchLatestDecision, executeOverride } = usePRGate();
 
   // Review Store
   const { setSourceFile, setTestFile, setIsReviewing } = useReviewStore();
@@ -309,6 +315,19 @@ const Index = () => {
     setIsChatbotOpen(false);
   };
 
+  const handleFetchDecision = async (prNum: number) => {
+    if (selectedRepo) {
+      setPrNumberInput(prNum.toString());
+      await fetchLatestDecision(selectedRepo.owner.login, selectedRepo.name, prNum);
+    }
+  };
+
+  const handleOverride = async (reason: string) => {
+    if (selectedRepo && prNumberInput) {
+      await executeOverride(selectedRepo.owner.login, selectedRepo.name, parseInt(prNumberInput), reason);
+    }
+  };
+
   const steps = [
     { id: 'connect', title: 'Connect GitHub', completed: isConnected },
     { id: 'repo-selection', title: 'Select Repository', completed: currentStep !== 'connect' && currentStep !== 'repo-selection' },
@@ -500,17 +519,23 @@ const Index = () => {
            
            <div className="flex-1 overflow-hidden">
              <AnalysisView 
-               files={files}
-               selectedFiles={new Set(selectedFiles)}
-               onSelectionChange={(newSet) => setSelectedFiles(Array.from(newSet))}
-               expandedFolders={expandedFolders}
-               onToggleFolder={toggleFolder}
-               testSummaries={testSummaries}
-               onGenerateSummaries={handleGenerateSummaries}
-               onGenerateCode={handleGenerateCode}
-               isGeneratingSummaries={isGeneratingSummaries}
-               isGeneratingCode={isGeneratingCode}
-             />
+                files={files}
+                selectedFiles={new Set(selectedFiles)}
+                onSelectionChange={(newSet) => setSelectedFiles(Array.from(newSet))}
+                expandedFolders={expandedFolders}
+                onToggleFolder={toggleFolder}
+                testSummaries={testSummaries}
+                onGenerateSummaries={handleGenerateSummaries}
+                onGenerateCode={handleGenerateCode}
+                isGeneratingSummaries={isGeneratingSummaries}
+                isGeneratingCode={isGeneratingCode}
+                prDecision={latestDecision}
+                isPrLoading={isPrLoading}
+                onOverride={handleOverride}
+                 repoOwner={selectedRepo?.owner.login}
+                 repoName={selectedRepo?.name}
+                 onFetchPrDecision={handleFetchDecision}
+               />
            </div>
         </div>
       </div>
