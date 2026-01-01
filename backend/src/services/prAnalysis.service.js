@@ -66,7 +66,7 @@ export class PrAnalysisService {
                 repo, 
                 prNumber, 
                 headSha, 
-                policyVersion: policyEngine.VERSION
+                policyVersion: policyEngine.POLICY_VERSION
               },
               type: sequelize.QueryTypes.INSERT,
               transaction: t
@@ -128,8 +128,8 @@ export class PrAnalysisService {
         {
           replacements: {
             decision: decisionObject.decision,
-            reason: decisionObject.reason,
-            rawData: JSON.stringify(decisionObject.raw_data),
+            reason: decisionObject.decisionReason,
+            rawData: JSON.stringify(decisionObject),
             policyVersion: decisionObject.policy_version,
             owner,
             repo,
@@ -158,7 +158,7 @@ export class PrAnalysisService {
       }
 
       // D. Report Final Status to GitHub
-      await reporter.reportStatus(owner, repo, headSha, decisionObject.decision, decisionObject.reason);
+      await reporter.reportStatus(owner, repo, headSha, decisionObject.decision, decisionObject.decisionReason);
       
       console.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
 

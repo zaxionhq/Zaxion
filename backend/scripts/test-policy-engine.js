@@ -21,7 +21,7 @@ async function runTests() {
         categories: { highRisk: [], tests: [], other: ["src/ui/Button.js"] },
         totalChanges: 1
       },
-      metadata: { baseBranch: "main" },
+      metadata: { owner: "org", repo: "payments", prNumber: 1, baseBranch: "main" },
       expected: "PASS"
     },
     {
@@ -30,7 +30,7 @@ async function runTests() {
         categories: { highRisk: ["src/auth/login.js"], tests: [], other: [] },
         totalChanges: 1
       },
-      metadata: { baseBranch: "main" },
+      metadata: { owner: "org", repo: "payments", prNumber: 2, baseBranch: "main" },
       expected: "BLOCK"
     },
     {
@@ -83,9 +83,12 @@ async function runTests() {
     
     if (result.decision === scenario.expected) {
       console.log(`  ✅ Passed (Got ${result.decision})`);
+      if (scenario.expected === "BLOCK") {
+        console.log("  Sample Decision Object (BLOCKED):", JSON.stringify(result, null, 2));
+      }
     } else {
       console.error(`  ❌ FAILED (Expected ${scenario.expected}, Got ${result.decision})`);
-      console.error("  Reason:", result.reason);
+      console.error("  Reason:", result.decisionReason);
     }
     console.log("---------------------------------------------------");
   }
