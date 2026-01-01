@@ -1,14 +1,15 @@
 // src/routes/github.routes.js
 import { Router } from "express";
 import { requireGithub } from "../middleware/auth.js";
-import * as githubController from "../controllers/github.controller.js";
-import authControllerFactory from "../controllers/auth.controller.js"; // Import authControllerFactory
+import githubControllerFactory from "../controllers/github.controller.js";
+import authControllerFactory from "../controllers/auth.controller.js";
 import { validate } from "../middleware/zodValidate.js";
-import { listRepoFilesQuery, getRepoTreeQuery, createPrBody } from "../schemas/github.schema.js";
+import { listRepoFilesQuery, getRepoTreeQuery, createPrBody, executeOverrideBody } from "../schemas/github.schema.js";
 
 export default function githubRoutesFactory(db) {
   const router = Router();
-  const authController = authControllerFactory(db); // Instantiate authController
+  const authController = authControllerFactory(db);
+  const githubController = githubControllerFactory(db);
 
   // List authenticated user's repos
   router.get("/repos", requireGithub, githubController.listRepos);
@@ -37,11 +38,25 @@ export default function githubRoutesFactory(db) {
   );
 
   // Create PR with test cases
+  router.get(
+    "/repos/:owner/:repo/pr/:prNumber/decision",
+    requireGithub,
+    githubController.getLatestDecision
+  );
+
   router.post(
     "/repos/:owner/:repo/pr",
     validate({ body: createPrBody }),
     requireGithub,
     githubController.createPullRequestWithFiles
+  );
+
+  // Manual Override for PR Gate
+  router.post(
+    "/repos/:owner/:repo/pr/:prNumber/override",
+    validate({ body: executeOverrideBody }),
+    requireGithub,
+    githubController.executeOverride
   );
 
   return router;

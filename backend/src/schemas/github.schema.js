@@ -15,3 +15,8 @@ export const createPrBody = z.object({
   files: z.array(z.object({ path: z.string(), content: z.string() })).optional(),
   baseBranch: z.string().optional(),
 });
+
+export const executeOverrideBody = z.object({
+  reason: z.string().min(10, "Justification must be at least 10 characters long"),
+  role: z.string().optional(), // In a real app, this would be verified against user sessions
+});
