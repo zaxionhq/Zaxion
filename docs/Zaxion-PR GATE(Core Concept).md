@@ -1,4 +1,4 @@
-# Axion PR GATE (The Core Concept)
+# Zaxion PR GATE (The Core Concept)
 
 You built **Step 2 of a product before Step 1 existed**.
 
@@ -388,7 +388,7 @@ Status message example:
 > 
 > Missing tests detected for billing logic
 > 
-> → Open in Git Code Guru
+> → Open in Zaxion
 > 
 
 That link opens your existing workspace **preloaded**.
@@ -705,7 +705,7 @@ Now plug in what you already built.
     - Suggested tests (from AI analysis)
 - Add link:
     
-    > “Fix with Git Code Guru”
+    > “Fix with Zaxion”
     > 
 
 Now your UI becomes **mandatory**, not optional.
@@ -1621,4 +1621,4 @@ Frontend:
 - frontend/src/views/AnalysisView.tsx
 
 Docs:
-- docs/Axion-PR GATE(Core Concept).md
+- docs/Zaxion-PR GATE(Core Concept).md

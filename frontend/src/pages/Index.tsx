@@ -31,7 +31,7 @@ const Index = () => {
   const [prNumberInput, setPrNumberInput] = useState<string>(''); // State for manual PR number entry
 
   // PR Gate Hook
-  const { latestDecision, isLoading: isPrLoading, fetchLatestDecision, executeOverride } = usePRGate();
+  const { latestDecision, isLoading: isPrLoading, fetchLatestDecision, fetchDecisionById, executeOverride } = usePRGate();
 
   // Review Store
   const { setSourceFile, setTestFile, setIsReviewing } = useReviewStore();
@@ -322,6 +322,10 @@ const Index = () => {
     }
   };
 
+  const handleFetchDecisionById = async (id: number) => {
+    await fetchDecisionById(id);
+  };
+
   const handleOverride = async (reason: string) => {
     if (selectedRepo && prNumberInput) {
       await executeOverride(selectedRepo.owner.login, selectedRepo.name, parseInt(prNumberInput), reason);
@@ -532,10 +536,11 @@ const Index = () => {
                 prDecision={latestDecision}
                 isPrLoading={isPrLoading}
                 onOverride={handleOverride}
-                 repoOwner={selectedRepo?.owner.login}
-                 repoName={selectedRepo?.name}
-                 onFetchPrDecision={handleFetchDecision}
-               />
+                repoOwner={selectedRepo?.owner.login}
+                repoName={selectedRepo?.name}
+                onFetchPrDecision={handleFetchDecision}
+                onFetchDecisionById={handleFetchDecisionById}
+              />
            </div>
         </div>
       </div>

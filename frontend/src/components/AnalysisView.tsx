@@ -27,6 +27,7 @@ interface AnalysisViewProps {
   repoName?: string;
   // Manual PR fetch
   onFetchPrDecision: (prNumber: number) => void;
+  onFetchDecisionById: (decisionId: number) => void;
 }
 
 export const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -45,14 +46,23 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
   onOverride,
   repoOwner,
   repoName,
-  onFetchPrDecision
+  onFetchPrDecision,
+  onFetchDecisionById
 }) => {
   const [prNumber, setPrNumber] = React.useState<string>('');
+  const [decisionId, setDecisionId] = React.useState<string>('');
 
   const handleFetchClick = () => {
     const num = parseInt(prNumber);
     if (!isNaN(num)) {
       onFetchPrDecision(num);
+    }
+  };
+
+  const handleFetchByIdClick = () => {
+    const num = parseInt(decisionId);
+    if (!isNaN(num)) {
+      onFetchDecisionById(num);
     }
   };
 
@@ -85,24 +95,44 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({
         <div className="col-span-8 flex flex-col h-full space-y-4 overflow-hidden">
            {/* PR Gate Status Fetcher */}
            <Card className="bg-muted/30 border-dashed">
-             <CardContent className="p-4 flex items-center gap-4">
-               <div className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
-                 <GitPullRequest className="h-4 w-4 text-primary" />
-                 PR Gate Status:
-               </div>
-               <div className="flex items-center gap-2 flex-1 max-w-xs">
-                 <Input 
-                   placeholder="Enter PR Number (e.g. 123)" 
-                   value={prNumber} 
-                   onChange={(e) => setPrNumber(e.target.value)}
-                   className="h-8 text-xs"
-                 />
-                 <Button size="sm" variant="secondary" className="h-8 px-3" onClick={handleFetchClick} disabled={isPrLoading}>
-                   {isPrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
-                 </Button>
+             <CardContent className="p-4 flex flex-col gap-4">
+               <div className="flex items-center gap-4 w-full">
+                 <div className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
+                   <GitPullRequest className="h-4 w-4 text-primary" />
+                   Fetch by PR:
+                 </div>
+                 <div className="flex items-center gap-2 flex-1 max-w-[180px]">
+                   <Input 
+                     placeholder="PR #" 
+                     value={prNumber} 
+                     onChange={(e) => setPrNumber(e.target.value)}
+                     className="h-8 text-xs"
+                   />
+                   <Button size="sm" variant="secondary" className="h-8 px-3" onClick={handleFetchClick} disabled={isPrLoading}>
+                     {isPrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                   </Button>
+                 </div>
+                 
+                 <div className="h-4 w-px bg-border mx-2" />
+
+                 <div className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
+                   <Shield className="h-4 w-4 text-primary" />
+                   Fetch by Decision ID:
+                 </div>
+                 <div className="flex items-center gap-2 flex-1 max-w-[180px]">
+                   <Input 
+                     placeholder="Decision ID" 
+                     value={decisionId} 
+                     onChange={(e) => setDecisionId(e.target.value)}
+                     className="h-8 text-xs"
+                   />
+                   <Button size="sm" variant="secondary" className="h-8 px-3" onClick={handleFetchByIdClick} disabled={isPrLoading}>
+                     {isPrLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+                   </Button>
+                 </div>
                </div>
                <p className="text-[10px] text-muted-foreground italic">
-                 Enter a Pull Request number to check its quality gate status and execute overrides.
+                 Analyze a Pull Request or a specific Decision ID to see the Zaxion Guard status and follow the Resolution Path.
                </p>
              </CardContent>
            </Card>

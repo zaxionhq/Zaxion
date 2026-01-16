@@ -5,7 +5,7 @@
 export class GitHubReporterService {
   constructor(octokit) {
     this.octokit = octokit;
-    this.CHECK_NAME = "git-code-guru/pr-gate";
+    this.CHECK_NAME = "Zaxion/pr-gate";
   }
 
   /**
@@ -66,10 +66,10 @@ export class GitHubReporterService {
       const frontendUrl = process.env.FRONTEND_URL || "https://git-code-guru.app";
       const deepLink = `${frontendUrl}/workspace?repo=${repo}&owner=${owner}&pr=${prNumber}&sha=${headSha}`;
       
-      summary = `### ${title}\n${description}\n\n[🔍 Fix with Git Code Guru](${deepLink})`;
+      summary = `### ${title}\n${description}\n\n[🔍 Fix with Zaxion](${deepLink})`;
 
       // Build detailed policy breakdown
-      text = `## 🛡️ Policy Evaluation Report\n`;
+      text = `## 🛡️ Zaxion Policy Evaluation Report\n`;
       text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n`;
       text += `**Decision:** ${decisionState}\n`;
       text += `**Timestamp:** ${new Date().toISOString()}\n\n`;
@@ -82,7 +82,7 @@ export class GitHubReporterService {
       }
 
       if (decisionObject.advisor && decisionObject.advisor.status !== "ERROR") {
-        text += `### 💡 AI Advisor Insights (Non-Gating)\n`;
+        text += `### 💡 Zaxion Advisor Insights (Non-Gating)\n`;
         text += `> ${decisionObject.advisor.rationale}\n\n`;
         
         if (decisionObject.advisor.suggestedTestIntents?.length > 0) {
@@ -94,7 +94,7 @@ export class GitHubReporterService {
         }
       }
 
-      text += `---\n*This report was generated automatically by Axion-PR GATE. Decisions are deterministic and based on project-defined policies.*`;
+      text += `---\n*This report was generated automatically by Zaxion-PR GATE. Decisions are deterministic and based on project-defined policies.*`;
     }
 
     try {

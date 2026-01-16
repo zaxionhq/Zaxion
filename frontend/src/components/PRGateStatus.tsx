@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History, CheckCircle2, ListChecks, FileCode, Lightbulb } from 'lucide-react';
 import { PRDecision, DecisionObject } from '@/hooks/usePRGate';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -24,7 +24,7 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
       <Card className="animate-pulse">
         <CardContent className="p-6 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>Loading Quality Gate Status...</span>
+          <span>Loading Zaxion Guard Status...</span>
         </CardContent>
       </Card>
     );
@@ -70,11 +70,16 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {getStatusIcon()}
-            <CardTitle className="text-lg">Quality Gate: {decision.decision.replace('_', ' ')}</CardTitle>
+            <CardTitle className="text-lg">Zaxion Guard: {decision.decision.replace('_', ' ')}</CardTitle>
           </div>
-          <Badge variant={isPassed ? "default" : isBlocked ? "destructive" : "outline"} className="capitalize">
-            {data.evaluationStatus}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono text-[10px] bg-background/50">
+              ID: {decision.id}
+            </Badge>
+            <Badge variant={isPassed ? "default" : isBlocked ? "destructive" : "outline"} className="capitalize">
+              {data.evaluationStatus}
+            </Badge>
+          </div>
         </div>
         <CardDescription className="font-medium mt-1">
           {decision.decisionReason}
@@ -83,25 +88,80 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
       <CardContent className="space-y-4">
         <Alert variant="default" className="bg-background/50 border-none">
           <Brain className="h-4 w-4" />
-          <AlertTitle>AI Advisor Rationale</AlertTitle>
+          <AlertTitle>Zaxion Advisor Insights</AlertTitle>
           <AlertDescription className="text-sm italic">
             "{data.advisor.rationale}"
           </AlertDescription>
         </Alert>
+
+        {/* Resolution Path Checklist */}
+        {(isBlocked || isWarning) && (
+          <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 space-y-3">
+            <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+              <ListChecks className="h-4 w-4" />
+              Resolution Path
+            </h4>
+            <div className="space-y-3">
+              {/* 1. Policy Step */}
+              <div className="flex gap-3">
+                <div className="mt-0.5">
+                  {isPassed ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <div className="h-4 w-4 rounded-full border-2 border-primary/30" />}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Step 1: Policy Compliance</p>
+                  <p className="text-[11px] text-muted-foreground">{decision.decisionReason}</p>
+                </div>
+              </div>
+
+              {/* 2. File Step */}
+              <div className="flex gap-3">
+                <div className="mt-0.5">
+                  <div className="h-4 w-4 rounded-full border-2 border-primary/30" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Step 2: Affected Files</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {data.facts.changedFiles.slice(0, 3).map((f, i) => (
+                      <Badge key={i} variant="outline" className="text-[9px] py-0 px-1 font-mono">
+                        {f.split('/').pop()}
+                      </Badge>
+                    ))}
+                    {data.facts.changedFiles.length > 3 && (
+                      <span className="text-[9px] text-muted-foreground">+{data.facts.changedFiles.length - 3} more</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Intent Step */}
+              <div className="flex gap-3">
+                <div className="mt-0.5">
+                  <div className="h-4 w-4 rounded-full border-2 border-primary/30" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Step 3: Resolve with Intent</p>
+                  <p className="text-[11px] text-muted-foreground italic">"Analyze these files to generate missing tests and satisfy the Zaxion Guard."</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-current/10">
           <div className="flex items-center gap-4">
             <span>Risk: <Badge variant="outline" className="text-[10px] h-4">{data.advisor.riskAssessment.riskLevel}</Badge></span>
             <span>Policy: v{decision.policy_version || '1.0.0'}</span>
           </div>
-          <span>Decision ID: #{decision.id}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] opacity-70">SHA: {decision.commit_sha.substring(0, 7)}</span>
+          </div>
         </div>
 
         {isOverridden && data.override && (
           <div className="mt-4 p-3 rounded-md bg-amber-500/5 border border-amber-500/20 space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <History className="h-4 w-4" />
-              Bypass History
+              Zaxion Ledger: Bypass History
             </div>
             <p className="text-xs italic">"{data.override.justification}"</p>
             <div className="flex justify-between text-[10px] opacity-70">
@@ -117,14 +177,14 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Lock className="h-3 w-3" />
-                  Override Gate
+                  Zaxion Bypass
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Manual Quality Gate Override</DialogTitle>
+                  <DialogTitle>Zaxion Guard: Manual Bypass</DialogTitle>
                   <DialogDescription>
-                    Bypassing the quality gate is an audited action. Please provide a clear justification for this override.
+                    Bypassing the quality gate is an audited action recorded in the Zaxion Ledger. Please provide a clear justification.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -152,7 +212,7 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
                     onClick={handleOverrideSubmit}
                   >
                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Unlock className="h-4 w-4 mr-2" />}
-                    Confirm Bypass
+                    Confirm Zaxion Bypass
                   </Button>
                 </DialogFooter>
               </DialogContent>

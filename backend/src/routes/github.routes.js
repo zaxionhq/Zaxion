@@ -44,6 +44,12 @@ export default function githubRoutesFactory(db) {
     githubController.getLatestDecision
   );
 
+  router.get(
+    "/decisions/:decisionId",
+    requireGithub,
+    githubController.getDecisionById
+  );
+
   router.post(
     "/repos/:owner/:repo/pr",
     validate({ body: createPrBody }),

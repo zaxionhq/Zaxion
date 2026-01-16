@@ -126,7 +126,7 @@ export class PolicyEngineService {
     }
 
     // UI Path to Resolution (This is a deterministic UI contract)
-    const fixLink = `https://git-code-guru.app/workspace?repo=${metadata.repo}&owner=${metadata.owner}&pr=${metadata.prNumber}`;
+    const fixLink = `https://zaxion.app/workspace?repo=${metadata.repo}&owner=${metadata.owner}&pr=${metadata.prNumber}`;
 
     const decisionObject = {
       repo: `${metadata.owner}/${metadata.repo}`,

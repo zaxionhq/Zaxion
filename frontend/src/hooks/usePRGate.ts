@@ -20,6 +20,18 @@ export interface DecisionObject {
   decision: string;
   evaluationStatus: string;
   decisionReason: string;
+  policy_version: string;
+  facts: {
+    changedFiles: string[];
+    testFilesAdded: number;
+    affectedAreas: string[];
+    totalChanges: number;
+    isMainBranch: boolean;
+    hasCriticalChanges: boolean;
+  };
+  ui: {
+    fix_link: string;
+  };
   advisor: {
     rationale: string;
     riskAssessment: {
@@ -45,18 +57,33 @@ export const usePRGate = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Assuming we have an endpoint for this, if not we'll need to create one or use a general query
-      // For now, let's assume /v1/github/repos/:owner/:repo/pr/:prNumber/decision
       const response = await api.get<PRDecision>(`/v1/github/repos/${owner}/${repo}/pr/${prNumber}/decision`);
       setLatestDecision(response);
       return response;
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || 'Failed to fetch PR decision');
-      // Don't show toast for 404 as it might just mean no decision yet
       if (apiErr.status !== 404) {
         handleError(err as Error, 'Fetch Decision Failed');
       }
+      setLatestDecision(null);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleError]);
+
+  const fetchDecisionById = useCallback(async (decisionId: number) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await api.get<PRDecision>(`/v1/github/decisions/${decisionId}`);
+      setLatestDecision(response);
+      return response;
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr.message || 'Failed to fetch PR decision by ID');
+      handleError(err as Error, 'Fetch Decision by ID Failed');
       setLatestDecision(null);
       return null;
     } finally {
@@ -88,6 +115,7 @@ export const usePRGate = () => {
     isLoading,
     error,
     fetchLatestDecision,
+    fetchDecisionById,
     executeOverride
   };
 };

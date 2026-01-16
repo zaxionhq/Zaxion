@@ -260,6 +260,37 @@ export default function githubControllerFactory(db) {
     },
 
     /**
+     * Get a specific PR decision by ID.
+     * GET /api/v1/github/decisions/:decisionId
+     */
+    getDecisionById: async (req, res, next) => {
+      try {
+        const { decisionId } = req.params;
+        
+        const [decision] = await db.sequelize.query(
+          `SELECT d.*, o.user_login as override_by, o.override_reason, o.created_at as overridden_at
+           FROM pr_decisions d
+           LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
+           WHERE d.id = :decisionId 
+           LIMIT 1`,
+          {
+            replacements: { decisionId },
+            type: db.sequelize.QueryTypes.SELECT
+          }
+        );
+
+        if (!decision) {
+          return res.status(404).json({ error: "Decision not found" });
+        }
+
+        res.status(200).json(decision);
+      } catch (err) {
+        console.error("getDecisionById error", err);
+        next(err);
+      }
+    },
+
+    /**
      * Get the latest PR decision for a specific PR.
      * GET /api/v1/github/repos/:owner/:repo/pr/:prNumber/decision
      */
