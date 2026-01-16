@@ -268,9 +268,11 @@ export default function githubControllerFactory(db) {
         const { owner, repo, prNumber } = req.params;
         
         const [decision] = await db.sequelize.query(
-          `SELECT * FROM pr_decisions 
-           WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber 
-           ORDER BY created_at DESC LIMIT 1`,
+          `SELECT d.*, o.user_login as override_by, o.override_reason, o.created_at as overridden_at
+           FROM pr_decisions d
+           LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
+           WHERE d.repo_owner = :owner AND d.repo_name = :repo AND d.pr_number = :prNumber 
+           ORDER BY d.created_at DESC LIMIT 1`,
           {
             replacements: { owner, repo, prNumber },
             type: db.sequelize.QueryTypes.SELECT
@@ -320,8 +322,19 @@ export default function githubControllerFactory(db) {
           return res.status(404).json({ error: "No PR decision found to override" });
         }
 
-        // --- PHASE 4 HARDENING: Replay Protection ---
-        if (decision.decision === "OVERRIDDEN_PASS") {
+        // --- PHASE 4 HARDENING: Immutability Check ---
+        // We no longer check if decision.decision === "OVERRIDDEN_PASS"
+        // Instead, we check if an override already exists in the pr_overrides table
+        const [existingOverride] = await db.sequelize.query(
+          `SELECT id FROM pr_overrides WHERE pr_decision_id = :id LIMIT 1`,
+          {
+            replacements: { id: decision.id },
+            type: db.sequelize.QueryTypes.SELECT,
+            transaction
+          }
+        );
+
+        if (existingOverride) {
           await transaction.rollback();
           return res.status(400).json({ 
             error: "Override already exists", 
@@ -375,29 +388,9 @@ export default function githubControllerFactory(db) {
           });
         }
 
-        // 2. Update decision status
-        const rawData = JSON.parse(decision.raw_data);
-        rawData.decision = "OVERRIDDEN_PASS";
-        rawData.override = {
-          executed: true,
-          by: user.login || user.email,
-          role,
-          justification: reason,
-          timestamp: new Date().toISOString()
-        };
-
-        await db.sequelize.query(
-          `UPDATE pr_decisions 
-           SET decision = 'OVERRIDDEN_PASS', raw_data = :rawData, updated_at = NOW()
-           WHERE id = :id`,
-          {
-            replacements: { id: decision.id, rawData: JSON.stringify(rawData) },
-            type: db.sequelize.QueryTypes.UPDATE,
-            transaction
-          }
-        );
-
-        // 3. Log to overrides table
+        // 2. Log to overrides table (The Authoritative Ledger for Bypasses)
+        // Hardened: We DO NOT update pr_decisions. That table is frozen for audit.
+        // The pr_overrides table is the append-only log of human intervention.
         await db.sequelize.query(
           `INSERT INTO pr_overrides (pr_decision_id, user_login, override_reason, created_at)
            VALUES (:decisionId, :userLogin, :reason, NOW())`,
@@ -413,19 +406,17 @@ export default function githubControllerFactory(db) {
         );
 
         // 4. Update GitHub Check Run
-        const token = req.githubToken;
-        if (token) {
-          const octokit = getOctokit(token);
-          const reporter = new GitHubReporterService(octokit);
-          await reporter.reportStatus(
-            owner,
-            repo,
-            decision.commit_sha,
-            "OVERRIDDEN_PASS",
-            `Override authorized by ${user.login || user.email}`,
-            `### ⚠️ Bypass Authorized\n\n**Justification:** ${reason}\n\n**Authorized by:** ${user.login || user.email} (${role})`
-          );
-        }
+        const reporter = new GitHubReporterService(octokit);
+        await reporter.reportStatus(
+          owner,
+          repo,
+          decision.commit_sha,
+          "OVERRIDDEN_PASS",
+          { 
+            description: `Override authorized by ${user.login || user.email}`,
+            prNumber: decision.pr_number
+          }
+        );
 
         await transaction.commit();
         res.status(200).json({

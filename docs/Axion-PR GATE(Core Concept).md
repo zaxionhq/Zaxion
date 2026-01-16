@@ -724,8 +724,6 @@ To ensure this system is ready for high-compliance environments, we have refined
 4.  **Enterprise Overrides**: Replaced the simple `overrideAllowed` boolean with a structured `override` object. This defines which roles (e.g., `REPO_ADMIN`) can override and requires a justification for audit logs.
 5.  **Storage Integrity**: The system now stores the entire Decision Object in a `raw_data` column (JSONB) while maintaining indexed columns (`repo_owner`, `repo_name`, `pr_number`, `decision`, `policy_version`) for rapid searching and analytics.
 
----
-
 ## 🚀 Phase 4 Roadmap: Known Gaps & Future Hardening (COMPLETED)
 
 Phase 4 hardening is now fully implemented. The system now enforces enterprise-grade security and auditability:
@@ -741,6 +739,34 @@ Phase 4 hardening is now fully implemented. The system now enforces enterprise-g
 ### ✅ 3. UI Override Flow
 *   **Status**: COMPLETED
 *   **Implementation**: A full UI flow is now available in the [AnalysisView](file:///c:/Users/hamza/OneDrive/Desktop/hamza/frontend/src/components/AnalysisView.tsx). Users can enter a PR number to fetch its current Quality Gate status and, if authorized, provide a justification to bypass blocks via the [PRGateStatus](file:///c:/Users/hamza/OneDrive/Desktop/hamza/frontend/src/components/PRGateStatus.tsx) component.
+
+---
+
+## 🛠️ Phase 3 Implementation Progress: Decision Intelligence
+
+Phase 3 transforms PR GATE into an actionable, auditable platform.
+
+### ✅ Step 1: Policy/Advisor Separation
+*   **Status**: COMPLETED
+*   **Architecture**: Split `PolicyEngineService` (deterministic judge) and `AdvisorService` (non-gating AI advisor).
+*   **Guarantee**: AI failures or non-determinism can no longer influence the binary PASS/BLOCK decision.
+
+### ✅ Step 2: Hardening the Decision Object
+*   **Status**: COMPLETED
+*   **Implementation**: Added DB-level triggers to enforce immutability of `FINAL` decisions. Implemented append-only `pr_overrides` for audit integrity.
+*   **Guarantee**: Once a decision is reached, it is frozen in time for auditors.
+
+### ✅ Step 3: Enriched GitHub Reporting
+*   **Status**: COMPLETED
+*   **Implementation**: GitHub Check Runs now include rich markdown reports, policy facts, AI advisor resolution intents, and deep-links back to the UI.
+*   **Guarantee**: Developers get immediate resolution context without leaving GitHub.
+
+### ⏳ Step 4: Resolution Dashboard UI
+*   **Status**: PENDING (Waiting for Signal)
+*   **Goal**: Implement the "Fix Path" checklist (Policy Violation -> Affected File -> Suggested Intent).
+*   **Critical Requirement**: Deep links must internally resolve `commitSha` → `decisionId`. The UI must ultimately anchor on the **immutable `decisionId`** to ensure time-travel safety, as a single SHA may have multiple decisions over its lifecycle.
+
+---
 
 ---
 

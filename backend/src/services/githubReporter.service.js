@@ -9,15 +9,18 @@ export class GitHubReporterService {
   }
 
   /**
-   * Report status to GitHub Checks API
+   * Report status to GitHub Checks API with rich intelligence
    * @param {string} owner 
    * @param {string} repo 
    * @param {string} headSha 
-   * @param {string} decisionState - PENDING, PASS, BLOCK, WARN, OVERRIDDEN_PASS
-   * @param {string} description - Summary text
-   * @param {object} details - Optional detailed markdown output
+   * @param {object} decisionObject - Full deterministic decision
+   * @param {object} metadata - Extra context (prNumber, etc)
    */
-  async reportStatus(owner, repo, headSha, decisionState, description, details = "") {
+  async reportStatus(owner, repo, headSha, decisionObject, metadata = {}) {
+    const decisionState = typeof decisionObject === 'string' ? decisionObject : decisionObject.decision;
+    const description = typeof decisionObject === 'string' ? metadata.description || "" : decisionObject.decisionReason;
+    const prNumber = metadata.prNumber || decisionObject.prNumber;
+
     let status = "completed";
     let conclusion = "neutral";
     let title = "Gateway Analysis";
@@ -26,7 +29,7 @@ export class GitHubReporterService {
     switch (decisionState) {
       case "PENDING":
         status = "in_progress";
-        conclusion = null; // Conclusion is null when in_progress
+        conclusion = null;
         title = "Analyzing Risk...";
         break;
       case "BLOCK":
@@ -51,13 +54,51 @@ export class GitHubReporterService {
         break;
       default:
         status = "completed";
-        conclusion = "failure"; // Fail closed on unknown state
+        conclusion = "failure";
         title = "System Error";
-        description = "Unknown decision state.";
+    }
+
+    // 0. Build Rich Markdown Output (Step 3: Enriched Reporting)
+    let summary = description;
+    let text = "";
+
+    if (typeof decisionObject === 'object') {
+      const frontendUrl = process.env.FRONTEND_URL || "https://git-code-guru.app";
+      const deepLink = `${frontendUrl}/workspace?repo=${repo}&owner=${owner}&pr=${prNumber}&sha=${headSha}`;
+      
+      summary = `### ${title}\n${description}\n\n[🔍 Fix with Git Code Guru](${deepLink})`;
+
+      // Build detailed policy breakdown
+      text = `## 🛡️ Policy Evaluation Report\n`;
+      text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n`;
+      text += `**Decision:** ${decisionState}\n`;
+      text += `**Timestamp:** ${new Date().toISOString()}\n\n`;
+
+      if (decisionObject.facts) {
+        text += `### 📊 Facts Observed\n`;
+        text += `- **Total Changes:** ${decisionObject.facts.totalChanges || 0} files\n`;
+        text += `- **High Risk Changes:** ${decisionObject.facts.hasCriticalChanges ? '✅ Yes' : '❌ No'}\n`;
+        text += `- **Tests Added:** ${decisionObject.facts.testFilesAdded || 0}\n\n`;
+      }
+
+      if (decisionObject.advisor && decisionObject.advisor.status !== "ERROR") {
+        text += `### 💡 AI Advisor Insights (Non-Gating)\n`;
+        text += `> ${decisionObject.advisor.rationale}\n\n`;
+        
+        if (decisionObject.advisor.suggestedTestIntents?.length > 0) {
+          text += `**Suggested Test Intents:**\n`;
+          decisionObject.advisor.suggestedTestIntents.forEach(intent => {
+            text += `- [ ] **${intent.file}**: ${intent.intent}\n`;
+          });
+          text += `\n`;
+        }
+      }
+
+      text += `---\n*This report was generated automatically by Axion-PR GATE. Decisions are deterministic and based on project-defined policies.*`;
     }
 
     try {
-      // 1. Check if a Check Run already exists for this SHA and name
+      // 1. Check if a Check Run already exists
       const { data: { check_runs } } = await this.octokit.checks.listForRef({
         owner,
         repo,
@@ -68,7 +109,6 @@ export class GitHubReporterService {
       const existingCheck = check_runs.find(cr => cr.name === this.CHECK_NAME);
 
       if (existingCheck) {
-        // Update existing check
         const updateParams = {
           owner,
           repo,
@@ -76,20 +116,17 @@ export class GitHubReporterService {
           status,
           output: {
             title,
-            summary: description,
-            text: details
+            summary,
+            text
           }
         };
 
-        // GitHub forbids 'conclusion' when status is not 'completed'
         if (status === "completed") {
           updateParams.conclusion = conclusion;
         }
 
         await this.octokit.checks.update(updateParams);
-        console.log(`[GitHubReporter] Updated check ${existingCheck.id} to ${decisionState} for ${owner}/${repo}`);
       } else {
-        // Create new check
         const createParams = {
           owner,
           repo,
@@ -98,22 +135,19 @@ export class GitHubReporterService {
           status,
           output: {
             title,
-            summary: description,
-            text: details
+            summary,
+            text
           }
         };
 
-        // Only add conclusion if we are starting in a completed state (rare but possible)
         if (status === "completed") {
           createParams.conclusion = conclusion;
         }
 
         await this.octokit.checks.create(createParams);
-        console.log(`[GitHubReporter] Created new check for ${owner}/${repo} SHA:${headSha.substring(0, 7)}`);
       }
     } catch (error) {
       console.error("[GitHubReporter] Failed to report status:", error);
-      throw error; // Propagate error so worker can handle fail-closed if needed
     }
   }
 }

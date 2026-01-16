@@ -2,6 +2,7 @@ import sequelize from "../config/sequelize.js";
 import { Octokit } from "@octokit/rest";
 import { DiffAnalyzerService } from "./diffAnalyzer.service.js";
 import { PolicyEngineService } from "./policyEngine.service.js";
+import { AdvisorService } from "./advisor.service.js";
 import { GitHubReporterService } from "./githubReporter.service.js";
 import githubAppService from "./githubApp.service.js";
 import env from "../config/env.js";
@@ -23,6 +24,7 @@ export class PrAnalysisService {
     // Initialize sub-services with the dynamic token/octokit
     const diffAnalyzer = new DiffAnalyzerService(token);
     const policyEngine = new PolicyEngineService(octokit);
+    const advisor = new AdvisorService(); // Best-effort intelligence
     const reporter = new GitHubReporterService(octokit);
 
     // Transaction for DB operations
@@ -45,7 +47,14 @@ export class PrAnalysisService {
         // This prevents "policy drift" if the engine version changed since the first analysis.
         if (existingDecision.decision !== 'PENDING') {
           console.log(`[PrAnalysisService] [trace:${traceId}] action: IDEMPOTENT_HIT status: FINAL version: ${existingDecision.policy_version}`);
-          await reporter.reportStatus(owner, repo, headSha, existingDecision.decision, existingDecision.reason);
+          
+          // Re-report the existing decision from DB
+          let decisionObj = existingDecision;
+          try {
+            decisionObj = JSON.parse(existingDecision.raw_data);
+          } catch (e) { /* ignore */ }
+          
+          await reporter.reportStatus(owner, repo, headSha, decisionObj, { prNumber });
           await t.commit();
           return;
         }
@@ -95,12 +104,18 @@ export class PrAnalysisService {
 
       if (finalExistingDecision && finalExistingDecision.decision !== 'PENDING') {
         console.log(`[PrAnalysisService] [trace:${traceId}] action: POST_RACE_IDEMPOTENT_HIT status: FINAL version: ${finalExistingDecision.policy_version}`);
-        await reporter.reportStatus(owner, repo, headSha, finalExistingDecision.decision, finalExistingDecision.reason);
+        
+        let decisionObj = finalExistingDecision;
+        try {
+          decisionObj = JSON.parse(finalExistingDecision.raw_data);
+        } catch (e) { /* ignore */ }
+
+        await reporter.reportStatus(owner, repo, headSha, decisionObj, { prNumber });
         return;
       }
 
       // Report PENDING to GitHub
-      await reporter.reportStatus(owner, repo, headSha, "PENDING", "Queued for analysis...");
+      await reporter.reportStatus(owner, repo, headSha, "PENDING", { description: "Queued for analysis...", prNumber });
 
       // 3. Step 3: Execution Pipeline
       // A. Fetch & Analyze Diff
@@ -118,19 +133,44 @@ export class PrAnalysisService {
         userLogin: prDetails.user.login
       });
 
-      // C. Update DB with Final Decision
-      // We only update if the decision is still the one we initialized or if we are finishing a PENDING one.
+      // C. Enrich with Advisor (Best-effort, non-gating)
+      // SECURITY: Pass a deep copy to prevent "Soft Mutation" of the deterministic decision
+      // Using structuredClone (Node 18+) to preserve Dates, BigInts, and nested structures correctly.
+      try {
+        const decisionSnapshot = structuredClone(decisionObject);
+        const advisorContext = await advisor.enrich(decisionSnapshot, prContext);
+        
+        // Advisor output is stored under its own explicit namespace
+        // to keep it separate from the deterministic 'facts'
+        decisionObject.advisor = {
+          ...advisorContext,
+          non_authoritative: true // Explicitly marked as non-authoritative
+        };
+      } catch (advisorErr) {
+        console.warn(`[PrAnalysisService] [trace:${traceId}] Advisor enrichment failed: ${advisorErr.message}`);
+        decisionObject.advisor = { 
+          status: "ERROR", 
+          rationale: "Advisor enrichment failed.",
+          non_authoritative: true 
+        };
+      }
+
+      // D. Update DB with Final Decision
+      // Hardened: Setting evaluation_status to 'FINAL' to trigger DB-level immutability
       const [, affectedRows] = await sequelize.query(
         `UPDATE pr_decisions 
-         SET decision = :decision, reason = :reason, raw_data = :rawData, updated_at = NOW()
+         SET decision = :decision, 
+             reason = :reason, 
+             raw_data = :rawData, 
+             evaluation_status = 'FINAL',
+             updated_at = NOW()
          WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber AND commit_sha = :headSha
-         AND policy_version = :policyVersion`, // HARD LOCK: Never update if policy_version changed mid-flight
+         AND (evaluation_status IS NULL OR evaluation_status != 'FINAL')`,
         {
           replacements: {
             decision: decisionObject.decision,
             reason: decisionObject.decisionReason,
             rawData: JSON.stringify(decisionObject),
-            policyVersion: decisionObject.policy_version,
             owner,
             repo,
             prNumber,
@@ -157,8 +197,8 @@ export class PrAnalysisService {
         throw raceError;
       }
 
-      // D. Report Final Status to GitHub
-      await reporter.reportStatus(owner, repo, headSha, decisionObject.decision, decisionObject.decisionReason);
+      // E. Report Final Status to GitHub
+      await reporter.reportStatus(owner, repo, headSha, decisionObject, { prNumber });
       
       console.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
 
@@ -171,10 +211,10 @@ export class PrAnalysisService {
           if (error.code === 'POLICY_VERSION_RACE') {
             // Internal policy races are not the developer's fault. 
             // We report ERROR/NEUTRAL instead of BLOCK to avoid annoying teams.
-            await reporter.reportStatus(owner, repo, headSha, "WARN", "System Error: Policy version drift detected. Please re-trigger analysis.");
+            await reporter.reportStatus(owner, repo, headSha, "WARN", { description: "System Error: Policy version drift detected. Please re-trigger analysis.", prNumber });
           } else {
             // Fail-Closed: For unknown errors, we BLOCK for safety
-            await reporter.reportStatus(owner, repo, headSha, "BLOCK", "System Error: Analysis failed. Blocking for safety.");
+            await reporter.reportStatus(owner, repo, headSha, "BLOCK", { description: "System Error: Analysis failed. Blocking for safety.", prNumber });
           }
         }
       } catch (e) {

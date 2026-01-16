@@ -6,14 +6,15 @@ import dotenv from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from the root .env file
+// Load environment variables from the backend .env file first, then root .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Construct the DATABASE_URL explicitly for sequelize-cli --url
-const dbUser = process.env.DB_USER;
-const dbPassword = process.env.DB_PASSWORD;
+const dbUser = process.env.APP_DB_USER || process.env.DB_USER;
+const dbPassword = process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD;
 const dbHost = process.env.LOCAL_DB_HOST || process.env.DB_HOST;
-const dbPort = process.env.DB_PORT;
+const dbPort = process.env.DB_PORT || 5432;
 const dbName = process.env.DB_NAME;
 
 const databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;

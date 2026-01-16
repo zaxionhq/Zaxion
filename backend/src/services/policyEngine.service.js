@@ -125,19 +125,7 @@ export class PolicyEngineService {
       decisionReason = `Overridden by ${overrideActor}.`;
     }
 
-    // AI Advisor Block (Simulated context for now)
-    const advisor = {
-      riskAssessment: {
-        level: isBlocked ? "HIGH" : (isWarned ? "MEDIUM" : "LOW"),
-        confidence: 0.85
-      },
-      suggestedTestIntents: highRiskFiles.map(f => `${f.split('/').pop().split('.')[0]}.logic.check`),
-      rationale: isBlocked 
-        ? "Deterministic policy blocked this PR due to missing tests in high-risk areas." 
-        : "AI suggests focusing tests on modified business logic."
-    };
-
-    // UI Path to Resolution
+    // UI Path to Resolution (This is a deterministic UI contract)
     const fixLink = `https://git-code-guru.app/workspace?repo=${metadata.repo}&owner=${metadata.owner}&pr=${metadata.prNumber}`;
 
     const decisionObject = {
@@ -155,7 +143,6 @@ export class PolicyEngineService {
         isMainBranch: isMainBranch,
         hasCriticalChanges: highRiskFiles.length > 0
       },
-      advisor,
       ui: {
         fix_link: fixLink
       },
