@@ -3,7 +3,7 @@ import { FileTree, FileNode } from '@/components/FileTree';
 import { TestSummaryCard, TestSummary } from '@/components/TestSummaryCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, FileText, ArrowRight, Loader2, GitPullRequest, Search } from 'lucide-react';
+import { Brain, FileText, ArrowRight, Loader2, GitPullRequest, Search, Shield } from 'lucide-react';
 import { PRGateStatus } from '@/components/PRGateStatus';
 import { PRDecision } from '@/hooks/usePRGate';
 import { Input } from '@/components/ui/input';

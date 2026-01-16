@@ -1,14 +1,8 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
+Disallow: /_experimental
+Disallow: /auth/callback
 Allow: /
+Allow: /resolution/
+
+# Zaxion Guard - PR Quality Enforcement
+Sitemap: https://zaxion.app/sitemap.xml

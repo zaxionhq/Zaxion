@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Github, Brain, Sparkles, Code2, GitBranch, Zap, ArrowRight, CheckCircle, MessageCircle, Loader2 } from 'lucide-react';
+import { Github, Brain, Sparkles, Code2, GitBranch, Zap, ArrowRight, CheckCircle, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { GitHubButton } from '@/components/ui/github-button';
 import { AIButton } from '@/components/ui/ai-button';
@@ -22,7 +22,7 @@ import { api } from '@/lib/api';
 import { usePRGate } from '@/hooks/usePRGate';
 import { Input } from '@/components/ui/input';
 
-const Index = () => {
+const ExperimentalIDE = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [currentStep, setCurrentStep] = useState<'connect' | 'repo-selection' | 'analysis' | 'generate' | 'ide'>('connect');
   const [editedCode, setEditedCode] = useState<string>(''); // New state for edited code
@@ -343,6 +343,14 @@ const Index = () => {
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-background">
+        {/* Experimental Warning Banner */}
+        <div className="bg-destructive/10 border-b border-destructive/20 py-2 px-4 text-center">
+          <p className="text-[10px] font-bold text-destructive uppercase tracking-widest flex items-center justify-center gap-2">
+            <AlertCircle className="h-3 w-3" />
+            INTERNAL EXPERIMENTAL TOOL - DO NOT USE FOR PRODUCTION RESOLUTION
+            <AlertCircle className="h-3 w-3" />
+          </p>
+        </div>
         {/* Theme Toggle and Demo Mode Indicator - Fixed position */}
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
           {import.meta.env.VITE_MOCK === 'true' && (
@@ -569,4 +577,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default ExperimentalIDE;
