@@ -761,10 +761,11 @@ Phase 3 transforms PR GATE into an actionable, auditable platform.
 *   **Implementation**: GitHub Check Runs now include rich markdown reports, policy facts, AI advisor resolution intents, and deep-links back to the UI.
 *   **Guarantee**: Developers get immediate resolution context without leaving GitHub.
 
-### ⏳ Step 4: Resolution Dashboard UI
-*   **Status**: PENDING (Waiting for Signal)
-*   **Goal**: Implement the "Fix Path" checklist (Policy Violation -> Affected File -> Suggested Intent).
-*   **Critical Requirement**: Deep links must internally resolve `commitSha` → `decisionId`. The UI must ultimately anchor on the **immutable `decisionId`** to ensure time-travel safety, as a single SHA may have multiple decisions over its lifecycle.
+### ✅ Step 4: Resolution Dashboard UI
+*   **Status**: COMPLETED
+*   **Implementation**: Implemented the context-aware [ResolutionPage](file:///c:/Users/hamza/OneDrive/Desktop/hamza/frontend/src/pages/ResolutionPage.tsx) which serves as the sole authoritative entry point for PR resolution.
+*   **Hardening**: Strictly isolated `decisionId` fetching to the Resolution Workspace, removing it from the legacy [AnalysisView](file:///c:/Users/hamza/OneDrive/Desktop/hamza/frontend/src/components/AnalysisView.tsx) to enforce the Resolution-First doctrine.
+*   **Guarantee**: Users can only resolve violations within a dedicated, audited courtroom environment.
 
 ---
 

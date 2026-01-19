@@ -182,7 +182,6 @@ const ResolutionPage = () => {
             repoOwner={latestDecision?.repo_owner}
             repoName={latestDecision?.repo_name}
             onFetchPrDecision={() => {}} // Disabled in resolution view
-            onFetchDecisionById={(id) => navigate(`/resolution/${id}`)}
           />
         ) : (
           <MainLayout 
