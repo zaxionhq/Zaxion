@@ -63,26 +63,21 @@ Moving from one-off decisions to longitudinal analysis.
 
 ```mermaid
 graph TD
-    subgraph "Governance Layer (Pillar 1)"
+    subgraph "Law Registry (Pillar 1)"
         Org[Organization Admin] -->|Defines| OrgPolicy[Org-Level Policies]
         RepoOwner[Repo Lead] -->|Refines| RepoPolicy[Repo-Specific Rules]
         OrgPolicy --> RepoPolicy
     end
 
-    subgraph "Decision Engine (Phase 3)"
-        RepoPolicy -->|Enforces| Decision[AI Decision: BLOCK/WARN]
-    end
-
-    subgraph "Accountability Layer (Pillar 2)"
-        Decision -->|Triggers| Request[Override Request]
-        Request -->|Human Review| AuthorizedUser{Authorized User?}
+    subgraph "Accountability Registry (Pillar 2)"
+        Request[Override Request] -->|Human Review| AuthorizedUser{Authorized User?}
         AuthorizedUser -->|YES| Override[Immutable Override Signed]
-        AuthorizedUser -->|NO| Blocked[PR Blocked]
     end
 
-    subgraph "Memory Layer (Pillar 3)"
-        Override -->|Record Pattern| OrgMemory[Organizational Memory]
-        Decision -->|Record Pattern| OrgMemory
+    subgraph "Decision & Memory Engine (Pillar 3)"
+        RepoPolicy -->|Enforced By| Decision[Decision: PASS/BLOCK]
+        Override -->|Binds To| Decision
+        Decision -->|Record Pattern| OrgMemory[Organizational Memory]
         OrgMemory -->|Insight| Org
     end
 ```
