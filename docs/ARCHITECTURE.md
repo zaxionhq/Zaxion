@@ -33,6 +33,11 @@ The system follows a **Producer-Consumer** pattern to handle high volumes of Git
 - **Authentication**: Uses JWT for App-level auth and Installation Tokens for repository-level actions.
 - **Reporting**: Posts results back to GitHub using **Check Runs** and **PR Comments**.
 
+### 5. Frontend Resolution Architecture (`frontend/src/pages/`)
+- **Landing Page (`/`)**: Marketing authority that explains the Zaxion Guard model.
+- **Resolution Workspace (`/resolution/:decisionId`)**: Context-aware environment that auto-loads decision facts and repo context for rapid fix generation.
+- **Experimental Lab (`/_experimental`)**: Quarantined IDE UI for internal testing and advanced exploration.
+
 ---
 
 ## 🔄 Data Flow
