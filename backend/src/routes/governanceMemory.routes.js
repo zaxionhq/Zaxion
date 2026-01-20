@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import governanceMemoryControllerFactory from '../controllers/governanceMemory.controller.js';
-import { authenticateJWT, authorize } from '../middleware/auth.middleware.js';
+import { authenticateJWT } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
 
 export default function governanceMemoryRoutesFactory(db) {
   const router = Router();
