@@ -1,61 +1,28 @@
-# PHASE 4 — GOVERNANCE, TRUST & SCALE (DESIGN)
+# PHASE 4 — GOVERNANCE, TRUST & SCALE (LOCKED)
 
-Status: 📝 DESIGN PHASE (DO NOT CODE)
-Date: 2026-01-19
+Status: ✅ COMPLETE
+Date locked: 2026-01-20
 
-## 🔑 Core Mission
-Turn Zaxion from a single-decision engine into an **organizational governance system**. 
-
-Phase 4 moves beyond "Can I prove why a PR was blocked?" (Phase 3) to "Can an organization trust this system at scale?" It shifts the focus from individual decisions to law, policy, and accountability.
+This phase transforms Zaxion from a single-decision engine into an **organizational governance system**. It establishes the "Law" (Policies), the "Exception" (Overrides), and the "Memory" (Decisions) as an immutable foundation for trust at scale.
 
 ---
 
-## 🧱 Pillar 1: Policy Governance (The Rule of Law)
-*Who sets the rules?*
+## 🏗️ The Three Pillars of Governance (Frozen)
 
-Right now, policies exist and block PRs. Phase 4 introduces a formal hierarchy and ownership model.
+### Pillar 1: Policy Governance (The Rule of Law)
+- **Immutable Policy Registry**: Every policy and version is permanent and append-only.
+- **Strict Narrowing**: Child jurisdictions (Repos) can only *stricter* than parent jurisdictions (Orgs), never more lenient.
+- **Enforcement Levels**: Mandatory, Overridable, and Advisory tiers are codified at the version level.
 
-- **Policy Ownership**: Every policy must have an assigned human owner (e.g., Security Lead, QA Manager).
-- **Strength Levels**:
-    - **MANDATORY**: Non-overridable.
-    - **OVERRIDABLE**: Requires a Senior/Lead signature.
-    - **ADVISORY**: Warning only.
-- **Jurisdiction & Inheritance**:
-    - **Org Policy → Repo Policy → PR Decision**.
-    - Repos can *narrow* (make stricter) but not *weaken* Mandatory Org policies.
-- **Versioned Lifecycle**: Policies evolve without rewriting history. Every decision is tied to a specific policy version.
-- **Policy Change Impact Awareness**: Policy updates are evaluated for affected repositories and surfaced as informational signals before enforcement (the "blast radius" check).
+### Pillar 2: Human Accountability (The Exception)
+- **Cryptographic Binding**: Overrides are bound to specific human actors, roles, and commit SHAs.
+- **Auto-Expiry Integrity**: Overrides are ephemeral and expire automatically if the code state (SHA) changes.
+- **Passive Recording**: Overrides are records of fact, not approval outcomes. Authority rests with the signer.
 
----
-
-## 🧾 Pillar 2: Human Accountability (The Human in the Loop)
-*Who made the call?*
-
-Overrides are not failures; they are signals. Phase 4 adds structure to the "how" and "who" of bypassing the system.
-
-- **Role & Permission Matrix**: 
-    - **Juniors**: View decisions, request overrides.
-    - **Seniors/Leads**: Grant overrides for specific repos.
-    - **Admins**: Change global policies.
-- **Override Scoping**:
-    - Overrides are **PR-Specific** and **Auto-Expire** upon merge.
-    - New commits invalidate existing overrides (Commit-Specific).
-- **Anti-Abuse Safeguards**:
-    - **Immutable Audit Trails**: Actions cannot be deleted or hidden.
-    - **Visibility Asymmetry**: Manager/Admin actions are subject to higher scrutiny and automatic peer-flagging.
-    - **Bypass Flagging**: Repeatedly bypassing the same policy triggers a review.
-
----
-
-## 📊 Pillar 3: Organizational Memory (The Pattern Search)
-*What patterns emerge?*
-
-Moving from one-off decisions to longitudinal analysis.
-
-- **Passive Observation**: Recording patterns without immediate punishment.
-- **Bypass Velocity**: Which teams bypass the most? Is it due to deadlines or bad policies?
-- **Policy Effectiveness**: Which policies block the most? Are they catching real bugs or just creating noise?
-- **Risk Correlation**: Are high-risk areas showing improved compliance over time?
+### Pillar 3: Organizational Memory (The Record)
+- **Causal Decision Linking**: Every decision links to its predecessor, creating a replayable audit trail.
+- **Statistical Signaling**: Neutral signals (e.g., Bypass Velocity) are generated from longitudinal data.
+- **Derived Metrics**: Real-time aggregation of pass/block/override rates and human challenges.
 
 ---
 
@@ -70,49 +37,41 @@ graph TD
     end
 
     subgraph "Accountability Registry (Pillar 2)"
-        Request[Override Request] -->|Human Review| AuthorizedUser{Authorized User?}
-        AuthorizedUser -->|YES| Override[Immutable Override Signed]
+        Request[Override Request] -->|Human Signature| SignedRecord[Immutable Override Record]
+        SignedRecord -->|Binds to SHA| CodeState[Commit SHA]
     end
 
     subgraph "Decision & Memory Engine (Pillar 3)"
-        RepoPolicy -->|Enforced By| Decision[Decision: PASS/BLOCK]
-        Override -->|Binds To| Decision
-        Decision -->|Record Pattern| OrgMemory[Organizational Memory]
-        OrgMemory -->|Insight| Org
+        RepoPolicy -->|Registry Data| DecisionEngine[Evaluation Engine]
+        SignedRecord -->|Registry Data| DecisionEngine
+        DecisionEngine -->|Record Result| Decision[Immutable Decision Record]
+        Decision -->|Update| Metrics[Derived Policy Metrics]
+        Decision -->|Link| PrevDecision[Previous Decision]
+        Metrics -->|Inform| Org
     end
 ```
 
 ---
 
-## 🔒 Design Answers (The "Paper" Test)
+## 🔒 Immutable System Constraints
 
-### 1. Who owns policies?
-**The Organization and Repository Leads.** 
-Policies are no longer "static files" but "governed assets." A policy is owned by a human role (e.g., `security-admin`). If a policy is too noisy, that owner is responsible for versioning it.
-
-### 2. Who overrides?
-**Authorized Personnel only.** 
-Authority is mapped via a Role-Based Access Control (RBAC) matrix. A developer can propose an override, but a designated "Signer" (Senior/Lead) must execute it. Every override is an immutable record signed by the human actor.
-
-### 3. Who gets blamed if something breaks?
-**The Data Points to the Truth.**
-- If a **Policy** was followed but code broke: The **Policy Owner** needs to refine the rules.
-- If a **Policy** was **Overridden** and code broke: The **Override Actor** is accountable.
-- The system provides the "Courtroom Truth" (Phase 3) to support the "Governance Review" (Phase 4).
+1. **Passive Role**: Phase 4 components MUST NOT perform active enforcement (blocking PRs). They are registries of truth only.
+2. **Append-Only History**: No governance record (Policy, Override, Decision) may ever be updated or deleted.
+3. **No Executable Logic**: Metadata and policy fields must remain declarative. They are prohibited from containing scripts or runtime rules.
+4. **Human Supremacy**: The system never overrides a human; it records the human's decision to override the system.
 
 ---
 
-## 🚫 What Phase 4 is NOT
-- ❌ **Better AI Prompts**: We aren't making the AI smarter; we're making the human control better.
-- ❌ **More Test Generation**: That's labor; Phase 4 is oversight.
-- ❌ **Fancy Dashboards**: We want actionable signals, not "analytics fluff."
-- ❌ **Automated Policy Editing**: Humans decide the law; AI only enforces it.
+## ✅ Phase 4 Milestones (Verified)
+
+- [x] **Pillar 1 Built**: Law registry with Org/Repo inheritance and strict narrowing logic.
+- [x] **Pillar 2 Built**: Human accountability layer with SHA-bound overrides and signature tracking.
+- [x] **Pillar 3 Built**: Organizational memory with causal decision linking and bypass velocity signals.
+- [x] **Schema Migrated**: All database tables for policies, overrides, decisions, and signals are live.
+- [x] **Internal Contract Locked**: `PHASE_4_COMPLETION.md` established as the governance constitution.
 
 ---
 
-## 📋 Implementation Roadmap (The Correct Order)
+## Rationale
 
-1.  **Step 1: Policy Ownership Model**: Define scope, owners, and versioning schema in the database. (No UI).
-2.  **Step 2: Role & Permission Matrix**: Implement RBAC for viewing, overriding, and editing policies.
-3.  **Step 3: Override Signal Analysis (Passive)**: Start recording *why* and *who* for every bypass.
-4.  **Step 4: Org-Level Read Views**: Create read-only "Truth Views" for management visibility.
+Phase 4 moves Zaxion from "Helping a developer fix a test" to "Providing an organization with a trustable audit trail." By locking this governance layer, we ensure that as the system scales to thousands of repositories, the "Rule of Law" remains immutable and human accountability remains transparent.
