@@ -150,7 +150,7 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-current/10">
           <div className="flex items-center gap-4">
             <span>Risk: <Badge variant="outline" className="text-[10px] h-4">{data.advisor.riskAssessment.riskLevel}</Badge></span>
-            <span>Policy: v{decision.policy_version || '1.0.0'}</span>
+            <span>Policy: v{data.policy_version || '1.0.0'}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] opacity-70">SHA: {decision.commit_sha.substring(0, 7)}</span>

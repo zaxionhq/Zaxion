@@ -528,8 +528,8 @@ const ExperimentalIDE = () => {
            <div className="flex-1 overflow-hidden">
              <AnalysisView 
                 files={files}
-                selectedFiles={new Set(selectedFiles)}
-                onSelectionChange={(newSet) => setSelectedFiles(Array.from(newSet))}
+                selectedFiles={selectedFiles}
+                onSelectionChange={setSelectedFiles}
                 expandedFolders={expandedFolders}
                 onToggleFolder={toggleFolder}
                 testSummaries={testSummaries}

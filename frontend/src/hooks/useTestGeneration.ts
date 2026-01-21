@@ -409,7 +409,7 @@ export const useTestGeneration = () => {
       
       setFiles(treeData);
       setSelectedRepo(repo);
-      setSelectedFiles([]); // Clear previously selected files
+      setSelectedFiles(new Set()); // Clear previously selected files
       setFilesRetryCount(0);
       handleSuccess(`Loaded file tree from ${repo.name} (${targetBranch})`);
     } catch (error: unknown) {
@@ -455,7 +455,7 @@ export const useTestGeneration = () => {
         ];
         setFiles(mockTree);
         setSelectedRepo(repo);
-        setSelectedFiles([]);
+        setSelectedFiles(new Set());
         setFilesRetryCount(0);
         handleSuccess(`Demo files loaded for ${repo.name}`);
       } else if (!isRetry) {
@@ -552,11 +552,11 @@ export const useTestGeneration = () => {
       setFailedFiles([]);
       
       // Fallback to mock summaries for now
-      const selectedFileObjects = selectedFiles
-          .map(path => findFileInTree(files, path))
+      const selectedFileObjects = Array.from(selectedFiles)
+          .map((path: string) => findFileInTree(files, path))
           .filter((f): f is FileNode => f !== null);
           
-      const summaries = selectedFileObjects.map(f => generateMockSummary({ name: f.name, path: f.path }));
+      const summaries = selectedFileObjects.map((f: FileNode) => generateMockSummary({ name: f.name, path: f.path }));
       setTestSummaries(summaries);
       
       if (!isRetry) {
@@ -629,7 +629,7 @@ export const useTestGeneration = () => {
   const resetRepositorySelection = useCallback(() => {
     setSelectedRepo(null);
     setFiles([]);
-    setSelectedFiles([]);
+    setSelectedFiles(new Set());
     setTestSummaries([]);
     setGeneratedCode(null);
     setFilesError(null);

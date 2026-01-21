@@ -1,14 +1,8 @@
 import React from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, RefreshCw, X } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
-
-interface ErrorToastProps {
-  error: ApiError;
-  onRetry?: () => void;
-  onDismiss?: () => void;
-}
 
 export const showErrorToast = (error: ApiError, onRetry?: () => void) => {
   const isRetryable = error.retryable && onRetry;
@@ -83,7 +77,8 @@ function getErrorDescription(error: ApiError): string {
     return 'Network error. Please check your internet connection.';
   }
   
-  return error.details?.message || 'An unexpected error occurred.';
+  const details = error.details as { message?: string } | undefined;
+  return details?.message || 'An unexpected error occurred.';
 }
 
 // Hook for handling API errors with automatic toast display

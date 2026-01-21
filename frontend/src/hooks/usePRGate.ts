@@ -64,7 +64,7 @@ export const usePRGate = () => {
       const apiErr = err as ApiError;
       setError(apiErr.message || 'Failed to fetch PR decision');
       if (apiErr.status !== 404) {
-        handleError(err as Error, 'Fetch Decision Failed');
+        handleError(apiErr);
       }
       setLatestDecision(null);
       return null;
@@ -83,7 +83,7 @@ export const usePRGate = () => {
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || 'Failed to fetch PR decision by ID');
-      handleError(err as Error, 'Fetch Decision by ID Failed');
+      handleError(apiErr);
       setLatestDecision(null);
       return null;
     } finally {
@@ -98,17 +98,15 @@ export const usePRGate = () => {
         `/v1/github/repos/${owner}/${repo}/pr/${prNumber}/override`,
         { reason }
       );
-      handleSuccess('PR Gate bypassed successfully');
-      // Refresh decision after override
-      await fetchLatestDecision(owner, repo, prNumber);
-      return response;
+      handleSuccess('Override applied successfully');
+      return true;
     } catch (err) {
-      handleError(err as Error, 'Override Failed');
-      throw err;
+      handleError(err as ApiError);
+      return false;
     } finally {
       setIsLoading(false);
     }
-  }, [handleError, handleSuccess, fetchLatestDecision]);
+  }, [handleError, handleSuccess]);
 
   return {
     latestDecision,

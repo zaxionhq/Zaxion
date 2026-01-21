@@ -88,7 +88,7 @@ const LandingPage = () => {
                 <span className="text-neon-cyan ml-2">It is a governance system for engineering decisions.</span>
               </p>
             </motion.div>
-
+    
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
