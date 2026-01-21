@@ -115,4 +115,39 @@ All colors MUST be HSL.
   .bg-code-bg {
     background: hsl(var(--code-bg));
   }
+
+  .glass-panel {
+    @apply bg-glass backdrop-blur-xl border border-glass-border;
+  }
+
+  .glass-card {
+    @apply bg-glass backdrop-blur-lg border border-glass-border rounded-2xl shadow-xl transition-all duration-300;
+  }
+
+  .neon-text-cyan {
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  }
+
+  .neon-text-purple {
+    text-shadow: 0 0 10px rgba(191, 0, 255, 0.5);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-cyan to-neon-purple font-bold;
+  }
+
+  .radial-bg {
+    background: radial-gradient(circle at top center, rgba(191, 0, 255, 0.15) 0%, rgba(0, 255, 255, 0.05) 50%, transparent 100%);
+  }
+
+  .animate-gradient-border {
+    background-size: 200% 200%;
+    animation: gradient-border 4s linear infinite;
+  }
+
+  @keyframes gradient-border {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 }

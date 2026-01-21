@@ -6,6 +6,8 @@ interface User {
   id: number;
   githubId: string;
   username: string;
+  login?: string;
+  avatar_url?: string;
   displayName?: string;
   email?: string;
   provider: string;

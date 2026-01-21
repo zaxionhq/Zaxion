@@ -6,7 +6,8 @@ import { useFileTreeState } from '@/hooks/useFileTreeState';
 import { useSession } from '@/hooks/useSession';
 import { AnalysisView } from '@/components/AnalysisView';
 import { MainLayout } from '@/components/workbench/MainLayout';
-import { Loader2, Shield, AlertCircle, ArrowLeft } from 'lucide-react';
+import { TestSummary } from '@/components/TestSummaryCard';
+import { Loader2, Shield, AlertCircle, ArrowLeft, GitPullRequest } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -38,7 +39,8 @@ const ResolutionPage = () => {
     expandedFolders,
     toggleFolder,
     reconcileExpansion,
-    resetExpansion
+    resetExpansion,
+    setExpandedFolders: setExpandedFoldersState
   } = useFileTreeState();
 
   const [view, setView] = useState<'analysis' | 'ide'>('analysis');
@@ -64,6 +66,7 @@ const ResolutionPage = () => {
         owner: { login: latestDecision.repo_owner },
         full_name: `${latestDecision.repo_owner}/${latestDecision.repo_name}`,
         html_url: `https://github.com/${latestDecision.repo_owner}/${latestDecision.repo_name}`,
+        private: false,
         description: '',
         stargazers_count: 0,
         forks_count: 0,
@@ -88,8 +91,8 @@ const ResolutionPage = () => {
       setView('ide');
     }
   }, [generatedCode]);
-
-  const handleGenerateCode = async (summary: any) => {
+  
+  const handleGenerateCode = async (summary: TestSummary) => {
     await generateTestCode(summary, 'test');
   };
 
@@ -132,6 +135,9 @@ const ResolutionPage = () => {
     );
   }
 
+  const userAvatar = user?.avatar_url || "";
+  const userLogin = user?.login || user?.username || "";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -155,8 +161,8 @@ const ResolutionPage = () => {
           <ThemeToggle />
           {user && (
             <div className="flex items-center gap-2">
-              <img src={user.avatar_url} alt={user.login} className="h-6 w-6 rounded-full border" />
-              <span className="text-xs font-medium">{user.login}</span>
+              <img src={userAvatar} alt={userLogin} className="h-6 w-6 rounded-full border" />
+              <span className="text-xs font-medium">{userLogin}</span>
             </div>
           )}
         </div>
@@ -185,10 +191,16 @@ const ResolutionPage = () => {
           />
         ) : (
           <MainLayout 
+            files={files}
+            selectedFiles={selectedFiles}
+            onSelectionChange={setSelectedFiles}
+            expandedFolders={expandedFolders}
+            onToggleFolder={toggleFolder}
+            onSetExpandedFolders={setExpandedFoldersState}
             activeFile={undefined} // Resolution mode handles this differently
             activeFileContent=""
             editedCode={editedCode}
-            onCodeChange={setEditedCode}
+            onCodeChange={(code) => setEditedCode(code || '')}
             onSave={() => {}}
             onRunTests={() => {}}
             onToggleChat={() => {}}

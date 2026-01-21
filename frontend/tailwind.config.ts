@@ -59,18 +59,36 @@ export default {
 				},
 				success: 'hsl(var(--success))',
 				warning: 'hsl(var(--warning))',
-				'code-bg': 'hsl(var(--code-bg))'
+				'code-bg': 'hsl(var(--code-bg))',
+				neon: {
+					cyan: '#00ffff',
+					purple: '#bf00ff',
+					pink: '#ff00ff',
+					blue: '#0066ff',
+				},
+				glass: {
+					DEFAULT: 'rgba(255, 255, 255, 0.05)',
+					dark: 'rgba(0, 0, 0, 0.2)',
+					border: 'rgba(255, 255, 255, 0.1)',
+				}
 			},
 			backgroundImage: {
 				'ai-gradient': 'var(--ai-gradient)',
-				'hero-gradient': 'var(--hero-gradient)'
+				'hero-gradient': 'var(--hero-gradient)',
+				'glass-gradient': 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
+				'neon-gradient': 'linear-gradient(135deg, #00ffff, #bf00ff)',
 			},
 			boxShadow: {
 				'elegant': 'var(--shadow-elegant)',
-				'glow': 'var(--shadow-glow)'
+				'glow': 'var(--shadow-glow)',
+				'neon-cyan': '0 0 20px rgba(0, 255, 255, 0.5)',
+				'neon-purple': '0 0 20px rgba(191, 0, 255, 0.5)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'var(--transition-smooth)'
+			},
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

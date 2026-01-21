@@ -106,7 +106,6 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
               automaticLayout: true,
               padding: { top: 10, bottom: 10 },
               renderLineHighlight: 'all',
-              backgroundColor: '#1f1f23'
             }}
           />
         )}

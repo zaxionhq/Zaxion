@@ -122,7 +122,7 @@ const ExperimentalIDE = () => {
   // Handle file selection changes to set active file
   React.useEffect(() => {
     const currentSet = new Set(selectedFiles);
-    const added = selectedFiles.filter(f => !prevSelectedFilesRef.current.has(f));
+    const added = Array.from(selectedFiles).filter(f => !prevSelectedFilesRef.current.has(f));
     
     if (added.length > 0) {
       const lastAdded = added[added.length - 1];
@@ -552,23 +552,29 @@ const ExperimentalIDE = () => {
 
   return (
       <MainLayout 
-        files={files}
-        selectedFiles={new Set(selectedFiles)}
-        onSelectionChange={(newSet) => setSelectedFiles(Array.from(newSet))}
-        repos={repos}
-        selectedRepo={selectedRepo}
-        onRepoChange={handleRepoChange}
-        branches={branches}
-        selectedBranch={selectedBranch}
-        onBranchChange={handleBranchChange}
-        expandedFolders={expandedFolders}
-        onToggleFolder={toggleFolder}
-        onSetExpandedFolders={setExpandedFoldersState}
-        activeFile={activeFile}
-        activeFileContent={activeFileContent}
-        onCodeChange={(code) => code && setActiveFileContent(code)}
-        isLoading={isFileLoading || isLoadingFiles}
-      />
+          files={files}
+          selectedFiles={selectedFiles}
+          onSelectionChange={setSelectedFiles}
+          repos={repos}
+          selectedRepo={selectedRepo}
+          onRepoChange={handleRepoChange}
+          branches={branches}
+          selectedBranch={selectedBranch}
+          onBranchChange={handleBranchChange}
+          expandedFolders={expandedFolders}
+          onToggleFolder={toggleFolder}
+          onSetExpandedFolders={setExpandedFoldersState}
+          activeFile={activeFile}
+          activeFileContent={activeFileContent}
+          onCodeChange={(code) => setEditedCode(code || '')}
+          onSave={() => {}}
+          onRunTests={() => {}}
+          onToggleChat={() => setIsChatbotOpen(!isChatbotOpen)}
+          isChatOpen={isChatbotOpen}
+          onBack={() => setCurrentStep('analysis')}
+          onCreatePR={handleSubmitPullRequest}
+          isLoading={isFileLoading}
+        />
   );
 };
 

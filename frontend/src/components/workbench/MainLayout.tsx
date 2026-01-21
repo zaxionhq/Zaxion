@@ -1,4 +1,6 @@
 import React from 'react';
+import { ArrowLeft, ChevronRight, GitPullRequest } from 'lucide-react';
+import { Button } from '../ui/button';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { FileTree, FileNode } from '../FileTree';
 import { TerminalPanel } from './TerminalPanel';
@@ -31,7 +33,16 @@ interface MainLayoutProps {
   // Editor Props
   activeFile?: string;
   activeFileContent?: string;
+  editedCode?: string;
   onCodeChange?: (content: string | undefined) => void;
+  onSave?: () => void;
+  
+  // Controls
+  onRunTests?: () => void;
+  onToggleChat?: () => void;
+  isChatOpen?: boolean;
+  onBack?: () => void;
+  onCreatePR?: () => Promise<void>;
   
   // General
   isLoading?: boolean;
@@ -52,7 +63,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onSetExpandedFolders,
   activeFile,
   activeFileContent,
+  editedCode,
   onCodeChange,
+  onSave,
+  onRunTests,
+  onToggleChat,
+  isChatOpen,
+  onBack,
+  onCreatePR,
   isLoading
 }) => {
   const { isReviewing } = useReviewStore();
@@ -73,7 +91,39 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <div className="h-screen w-screen bg-[#09090b] text-zinc-100 overflow-hidden flex flex-col">
-      {/* Top Bar / Menu could go here if needed, skipping for now as sidebar has header */}
+      {/* Top Bar / Menu */}
+      <div className="h-10 border-b border-[#2b2d31] bg-[#18181b] flex items-center px-4 justify-between">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
+          )}
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400">
+            <span className="text-zinc-500">Workspace</span>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-zinc-200">{activeFile || 'No file selected'}</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {onCreatePR && (
+            <Button 
+              size="sm" 
+              variant="default" 
+              className="h-7 text-xs gap-1.5 bg-primary hover:bg-primary/90"
+              onClick={onCreatePR}
+            >
+              <GitPullRequest className="h-3.5 w-3.5" />
+              Create PR
+            </Button>
+          )}
+        </div>
+      </div>
       
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
