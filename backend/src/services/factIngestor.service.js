@@ -45,10 +45,19 @@ export class FactIngestorService {
 
     try {
       // 2. Fetch PR Metadata
-      const prMetadata = await this._fetchPRMetadata(repoFullName, prNumber);
+      const { data: prMetadata, headers: prHeaders } = await this._fetchPRMetadata(repoFullName, prNumber);
       
       // 3. Fetch PR Files
-      const files = await this._fetchPRFiles(repoFullName, prNumber);
+      const { data: filesData, headers: filesHeaders } = await this._fetchPRFiles(repoFullName, prNumber);
+      
+      const files = filesData.map(f => ({
+        path: f.filename,
+        extension: path.extname(f.filename),
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        is_test_file: this._isTestFile(f.filename)
+      }));
 
       // 4. Extract path prefixes (Deterministic derivation)
       const pathPrefixes = this._extractPathPrefixes(files);
@@ -66,7 +75,8 @@ export class FactIngestorService {
         provenance: {
           source: "github",
           api_version: "v3",
-          ingestion_method: "on_demand"
+          ingestion_method: "api",
+          rate_limit_remaining: parseInt(prHeaders['x-ratelimit-remaining'] || filesHeaders['x-ratelimit-remaining'] || "0", 10)
         },
         pull_request: {
           title: prMetadata.title,
@@ -113,13 +123,12 @@ export class FactIngestorService {
    * Fetches PR metadata from GitHub API
    */
   async _fetchPRMetadata(repoFullName, prNumber) {
-    const { data } = await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}`, {
+    return await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}`, {
       headers: { 
         Authorization: `Bearer ${this.token}`,
         Accept: "application/vnd.github.v3+json"
       }
     });
-    return data;
   }
 
   /**
@@ -127,21 +136,12 @@ export class FactIngestorService {
    */
   async _fetchPRFiles(repoFullName, prNumber) {
     // Note: This fetches up to 100 files. For extremely large PRs, pagination would be needed.
-    const { data } = await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}/files?per_page=100`, {
+    return await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}/files?per_page=100`, {
       headers: { 
         Authorization: `Bearer ${this.token}`,
         Accept: "application/vnd.github.v3+json"
       }
     });
-    
-    return data.map(f => ({
-      path: f.filename,
-      extension: path.extname(f.filename),
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions,
-      is_test_file: this._isTestFile(f.filename)
-    }));
   }
 
   /**

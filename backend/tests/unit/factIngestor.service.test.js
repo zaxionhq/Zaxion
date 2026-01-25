@@ -103,14 +103,16 @@ describe('FactIngestorService', () => {
         ...data 
       }));
 
-      // Mock GitHub API responses
+      // Mock GitHub API responses with headers
       mockedAxios.get.mockImplementation((url) => {
+        const headers = { 'x-ratelimit-remaining': '4999' };
         if (url.includes('/pulls/123/files')) {
           return Promise.resolve({
             data: [
               { filename: 'src/auth/login.ts', status: 'modified', additions: 10, deletions: 2 },
               { filename: 'tests/auth.test.ts', status: 'added', additions: 50, deletions: 0 }
-            ]
+            ],
+            headers
           });
         }
         if (url.includes('/pulls/123')) {
@@ -121,7 +123,8 @@ describe('FactIngestorService', () => {
               base: { ref: 'main' },
               labels: [{ name: 'bug' }],
               draft: false
-            }
+            },
+            headers
           });
         }
         return Promise.reject(new Error('Unexpected URL'));
@@ -142,6 +145,10 @@ describe('FactIngestorService', () => {
       expect(data.metadata.test_files_changed_count).toBe(1);
       expect(data.metadata.path_prefixes).toContain('src');
       expect(data.metadata.path_prefixes).toContain('tests');
+      
+      // Verify new schema fields
+      expect(data.provenance.rate_limit_remaining).toBe(4999);
+      expect(data.provenance.ingestion_method).toBe('api');
       
       expect(dbMock.FactSnapshot.create).toHaveBeenCalled();
     });
