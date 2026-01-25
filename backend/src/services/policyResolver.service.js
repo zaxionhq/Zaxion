@@ -25,6 +25,9 @@ export class PolicyResolverService {
   async resolve(orgId, repoId, changedPaths, snapshotTimestamp) {
     logger.info({ orgId, repoId, snapshotTimestamp }, "PolicyResolver: Resolving policies for PR");
 
+    // Invariant 7: Path Normalization
+    const normalizedPaths = changedPaths.map(p => this._normalizePath(p));
+
     // 1. Fetch Org-level Policies active at snapshot time
     const orgPolicies = await this._getApplicablePolicies(orgId, 'ORG', snapshotTimestamp);
     
@@ -36,7 +39,7 @@ export class PolicyResolverService {
     const applicablePolicies = [];
 
     for (const policy of allPolicies) {
-      const match = this._matchPaths(policy, changedPaths);
+      const match = this._matchPaths(policy, normalizedPaths);
       if (match.isApplicable) {
         // Handle potentially multiple versions (though limit 1 is used in query)
         const version = policy.versions[0];
@@ -55,6 +58,18 @@ export class PolicyResolverService {
 
     // 4. Deterministic Conflict Resolution (Pillar 5.2 Invariants)
     return this._resolveConflicts(applicablePolicies);
+  }
+
+  /**
+   * Invariant 7: Path Normalization
+   * Removes ./, handles case sensitivity consistently.
+   */
+  _normalizePath(p) {
+    let normalized = p.trim().replace(/\\/g, '/'); // Convert windows to posix
+    if (normalized.startsWith('./')) {
+      normalized = normalized.slice(2);
+    }
+    return normalized.toLowerCase(); // Case-insensitive matching as per design
   }
 
   /**
@@ -85,8 +100,8 @@ export class PolicyResolverService {
    */
   _matchPaths(policy, changedPaths) {
     const rules = policy.versions[0].rules_logic;
-    const includePaths = rules.include_paths || ['*'];
-    const excludePaths = rules.exclude_paths || [];
+    const includePaths = (rules.include_paths || ['*']).map(p => this._normalizePath(p));
+    const excludePaths = (rules.exclude_paths || []).map(p => this._normalizePath(p));
 
     // Check each changed path
     for (const path of changedPaths) {
@@ -126,7 +141,7 @@ export class PolicyResolverService {
         return;
       }
 
-      // Conflict Resolution:
+      // Conflict Resolution (Step 3.4):
       // 1. Hierarchy: Org-level takes precedence over Repo-level
       if (p.scope === 'ORG' && existing.scope === 'REPO') {
         resolved.set(p.policy_id, p);
@@ -138,8 +153,15 @@ export class PolicyResolverService {
         const levels = { 'MANDATORY': 3, 'OVERRIDABLE': 2, 'ADVISORY': 1 };
         if (levels[p.level] > levels[existing.level]) {
           resolved.set(p.policy_id, p);
+          return;
         }
-        // 3. Tie-breaker: Policy UUID alphabetical (implicit by keeping first or alphabetical sort later)
+
+        // 3. Tie-breaker: Deterministic fallback using Policy UUID (alphabetical)
+        if (levels[p.level] === levels[existing.level]) {
+          if (p.policy_id.localeCompare(existing.policy_id) < 0) {
+            resolved.set(p.policy_id, p);
+          }
+        }
       }
     });
 

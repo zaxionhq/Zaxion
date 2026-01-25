@@ -40,6 +40,20 @@ describe('PolicyResolverService', () => {
     });
   });
 
+  describe('Path Normalization: _normalizePath', () => {
+    test('should normalize windows paths', () => {
+      expect(service._normalizePath('src\\auth\\login.js')).toBe('src/auth/login.js');
+    });
+
+    test('should remove leading ./', () => {
+      expect(service._normalizePath('./src/auth/login.js')).toBe('src/auth/login.js');
+    });
+
+    test('should be case insensitive', () => {
+      expect(service._normalizePath('Src/Auth/Login.js')).toBe('src/auth/login.js');
+    });
+  });
+
   describe('Conflict Resolution: _resolveConflicts', () => {
     test('should prioritize Org over Repo', () => {
       const p1 = { policy_id: 'P1', scope: 'REPO', level: 'MANDATORY' };
