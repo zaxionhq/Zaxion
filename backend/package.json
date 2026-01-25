@@ -9,7 +9,7 @@
     "db:set-env": "cross-env APP_DB_USER=app_user APP_DB_PASSWORD=Kandizz@1947 DB_NAME=Github-test DB_HOST=127.0.0.1 DB_PORT=5432 DB_DIALECT=postgres DB_SSL=false",
     "db:migrate": "dotenv -e ./.env -- node scripts/run-migrate.js",
     "db:create-raw": "node scripts/create-database.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "lint": "eslint ."
   },
   "dependencies": {
