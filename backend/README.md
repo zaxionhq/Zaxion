@@ -46,6 +46,15 @@ This is the core engine of the GitHub Test Case Generator. It handles GitHub web
 
 ---
 
+## 🛡️ Core Engine: The Decision Producer
+As of Phase 5, the backend implements the **Deterministic Judge**. 
+- **Fact Ingestor**: Extracts PR metadata.
+- **Policy Resolver**: Binds Org/Repo rules.
+- **Evaluation Engine**: Stateless verdict generator.
+- **Decision Handoff**: Immutable ledger & GitHub reporting.
+
+---
+
 ## 🔗 Key API Routes (v1)
 
 | Route | Method | Description |
@@ -53,7 +62,9 @@ This is the core engine of the GitHub Test Case Generator. It handles GitHub web
 | `/api/health` | GET | System health & diagnostic info |
 | `/api/v1/auth/github` | GET | Initiate GitHub App OAuth |
 | `/api/v1/webhook` | POST | GitHub Webhook listener (HMAC verified) |
-| `/api/v1/testcases/generate` | POST | AI Test generation endpoint |
+| `/api/v1/governance/decisions` | GET | Fetch immutable decision history |
+| `/api/v1/policies` | GET/POST | Manage hierarchical policies |
+| `/api/v1/overrides` | POST | Sign a human-led exception |
 
 ---
 

@@ -34,6 +34,8 @@ Engineering leaders can set organization-wide policies (e.g., "All PRs > 50 file
 ---
 
 ## 🛤️ Roadmap
-- **Phase 1**: Deterministic PR Analysis & Gatekeeping (Core Infrastructure).
-- **Phase 2**: Enterprise Policy Engine (Risk-based Enforcement).
-- **Phase 3**: AI Test Generation & AST-based Code Understanding.
+- **Phase 1-3**: AI Test Generation & AST-based Code Understanding (Completed).
+- **Phase 4**: Governance, Trust & Scale — Immutable registries for Laws, Exceptions, and Memory (Completed).
+- **Phase 5**: The Decision Producer — Deterministic evaluation engine and automated PR gatekeeping (Completed).
+- **Phase 6**: Integration Surface — Slack, MS Teams, and external ecosystem hooks (Incoming).
+- **Phase 7**: Operational Readiness & Public Launch (Planned).

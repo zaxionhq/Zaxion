@@ -47,7 +47,28 @@ Debugging would involve checking:
 *   GitHub OAuth application settings for correct `client_id`, `client_secret`, and `redirect_uri`.
 *   Backend logs for errors during the token exchange process.
 *   Network requests in the browser developer tools during the redirect flow.
-*   The `.env` file for correct environment variable configuration.
+*   The .env file for correct environment variable configuration.
+
+---
+### The Decision Producer (Phase 5 Architecture)
+
+As of Phase 5, Zaxion uses a deterministic pipeline to judge Pull Requests.
+
+**1. Fact Ingestion (Pillar 1)**
+- Extracts objective data (diffs, coverage, file paths) into a `FactSnapshot`.
+- **Key Service**: `backend/src/services/factIngestor.service.js`
+
+**2. Policy Resolution (Pillar 2)**
+- Matches the `FactSnapshot` against hierarchical policies (Org > Repo).
+- **Key Service**: `backend/src/services/policyResolver.service.js`
+
+**3. Evaluation Engine (Pillar 3)**
+- A pure function that compares Facts vs. Policies to produce a `Verdict`.
+- **Key Service**: `backend/src/services/evaluationEngine.service.js`
+
+**4. Decision Handoff (Pillar 4)**
+- Records the decision in the `GovernanceMemory` and reports to GitHub.
+- **Key Service**: `backend/src/services/decisionHandoff.service.js`
 
 ---
 ### Repository and File Fetching

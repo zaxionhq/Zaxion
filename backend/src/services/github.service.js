@@ -2,6 +2,7 @@
 import axios from "axios";
 import { githubServiceCallCounter } from "../utils/metrics.js";
 import path from "path";
+import logger from "../logger.js";
 
 const GH_API = "https://api.github.com";
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID || "";
@@ -65,7 +66,7 @@ export async function listBranches(token, owner, repo) {
     return data.map((b) => ({ name: b.name, protected: b.protected, sha: b.commit.sha }));
   } catch (error) {
     status = 'failure';
-    console.error(`Error listing branches: ${error.message}`);
+    logger.error({ error }, "Error listing branches");
     throw error;
   } finally {
     githubServiceCallCounter.inc({ operation, status });
@@ -177,13 +178,13 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
         });
         targetBranch = repoInfoResponse.data.default_branch;
       } catch (repoInfoErr) {
-        console.log(`Could not determine default branch: ${repoInfoErr.message}`);
+        logger.warn({ error: repoInfoErr }, "Could not determine default branch");
         targetBranch = 'main'; // Fallback
       }
     }
 
     const url = `${GH_API}/repos/${owner}/${repo}/git/trees/${targetBranch}?recursive=1`;
-    console.log(`Fetching repo tree: ${url}`);
+    logger.info({ url }, "Fetching repo tree");
 
     const { data } = await axios.get(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -191,7 +192,7 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
     });
 
     if (data.truncated) {
-      console.warn(`Warning: Repository tree for ${owner}/${repo} is truncated.`);
+      logger.warn({ owner, repo }, "Repository tree is truncated");
     }
 
     const rawFiles = data.tree;
@@ -248,7 +249,7 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
     return root.children; // Return array of root items
   } catch (error) {
     status = 'failure';
-    console.error(`Error fetching repo tree: ${error.message}`);
+    logger.error({ error }, "Error fetching repo tree");
     throw error;
   } finally {
     githubServiceCallCounter.inc({ operation, status });
@@ -275,14 +276,14 @@ export async function listRepoFiles(token, owner, repo, path = "") {
       });
       defaultBranch = repoInfoResponse.data.default_branch;
     } catch (repoInfoErr) {
-      console.log(`Could not determine default branch: ${repoInfoErr.message}`);
+      logger.warn({ error: repoInfoErr }, "Could not determine default branch");
       // Continue with default approach
     }
     
     // Try to get the directory contents
     try {
       const url = `${GH_API}/repos/${owner}/${repo}/contents/${normalizedPath}`;
-      console.log(`Fetching repo files: ${url}`);
+      logger.info({ url }, "Fetching repo files");
       
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -302,13 +303,13 @@ export async function listRepoFiles(token, owner, repo, path = "") {
         size: i.size
       }));
     } catch (directErr) {
-      console.log(`Direct contents fetch failed: ${directErr.message}`);
+      logger.debug({ error: directErr }, "Direct contents fetch failed");
       
       // If the default approach fails, try with the default branch explicitly
       if (defaultBranch) {
         try {
           const branchUrl = `${GH_API}/repos/${owner}/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`;
-          console.log(`Trying with explicit branch: ${branchUrl}`);
+          logger.info({ url: branchUrl }, "Trying with explicit branch");
           
           const branchResponse = await axios.get(branchUrl, {
             headers: { Authorization: `Bearer ${token}` },
@@ -326,7 +327,7 @@ export async function listRepoFiles(token, owner, repo, path = "") {
             size: i.size
           }));
         } catch (branchErr) {
-          console.log(`Branch-specific fetch failed: ${branchErr.message}`);
+          logger.debug({ error: branchErr }, "Branch-specific fetch failed");
         }
       }
       
@@ -334,7 +335,7 @@ export async function listRepoFiles(token, owner, repo, path = "") {
       try {
         const refBranch = defaultBranch || 'master';
         const treeUrl = `${GH_API}/repos/${owner}/${repo}/git/trees/${refBranch}:${normalizedPath}`;
-        console.log(`Trying tree API: ${treeUrl}`);
+        logger.info({ url: treeUrl }, "Trying tree API");
         
         const treeResponse = await axios.get(treeUrl, {
           headers: { Authorization: `Bearer ${token}` },
@@ -354,7 +355,7 @@ export async function listRepoFiles(token, owner, repo, path = "") {
           }));
         }
       } catch (treeErr) {
-        console.log(`Tree API fetch failed: ${treeErr.message}`);
+        logger.debug({ error: treeErr }, "Tree API fetch failed");
       }
       
       // If all attempts fail, throw the original error
@@ -362,7 +363,7 @@ export async function listRepoFiles(token, owner, repo, path = "") {
     }
   } catch (error) {
     status = 'failure';
-    console.error(`Error listing repo files: ${error.message}`);
+    logger.error({ error }, "Error listing repo files");
     throw error;
   } finally {
     githubServiceCallCounter.inc({ operation, status });
@@ -388,7 +389,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
     
     // Clean the path - remove any leading slashes and normalize
     const cleanPath = path.replace(/^[\/\\]+/, '');
-    console.log(`Fetching file: owner=${actualOwner}, repo=${actualRepo}, original path=${path}, clean path=${cleanPath}`);
+    logger.info({ owner: actualOwner, repo: actualRepo, originalPath: path, cleanPath }, "Fetching file");
 
     // Check extension first
     const extension = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
@@ -404,9 +405,9 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
         timeout: 5000
       });
       defaultBranch = repoInfoResponse.data.default_branch;
-      console.log(`Default branch for ${actualOwner}/${actualRepo} is ${defaultBranch}`);
+      logger.info({ owner: actualOwner, repo: actualRepo, branch: defaultBranch }, "Default branch determined");
     } catch (repoInfoErr) {
-      console.log(`Could not determine default branch: ${repoInfoErr.message}`);
+      logger.warn({ error: repoInfoErr }, "Could not determine default branch");
       // Continue with fallback branches if we can't get the default branch
     }
     
@@ -485,12 +486,12 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
         throw directErr;
       }
 
-      console.log(`Direct API approach failed: ${directErr.message}`);
+      logger.debug({ error: directErr }, "Direct API approach failed");
       
       // If it's a 404 or other error, try with specific branches
       for (const branch of uniqueBranches) {
         try {
-          console.log(`Trying branch: ${branch}`);
+          logger.info({ branch }, "Trying branch");
           const branchResponse = await axios.get(`${GH_API}/repos/${actualOwner}/${actualRepo}/contents/${cleanPath}?ref=${branch}`, {
             headers: { 
               Authorization: `Bearer ${token}`,
@@ -506,7 +507,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
            if (branchErr.message.startsWith("BINARY_FILE") || branchErr.message.startsWith("TOO_LARGE") || branchErr.message.startsWith("EMPTY_FILE")) {
             throw branchErr;
           }
-          console.log(`Branch ${branch} attempt failed: ${branchErr.message}`);
+          logger.debug({ branch, error: branchErr }, "Branch attempt failed");
           // Continue to next branch
         }
       }
@@ -515,7 +516,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
       for (const branch of uniqueBranches) {
         try {
           const rawUrl = `https://raw.githubusercontent.com/${actualOwner}/${actualRepo}/${branch}/${cleanPath}`;
-          console.log(`Trying raw URL: ${rawUrl}`);
+          logger.info({ url: rawUrl }, "Trying raw URL");
           
           const rawResponse = await axios.get(rawUrl, {
             headers: { Authorization: `Bearer ${token}` },
@@ -531,7 +532,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
            if (rawBranchErr.message.startsWith("BINARY_FILE") || rawBranchErr.message.startsWith("TOO_LARGE") || rawBranchErr.message.startsWith("EMPTY_FILE")) {
             throw rawBranchErr;
           }
-          console.log(`Raw URL with branch ${branch} failed: ${rawBranchErr.message}`);
+          logger.debug({ branch, error: rawBranchErr }, "Raw URL with branch failed");
           // Continue to next branch
         }
       }
@@ -575,7 +576,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
          if (blobErr.message.startsWith("BINARY_FILE") || blobErr.message.startsWith("TOO_LARGE") || blobErr.message.startsWith("EMPTY_FILE")) {
             throw blobErr;
           }
-        console.log(`Blob API approach failed: ${blobErr.message}`);
+        logger.debug({ error: blobErr }, "Blob API approach failed");
       }
       
       // If all attempts fail, throw the original error
@@ -586,7 +587,7 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
     throw new Error(`File not found: ${path}. Could not locate the file in the repository.`);
   } catch (error) {
     status = 'failure';
-    console.error(`Error fetching file content: ${error.message}`);
+    logger.error({ error }, "Error fetching file content");
     throw error;
   } finally {
     githubServiceCallCounter.inc({ operation, status });
@@ -692,7 +693,7 @@ export async function fetchContextFiles(token, owner, repo, currentFilePath, imp
     // 3. Limit to top 5 to avoid perf issues
     const pathsToFetch = Array.from(uniquePaths).slice(0, 5);
     
-    console.log(`Fetching context files for ${currentFilePath}:`, pathsToFetch);
+    logger.info({ currentFilePath, pathsToFetch }, "Fetching context files");
 
     const contextFiles = [];
     
@@ -722,7 +723,7 @@ export async function fetchContextFiles(token, owner, repo, currentFilePath, imp
 
   } catch (error) {
     status = 'failure';
-    console.error(`Error fetching context files: ${error.message}`);
+    logger.error({ error }, "Error fetching context files");
     return []; // Return empty on error to not break main flow
   } finally {
     githubServiceCallCounter.inc({ operation, status });

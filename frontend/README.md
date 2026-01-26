@@ -41,8 +41,10 @@ This is the user interface for the GitHub Test Case Generator, built with **Reac
 ---
 
 ## ✨ Features
+- **Governance Dashboard**: Monitor organization-wide PR health and policy compliance.
+- **Resolution UI**: Specialized workbench for developers to fix policy violations.
+- **Audit Ledger**: Immutable view of historical decisions and human overrides.
 - **Repo Selector**: Browse and select your GitHub repositories.
-- **Analysis View**: Real-time feedback on PR analysis and policy violations.
 - **Test Editor**: Review, edit, and approve AI-generated test cases.
 
 ---

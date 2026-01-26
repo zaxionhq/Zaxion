@@ -1,84 +1,77 @@
-### STEP 1 — TASK A: WHAT DOES YOUR PROJECT DO? (High-Level)
+# 🎓 Teach Me: Zaxion (The Governor)
 
-**What the user does:**
-The user connects their GitHub account to the application. They then pick a specific GitHub repository and choose which files they want to analyze. After the AI generates test cases, the user can look at them, make changes if needed, and then decide to create a Pull Request on GitHub with these new tests.
+Welcome to the educational guide for **Zaxion**. This document explains the core philosophy, architectural patterns, and governance mechanics that power the system.
 
-**What the AI does:**
-The AI is the smart part that reads the user's code files from GitHub. It figures out what the code does, identifies areas that need testing, and then writes new test cases specifically for those files. It can also summarize code and answer questions about it.
+---
 
-**What GitHub’s API does:**
-GitHub's API is like a messenger service that lets our application talk to GitHub. It handles things like securely logging in the user, getting a list of their repositories, fetching the actual code files from those repositories, and finally, creating a Pull Request with the AI-generated tests.
+## 🏛️ 1. The Core Philosophy: "From Tool to Governor"
 
-**What your backend does:**
-The backend is the server-side brain of the application. It manages user logins through GitHub, talks to the GitHub API to get repository and file information, sends code to the AI for analysis and test generation, and then takes the AI's results to create Pull Requests on GitHub. It also handles all the security and data flow between the frontend and external services.
+Most AI tools are **Assistants**—they help you write code or tests. Zaxion is a **Governor**. 
 
-**What your frontend does:**
-The frontend is what the user sees and interacts with in their web browser. It provides the interface for logging in with GitHub, selecting repositories and files, viewing the AI-generated test cases, editing them, and triggering the creation of Pull Requests. It's the user's window into the entire process.
+- **Assistant Mode**: "I suggest you add a test here." (Phase 1-3)
+- **Governor Mode**: "This PR is BLOCKED because it touches payment logic without a security test." (Phase 5+)
 
-**What final output the user receives:**
-The user ultimately receives a Pull Request on their chosen GitHub repository. This Pull Request contains the new, AI-generated test files, ready for review and merging into their codebase.
+Zaxion moves the authority from "human intuition" to **"Deterministic Policy."**
 
-### STEP 1 — TASK B: DATA FLOW PIPELINE
+---
 
-Explain the flow EXACTLY like this:
-Input → Processing → Output → GitHub Action
-For example:
-User inputs X →
-AI receives Y →
-AI returns Z →
-Backend formats Z →
-Backend updates GitHub →
-User sees final result
+## 🧱 2. The Five Pillars of Governance
 
-You must fill X, Y, Z with your project’s actual values.
+Zaxion is built on a "Division of Powers" to ensure trust and accountability.
 
-**Input → Processing → Output → GitHub Action**
+### **Pillar 1: The Law (Fact Ingestion)**
+Extracts objective, immutable truths from your PR.
+- **Goal**: What *actually* changed?
+- **Invariant**: Determinism. Two different people looking at the same PR should see the same facts.
 
-- **User inputs GitHub credentials** →
-- **Backend authenticates with GitHub API** →
-- **Backend fetches user's repositories** →
-- **Frontend displays repositories** →
-- **User selects a repository and files** →
-- **Frontend sends selected files to Backend** →
-- **Backend sends file content to AI service** →
-- **AI service generates test cases** →
-- **AI service returns generated test cases to Backend** →
-- **Backend formats test cases** →
-- **Frontend displays generated test cases for review** →
-- **User reviews and approves/edits test cases** →
-- **Frontend sends approved test cases to Backend for PR creation** →
-- **Backend creates a new branch and commits test files to GitHub via GitHub API** →
-- **Backend creates a Pull Request on GitHub** →
-- **User sees final Pull Request on GitHub**
+### **Pillar 2: The Policy (Resolution)**
+Identifies which rules apply to those facts.
+- **Hierarchy**: Organization Rules > Repository Rules.
+- **Jurisdiction**: Does this file path fall under the "Security Policy"?
 
-### STEP 1 — TASK C: IDENTIFY MAIN COMPONENTS
+### **Pillar 3: The Judge (Evaluation Engine)**
+A pure, stateless function that compares **Facts** against **Policy**.
+- **Verdict**: PASS, BLOCK, or WARN.
+- **No AI in the Verdict**: The decision is 100% deterministic code. AI is only used for *remediation* (helping you fix the violation).
 
-**Backend Components:**
+### **Pillar 4: The Exception (Human Accountability)**
+Sometimes the law is too strict. Humans can sign "Overrides."
+- **Traceability**: Who signed the override? Why? For which specific commit?
 
-- `/auth/github` route: Handles GitHub OAuth login flow.
-- `/repos` route: Lists authenticated user's repositories.
-- `/files` route: Fetches files from a selected repository.
-- `/generate-tests` route: AI service endpoint for analyzing repo files and returning test cases.
-- `/create-pr` route: Creates a Pull Request with generated test cases.
-- GitHub API service: Manages communication with the GitHub API (authentication, fetching data, creating PRs).
-- AI service (`llm.service.js`): Orchestrates communication with the chosen LLM provider (Gemini, OpenRouter, OpenAI).
-- Project configuration: Environment variables (`.env`) for API keys, URLs, and other settings.
-- Authentication/Authorization: Handles user sessions and secure access.
-- Error Handling Middleware: Catches and formats errors consistently.
+### **Pillar 5: The Memory (Decision Handoff)**
+Records the final decision in an immutable ledger before telling GitHub.
+- **Causality**: If it's not in our database, it's not on GitHub.
 
-**Frontend Components:**
+---
 
-- `LoginPage`: Handles GitHub OAuth login and redirects.
-- `RepoSelector`: Displays a list of GitHub repositories and allows selection.
-- `TestGenerator`: Displays, allows review and editing of generated test cases.
-- `PRCreator`: Facilitates submitting selected tests as a Pull Request.
-- Input forms: For user interaction (e.g., selecting files, editing tests).
-- Display areas: To show repository content, generated tests, and status messages.
-- API Client (e.g., Axios/fetch): For making requests to the backend.
-- Loading states/Spinners: To indicate ongoing processes.
+## 🔄 3. The Lifecycle of a PR
 
-**External Services:**
+1. **Webhook**: GitHub tells Zaxion "New PR created."
+2. **Fact Snapshot**: Zaxion analyzes the diff and extracts facts (e.g., "Modified `auth.js`", "Coverage: 40%").
+3. **Policy Binding**: Zaxion finds the relevant policies for that repo and path.
+4. **Evaluation**: The Judge runs the facts through the policies.
+5. **Verdict**: 
+   - ✅ **PASS**: GitHub Check is green.
+   - ❌ **BLOCK**: GitHub Check is red. Developer is invited to use the **Resolution UI** to fix it.
+6. **Remediation**: AI generates the missing tests to help the developer get to a "PASS" state.
 
-- OpenRouter (or other LLM Provider like Gemini/OpenAI): Provides the AI model for test generation and code analysis.
-- GitHub API: Provides access to GitHub repositories, user data, and Pull Request functionality.
-- GitHub OAuth: Handles secure user authentication and authorization with GitHub.
+---
+
+## ⚖️ 4. Why Determinism Matters?
+
+If a governance system is "vibe-based" (probabilistic AI), developers will stop trusting it. 
+- **Zaxion's Rule**: The *Gate* is deterministic (Code). The *Help* is probabilistic (AI).
+
+You can always re-run a decision from 6 months ago and get the exact same result because every decision is bound to a specific **Policy Version** and **Fact Snapshot**.
+
+---
+
+## 🛠️ 5. Key Terms to Know
+
+| Term | Definition |
+| :--- | :--- |
+| **Fact Snapshot** | An immutable record of the state of a PR at a specific commit. |
+| **Policy Version** | A point-in-time version of a rule (e.g., "Policy v2"). |
+| **Verdict** | The final status (PASS/BLOCK/WARN) of a PR evaluation. |
+| **Decision Record** | The "Longitudinal Memory" — the permanent audit log of a verdict. |
+| **Override** | A human-signed "Mercy" to bypass a block. |
