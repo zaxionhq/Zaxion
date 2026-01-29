@@ -1,3 +1,5 @@
+import { Model } from 'sequelize';
+
 export default (sequelize, DataTypes) => {
   class PolicySimulation extends Model {
     static associate(models) {

@@ -7,6 +7,8 @@ describe('DecisionHandoffService', () => {
   let mockGovernanceMemory;
   let mockGithubReporter;
 
+  let mockOverrideService;
+
   beforeEach(() => {
     mockDb = {};
     mockGovernanceMemory = {
@@ -15,7 +17,10 @@ describe('DecisionHandoffService', () => {
     mockGithubReporter = {
       reportStatus: jest.fn()
     };
-    service = new DecisionHandoffService(mockDb, mockGovernanceMemory, mockGithubReporter);
+    mockOverrideService = {
+      isValidOverride: jest.fn()
+    };
+    service = new DecisionHandoffService(mockDb, mockGovernanceMemory, mockGithubReporter, mockOverrideService);
   });
 
   const mockEvalResult = {
@@ -50,8 +55,9 @@ describe('DecisionHandoffService', () => {
     expect(result.final_status).toBe('FAILURE');
   });
 
-  test('should report SUCCESS if a BLOCK result has an override_id', async () => {
+  test('should report OVERRIDDEN_PASS if a BLOCK result has a valid override_id', async () => {
     mockGovernanceMemory.recordDecision.mockResolvedValue({ id: 'decision-456' });
+    mockOverrideService.isValidOverride.mockResolvedValue(true);
     
     const result = await service.handoff({
       evaluation_result: mockEvalResult,
@@ -59,12 +65,31 @@ describe('DecisionHandoffService', () => {
       github_context: mockGithubContext
     });
 
-    expect(result.final_status).toBe('SUCCESS');
+    expect(result.final_status).toBe('OVERRIDDEN_PASS');
     expect(mockGithubReporter.reportStatus).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       expect.any(String),
-      expect.objectContaining({ decision: 'SUCCESS' })
+      expect.objectContaining({ decision: 'OVERRIDDEN_PASS' })
+    );
+  });
+
+  test('should report FAILURE if a BLOCK result has an invalid override_id', async () => {
+    mockGovernanceMemory.recordDecision.mockResolvedValue({ id: 'decision-456' });
+    mockOverrideService.isValidOverride.mockResolvedValue(false);
+    
+    const result = await service.handoff({
+      evaluation_result: mockEvalResult,
+      override_id: 'invalid-override',
+      github_context: mockGithubContext
+    });
+
+    expect(result.final_status).toBe('FAILURE');
+    expect(mockGithubReporter.reportStatus).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ decision: 'FAILURE' })
     );
   });
 
