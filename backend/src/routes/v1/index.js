@@ -6,6 +6,7 @@ import testcaseRoutesFactory from "../testcase.routes.js"; // Import testcaseRou
 import policyRoutesFactory from "../policy.routes.js";
 import overrideRoutesFactory from "../override.routes.js";
 import governanceMemoryRoutesFactory from "../governanceMemory.routes.js";
+import analyticsRoutesFactory from "../governanceAnalytics.routes.js";
 import chatbotRoutes from "../chatbot.routes.js";
 import webhookRoutesFactory from "../webhook.routes.js";
 
@@ -19,6 +20,7 @@ export default function v1ApiRoutesFactory(db) {
   router.use("/policies", policyRoutesFactory(db));
   router.use("/overrides", overrideRoutesFactory(db));
   router.use("/governance-memory", governanceMemoryRoutesFactory(db));
+  router.use("/analytics/governance", analyticsRoutesFactory(db));
   router.use("/chatbot", chatbotRoutes);
   router.use("/webhooks", webhookRoutesFactory());
 

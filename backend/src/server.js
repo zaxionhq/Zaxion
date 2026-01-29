@@ -46,10 +46,9 @@ async function assertDatabaseConnectionOk() {
 
     // In dev only, sync models for convenience. In production, use migrations.
     if (NODE_ENV !== "production") {
-      // Using force:false and alter:false to prevent automatic schema changes
-      // that could cause data loss. Use migrations for schema changes instead.
-      await db.sequelize.sync({ force: false, alter: false });
-      console.log("✅ Sequelize sync completed (dev mode)");
+      // In development, we allow schema alterations to match model changes.
+      await db.sequelize.sync({ force: false, alter: true });
+      console.log("✅ Sequelize sync completed (dev mode with alter:true)");
     }
   } catch (error) {
     logger.error({ error }, "Unable to connect to the database:");
