@@ -45,5 +45,27 @@ export default function policyRoutesFactory(db) {
     policyController.getPolicyVersion
   );
 
+  // Phase 6 Pillar 3: Policy Simulations
+  router.post(
+    '/:id/simulate',
+    authenticateJWT,
+    authorize(['admin']), // Simulation is an admin function
+    policyController.runSimulation
+  );
+
+  router.get(
+    '/simulations/:simId',
+    authenticateJWT,
+    authorize(['admin']),
+    policyController.getSimulation
+  );
+
+  router.post(
+    '/simulations/:simId/promote',
+    authenticateJWT,
+    authorize(['admin']),
+    policyController.promoteDraft
+  );
+
   return router;
 }

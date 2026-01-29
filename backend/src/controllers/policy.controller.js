@@ -1,7 +1,12 @@
 // src/controllers/policy.controller.js
 import * as policyService from '../services/policy.service.js';
+import { PolicySimulationService } from '../services/policySimulation.service.js';
+import { EvaluationEngineService } from '../services/evaluationEngine.service.js';
 
 export default function policyControllerFactory(db) {
+  const evaluationEngine = new EvaluationEngineService();
+  const simulationService = new PolicySimulationService(db, evaluationEngine);
+
   async function createPolicy(req, res, next) {
     try {
       const { name, scope, target_id, owning_role } = req.body;
@@ -86,11 +91,74 @@ export default function policyControllerFactory(db) {
     }
   }
 
+  // Phase 6 Pillar 3: Policy Simulations
+  async function runSimulation(req, res, next) {
+    try {
+      const { id: policyId } = req.params;
+      const { draft_rules, sample_strategy, sample_size } = req.body;
+      const userId = req.user ? req.user.id : null;
+
+      if (!userId) {
+        const error = new Error('User not authenticated');
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const simulation = await simulationService.runSimulation({
+        policy_id: policyId,
+        draft_rules,
+        sample_strategy,
+        sample_size,
+        created_by: userId
+      });
+
+      res.status(202).json(simulation);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function getSimulation(req, res, next) {
+    try {
+      const { simId } = req.params;
+      const simulation = await db.PolicySimulation.findByPk(simId);
+      if (!simulation) {
+        const error = new Error('Simulation not found');
+        error.statusCode = 404;
+        throw error;
+      }
+      res.json(simulation);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function promoteDraft(req, res, next) {
+    try {
+      const { simId } = req.params;
+      const userId = req.user ? req.user.id : null;
+
+      if (!userId) {
+        const error = new Error('User not authenticated');
+        error.statusCode = 401;
+        throw error;
+      }
+
+      const newVersion = await simulationService.promoteDraft(db, simId, userId);
+      res.status(201).json(newVersion);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   return {
     createPolicy,
     listPolicies,
     getPolicy,
     createPolicyVersion,
     getPolicyVersion,
+    runSimulation,
+    getSimulation,
+    promoteDraft
   };
 }
