@@ -9,11 +9,13 @@ export class DecisionHandoffService {
    * @param {object} db - Sequelize DB instance
    * @param {object} governanceMemoryService - Service to record decisions (Phase 4, Pillar 3)
    * @param {object} githubReporterService - Service to update GitHub Check Runs
+   * @param {object} overrideService - Phase 6 Pillar 2 Override Service
    */
-  constructor(db, governanceMemoryService, githubReporterService) {
+  constructor(db, governanceMemoryService, githubReporterService, overrideService) {
     this.db = db;
     this.governanceMemoryService = governanceMemoryService;
     this.githubReporterService = githubReporterService;
+    this.overrideService = overrideService;
   }
 
   /**
@@ -35,9 +37,16 @@ export class DecisionHandoffService {
       overrideId: override_id 
     }, "DecisionHandoff: Starting handoff process");
 
-    // 1. Override Applier (Step 3.3)
-    // Map evaluation result to final status based on presence of override
-    const finalStatus = this._calculateFinalStatus(evaluation_result.result, override_id);
+    // 1. Override Applier (Phase 6 Pillar 2.4.A)
+    // Map evaluation result to final status based on presence of valid override
+    const finalStatus = await this._calculateFinalStatus(
+      evaluation_result.result, 
+      override_id,
+      {
+        current_sha: github_context.sha,
+        current_hash: evaluation_result.evaluation_hash
+      }
+    );
 
     // 2. Pillar 3 Integration (Invariant 1 & Step 3.1)
     // We must record the decision BEFORE emitting external status
@@ -92,14 +101,17 @@ export class DecisionHandoffService {
 
   /**
    * Logic to determine the final status reported to the outside world.
-   * Step 3.3: Override Applier
+   * Step 3.3: Override Applier (Upgraded for Phase 6 Pillar 2)
    */
-  _calculateFinalStatus(evaluationResult, overrideId) {
+  async _calculateFinalStatus(evaluationResult, overrideId, context) {
     if (evaluationResult === 'PASS') return 'SUCCESS';
     
-    // If blocked but we have a valid override ID, we report success
-    if (evaluationResult === 'BLOCK' && overrideId) {
-      return 'SUCCESS'; // In Phase 6, we'd label this OVERRIDDEN_PASS for GitHub
+    // Phase 6 Pillar 2: Validation of the Override
+    if (overrideId && this.overrideService) {
+      const valid = await this.overrideService.isValidOverride(this.db, overrideId, context);
+      if (valid) {
+        return 'OVERRIDDEN_PASS'; // Enriched status for Phase 6
+      }
     }
 
     if (evaluationResult === 'BLOCK') return 'FAILURE';

@@ -37,11 +37,18 @@ export class DecisionReviewService {
         { 
           model: this.db.Override, 
           as: 'override',
-          include: [{ 
-            model: this.db.OverrideSignature, 
-            as: 'signatures',
-            include: [{ model: this.db.User, as: 'actor' }]
-          }]
+          include: [
+            { 
+              model: this.db.OverrideSignature, 
+              as: 'signatures',
+              include: [{ model: this.db.User, as: 'actor' }]
+            },
+            {
+              model: this.db.OverrideRevocation,
+              as: 'revocation',
+              include: [{ model: this.db.User, as: 'revoker' }]
+            }
+          ]
         }
       ]
     });
@@ -191,12 +198,19 @@ export class DecisionReviewService {
     return {
       id: override.id,
       status: override.status,
+      category: override.category,
+      expires_at: override.expires_at,
       signatures: override.signatures?.map(sig => ({
         actor: sig.actor?.username || 'System',
         role: sig.role_at_signing,
         justification: sig.justification,
         timestamp: sig.createdAt
-      })) || []
+      })) || [],
+      revocation: override.revocation ? {
+        revoked_by: override.revocation.revoker?.username || 'System',
+        revoked_at: override.revocation.revoked_at,
+        reason: override.revocation.reason
+      } : null
     };
   }
 }

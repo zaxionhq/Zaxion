@@ -9,10 +9,22 @@ export default (sequelize, DataTypes) => {
         as: 'policyVersion',
       });
 
+      // An Override belongs to a Decision
+      this.belongsTo(models.Decision, {
+        foreignKey: 'decision_id',
+        as: 'decision',
+      });
+
       // An Override has many Signatures
       this.hasMany(models.OverrideSignature, {
         foreignKey: 'override_id',
         as: 'signatures',
+      });
+
+      // An Override can have one Revocation
+      this.hasOne(models.OverrideRevocation, {
+        foreignKey: 'override_id',
+        as: 'revocation',
       });
     }
   }
@@ -24,19 +36,39 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      subject_ref: {
-        type: DataTypes.JSON,
+      decision_id: {
+        type: DataTypes.UUID,
         allowNull: false,
-        comment: 'JSON containing type (PR_CHECK|POLICY_EVALUATION) and external_id',
+        comment: 'Link to the canonical Governance Record being overridden',
       },
       policy_version_id: {
         type: DataTypes.UUID,
         allowNull: false,
       },
-      status: {
-        type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED'),
+      evaluation_hash: {
+        type: DataTypes.STRING(64),
         allowNull: false,
-        defaultValue: 'PENDING',
+        comment: 'Cryptographic binding to the exact code/policy state',
+      },
+      target_sha: {
+        type: DataTypes.STRING(64),
+        allowNull: false,
+        comment: 'Scope confinement: only valid for this commit SHA',
+      },
+      category: {
+        type: DataTypes.ENUM('EMERGENCY_HOTFIX', 'FALSE_POSITIVE', 'LEGACY_CODE', 'BUSINESS_EXCEPTION'),
+        allowNull: false,
+        defaultValue: 'BUSINESS_EXCEPTION',
+      },
+      status: {
+        type: DataTypes.ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'REVOKED'),
+        allowNull: false,
+        defaultValue: 'APPROVED',
+      },
+      expires_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        comment: 'Temporal expiry for governance safety',
       },
     },
     {
