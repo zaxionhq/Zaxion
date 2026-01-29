@@ -40,6 +40,11 @@ export default (sequelize) => {
         type: DataTypes.UUID,
         allowNull: true,
       },
+      evaluation_hash: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        comment: 'Pillar 1.3: Deterministic evaluation hash for integrity verification',
+      },
     },
     {
       sequelize,

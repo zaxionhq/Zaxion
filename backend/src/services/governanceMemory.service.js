@@ -5,7 +5,15 @@ import { Op } from 'sequelize';
  * This is a downstream-only recording of an evaluation result.
  */
 export async function recordDecision(db, payload) {
-  const { policy_version_id, fact_id, result, rationale, override_id, previous_decision_id } = payload;
+  const { 
+    policy_version_id, 
+    fact_id, 
+    result, 
+    rationale, 
+    override_id, 
+    previous_decision_id,
+    evaluation_hash 
+  } = payload;
 
   const decision = await db.Decision.create({
     policy_version_id,
@@ -14,6 +22,7 @@ export async function recordDecision(db, payload) {
     rationale,
     override_id,
     previous_decision_id,
+    evaluation_hash,
   });
 
   // Increment metrics as a side-effect of recording a decision

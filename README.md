@@ -17,6 +17,7 @@
 - **[Product Spec](PRODUCT_SPEC.md)**: Why we built this and where we are going.
 - **[Developer Guide](dev.md)**: In-depth technical documentation for contributors.
 - **[Architecture](docs/ARCHITECTURE.md)**: High-level system design.
+- **[Shortcomings](docs/LIMITATIONS_AND_SHORTCOMINGS.md)**: Known boundaries and technical limitations.
 
 ---
 

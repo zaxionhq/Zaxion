@@ -49,7 +49,8 @@ export class DecisionHandoffService {
         result: evaluation_result.result,
         rationale: evaluation_result.rationale,
         override_id: override_id,
-        final_status: finalStatus // Our derived status
+        final_status: finalStatus, // Our derived status
+        evaluation_hash: evaluation_result.evaluation_hash // Pillar 1.3: Link integrity hash
       });
       
       logger.info({ decisionId: decisionRecord.id }, "DecisionHandoff: Decision successfully recorded in Pillar 3");
