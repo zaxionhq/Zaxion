@@ -16,6 +16,7 @@ export default function analyticsRoutesFactory(db) {
 
   router.get('/summary', controller.getExecutiveSummary);
   router.get('/repo', controller.getRepoMetrics);
+  router.get('/decisions', controller.listDecisions);
 
   return router;
 }

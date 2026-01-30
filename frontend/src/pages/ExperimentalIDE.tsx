@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Github, Brain, Sparkles, Code2, GitBranch, Zap, ArrowRight, CheckCircle, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -73,8 +74,28 @@ const ExperimentalIDE = () => {
     toggleShowIgnored
   } = useTestGeneration();
 
-  // Local state for selected repo (since useTestGeneration doesn't expose setter)
   const [localSelectedRepo, setLocalSelectedRepo] = useState<typeof selectedRepo>(null);
+
+  const [searchParams] = useSearchParams();
+
+  // Handle deep link parameters
+  useEffect(() => {
+    const repoName = searchParams.get('repo');
+    const owner = searchParams.get('owner');
+    const pr = searchParams.get('pr');
+    const sha = searchParams.get('sha');
+
+    if (isConnected && repoName && owner && repos.length > 0) {
+      const repo = repos.find(r => r.name === repoName && r.owner.login === owner);
+      if (repo) {
+        handleRepoSelect(repo);
+        if (pr) {
+          const prNum = parseInt(pr);
+          handleFetchDecision(prNum);
+        }
+      }
+    }
+  }, [isConnected, repos, searchParams]);
 
   const { user, loading: sessionLoading, logout } = useSession();
   

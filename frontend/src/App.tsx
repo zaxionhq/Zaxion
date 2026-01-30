@@ -10,6 +10,7 @@ import ResolutionPage from "./pages/ResolutionPage";
 import ExperimentalIDE from "./pages/ExperimentalIDE";
 import OAuthCallback from "./pages/OAuthCallback";
 import ArchitecturePage from "./pages/ArchitecturePage";
+import GovernanceDashboard from "./pages/GovernanceDashboard";
 import NotFound from "./pages/NotFound";
 
 const InternalProtection = ({ children }: { children: React.ReactNode }) => {
@@ -52,6 +53,8 @@ const App = () => (
               />
               <Route path="/auth/callback" element={<OAuthCallback />} />
               <Route path="/architecture" element={<ArchitecturePage />} />
+              <Route path="/workspace" element={<ExperimentalIDE />} />
+              <Route path="/governance" element={<GovernanceDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

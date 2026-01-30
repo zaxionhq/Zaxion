@@ -18,5 +18,7 @@ export const createPrBody = z.object({
 
 export const executeOverrideBody = z.object({
   reason: z.string().min(10, "Justification must be at least 10 characters long"),
-  role: z.string().optional(), // In a real app, this would be verified against user sessions
+  category: z.enum(['EMERGENCY_HOTFIX', 'FALSE_POSITIVE', 'LEGACY_CODE', 'BUSINESS_EXCEPTION']).default('BUSINESS_EXCEPTION'),
+  ttl_hours: z.number().min(1).max(168).default(24), // Max 1 week
+  role: z.string().optional(),
 });

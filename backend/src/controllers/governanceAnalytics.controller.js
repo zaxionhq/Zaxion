@@ -35,8 +35,22 @@ export default function analyticsControllerFactory(db) {
     }
   }
 
+  /**
+   * GET /api/v1/analytics/governance/decisions
+   */
+  async function listDecisions(req, res, next) {
+    try {
+      const { limit = 50, offset = 0 } = req.query;
+      const decisions = await analyticsService.listDecisions(db, parseInt(limit), parseInt(offset));
+      res.json(decisions);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   return {
     getExecutiveSummary,
-    getRepoMetrics
+    getRepoMetrics,
+    listDecisions
   };
 }

@@ -96,14 +96,19 @@ const ResolutionPage = () => {
     await generateTestCode(summary, 'test');
   };
 
-  const handleOverride = async (reason: string) => {
+  const handleOverride = async (reason: string, category: string, ttlHours: number) => {
     if (latestDecision && latestDecision.pr_number) {
-      await executeOverride(
-        latestDecision.repo_owner, 
-        latestDecision.repo_name, 
-        latestDecision.pr_number, 
-        reason
+      const success = await executeOverride(
+        latestDecision.repo_owner,
+        latestDecision.repo_name,
+        latestDecision.pr_number,
+        reason,
+        category,
+        ttlHours
       );
+      if (success && decisionId) {
+        fetchDecisionById(parseInt(decisionId));
+      }
     }
   };
 

@@ -44,6 +44,12 @@ const LandingPage = () => {
           <div className="hidden md:flex items-center gap-8">
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
+            <button 
+              onClick={() => navigate('/governance')}
+              className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors"
+            >
+              Governance
+            </button>
             <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" asChild>
               <a href="https://github.com/apps/zaxion-guard" target="_blank" rel="noopener noreferrer">
                 <Github className="h-4 w-4 mr-2 inline" />

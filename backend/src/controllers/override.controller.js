@@ -4,15 +4,37 @@ import * as overrideService from '../services/override.service.js';
 export default function overrideControllerFactory(db) {
   async function createOverride(req, res, next) {
     try {
-      const { subject_ref, policy_version_id } = req.body;
+      const { 
+        decision_id, 
+        evaluation_hash, 
+        target_sha, 
+        category, 
+        reason, 
+        ttl_hours 
+      } = req.body;
+      const userId = req.user ? req.user.id : null;
 
-      if (!subject_ref || !subject_ref.type || !subject_ref.external_id || !policy_version_id) {
-        const error = new Error('Missing required fields: subject_ref (type, external_id), policy_version_id');
+      if (!userId) {
+        const error = new Error('User not authenticated');
+        error.statusCode = 401;
+        throw error;
+      }
+
+      if (!decision_id || !evaluation_hash || !target_sha || !category || !reason) {
+        const error = new Error('Missing required fields: decision_id, evaluation_hash, target_sha, category, reason');
         error.statusCode = 400;
         throw error;
       }
 
-      const override = await overrideService.createOverride(db, { subject_ref, policy_version_id });
+      const override = await overrideService.createOverride(db, { 
+        decision_id, 
+        evaluation_hash, 
+        target_sha, 
+        category, 
+        reason, 
+        ttl_hours 
+      }, userId);
+      
       res.status(201).json(override);
     } catch (error) {
       next(error);

@@ -3,19 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History, CheckCircle2, ListChecks, FileCode, Lightbulb } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History, CheckCircle2, ListChecks, FileCode, Lightbulb, Clock } from 'lucide-react';
 import { PRDecision, DecisionObject } from '@/hooks/usePRGate';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PRGateStatusProps {
   decision: PRDecision | null;
   isLoading: boolean;
-  onOverride: (reason: string) => Promise<void>;
+  onOverride: (reason: string, category: string, ttlHours: number) => Promise<void>;
 }
 
 export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading, onOverride }) => {
   const [justification, setJustification] = useState('');
+  const [category, setCategory] = useState('BUSINESS_EXCEPTION');
+  const [ttlHours, setTtlHours] = useState('24');
   const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,7 +59,7 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
     if (justification.length < 10) return;
     setIsSubmitting(true);
     try {
-      await onOverride(justification);
+      await onOverride(justification, category, parseInt(ttlHours));
       setIsOverrideDialogOpen(false);
       setJustification('');
     } finally {
@@ -180,38 +183,72 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
                   Zaxion Bypass
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Zaxion Guard: Manual Bypass</DialogTitle>
                   <DialogDescription>
-                    Bypassing the quality gate is an audited action recorded in the Zaxion Ledger. Please provide a clear justification.
+                    Bypassing the quality gate is an audited action recorded in the Zaxion Ledger.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</label>
+                      <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
+                          <SelectItem value="EMERGENCY_HOTFIX">Emergency Hotfix</SelectItem>
+                          <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
+                          <SelectItem value="LEGACY_CODE">Legacy Code</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Expiry (TTL)</label>
+                      <Select value={ttlHours} onValueChange={setTtlHours}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Select TTL" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="4">4 Hours</SelectItem>
+                          <SelectItem value="24">24 Hours</SelectItem>
+                          <SelectItem value="48">48 Hours</SelectItem>
+                          <SelectItem value="168">1 Week</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Justification (min 10 characters)</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Justification (min 10 chars)</label>
                     <Textarea 
                       placeholder="e.g., Emergency production fix, tests will be added in follow-up PR..." 
                       value={justification}
                       onChange={(e) => setJustification(e.target.value)}
-                      className="h-24"
+                      className="h-24 resize-none"
                     />
                   </div>
-                  <Alert variant="destructive" className="py-2">
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Only users with Admin or Maintainer permissions on GitHub are authorized to execute this override.
-                    </AlertDescription>
-                  </Alert>
+                  
+                  <div className="p-3 rounded-md bg-destructive/5 border border-destructive/10 flex gap-3 items-start">
+                    <Shield className="h-4 w-4 text-destructive mt-0.5" />
+                    <p className="text-[11px] text-destructive leading-relaxed">
+                      <strong>Authorization Required:</strong> Only users with Admin or Maintainer permissions on GitHub are authorized to execute this override.
+                    </p>
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="ghost" onClick={() => setIsOverrideDialogOpen(false)}>Cancel</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsOverrideDialogOpen(false)}>Cancel</Button>
                   <Button 
                     variant="destructive" 
+                    size="sm"
                     disabled={justification.length < 10 || isSubmitting}
                     onClick={handleOverrideSubmit}
+                    className="gap-2"
                   >
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Unlock className="h-4 w-4 mr-2" />}
+                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlock className="h-3 w-3" />}
                     Confirm Zaxion Bypass
                   </Button>
                 </DialogFooter>

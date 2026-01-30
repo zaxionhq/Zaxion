@@ -104,6 +104,39 @@ export async function getExecutiveSummary(db) {
 }
 
 /**
+ * List all governance decisions for exploration.
+ */
+export async function listDecisions(db, limit = 50, offset = 0) {
+  try {
+    const decisions = await db.Decision.findAll({
+      include: [
+        {
+          model: db.FactSnapshot,
+          as: 'factSnapshot',
+          attributes: ['repo_owner', 'repo_name', 'pr_number']
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset
+    });
+
+    return decisions.map(d => ({
+      id: d.id,
+      repo_owner: d.factSnapshot?.repo_owner,
+      repo_name: d.factSnapshot?.repo_name,
+      pr_number: d.factSnapshot?.pr_number,
+      result: d.result,
+      override_id: d.override_id,
+      created_at: d.createdAt
+    }));
+  } catch (error) {
+    logger.error({ error }, "Analytics: Failed to list decisions");
+    throw error;
+  }
+}
+
+/**
  * Internal helper to check for governance alerts.
  * Identifies policies with high bypass velocity (> 5%).
  */

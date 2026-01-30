@@ -329,7 +329,7 @@ export default function githubControllerFactory(db) {
       const transaction = await db.sequelize.transaction();
       try {
         const { owner, repo, prNumber } = req.params;
-        const { reason, role = "REPO_ADMIN" } = req.body;
+        const { reason, category = 'BUSINESS_EXCEPTION', ttl_hours = 24, role = "REPO_ADMIN" } = req.body;
         const user = req.user; // from auth middleware
 
         if (!user) {
@@ -337,7 +337,20 @@ export default function githubControllerFactory(db) {
         }
 
         // 1. Find the latest decision for this PR
-        const [decision] = await db.sequelize.query(
+        const decision = await db.Decision.findOne({
+          where: {
+            // We need to map GitHub PR metadata to our internal Decision records
+            // For now, we'll use a raw query or find by some metadata if available
+            // Since our Decision model doesn't have repo/pr_number directly, 
+            // we'll use the legacy pr_decisions table lookup if it still exists or 
+            // use a more robust way to find the Phase 6 Decision record.
+          },
+          order: [['createdAt', 'DESC']],
+          transaction
+        });
+
+        // Fallback to legacy pr_decisions for now if Decision model is empty or not linked
+        const [legacyDecision] = await db.sequelize.query(
           `SELECT * FROM pr_decisions 
            WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber 
            ORDER BY created_at DESC LIMIT 1`,
@@ -348,18 +361,16 @@ export default function githubControllerFactory(db) {
           }
         );
 
-        if (!decision) {
+        if (!legacyDecision) {
           await transaction.rollback();
           return res.status(404).json({ error: "No PR decision found to override" });
         }
 
         // --- PHASE 4 HARDENING: Immutability Check ---
-        // We no longer check if decision.decision === "OVERRIDDEN_PASS"
-        // Instead, we check if an override already exists in the pr_overrides table
         const [existingOverride] = await db.sequelize.query(
           `SELECT id FROM pr_overrides WHERE pr_decision_id = :id LIMIT 1`,
           {
-            replacements: { id: decision.id },
+            replacements: { id: legacyDecision.id },
             type: db.sequelize.QueryTypes.SELECT,
             transaction
           }
@@ -373,7 +384,7 @@ export default function githubControllerFactory(db) {
           });
         }
 
-        if (decision.decision === "PASS") {
+        if (legacyDecision.decision === "PASS") {
           await transaction.rollback();
           return res.status(400).json({ error: "PR already passed", message: "Manual override is not needed for a PASSing decision." });
         }
@@ -420,16 +431,16 @@ export default function githubControllerFactory(db) {
         }
 
         // 2. Log to overrides table (The Authoritative Ledger for Bypasses)
-        // Hardened: We DO NOT update pr_decisions. That table is frozen for audit.
-        // The pr_overrides table is the append-only log of human intervention.
         await db.sequelize.query(
-          `INSERT INTO pr_overrides (pr_decision_id, user_login, override_reason, created_at)
-           VALUES (:decisionId, :userLogin, :reason, NOW())`,
+          `INSERT INTO pr_overrides (pr_decision_id, user_login, override_reason, category, ttl_hours, created_at)
+           VALUES (:decisionId, :userLogin, :reason, :category, :ttlHours, NOW())`,
           {
             replacements: {
-              decisionId: decision.id,
+              decisionId: legacyDecision.id,
               userLogin: user.login || user.email,
-              reason: reason
+              reason: reason,
+              category: category,
+              ttlHours: ttl_hours
             },
             type: db.sequelize.QueryTypes.INSERT,
             transaction
@@ -441,11 +452,11 @@ export default function githubControllerFactory(db) {
         await reporter.reportStatus(
           owner,
           repo,
-          decision.commit_sha,
+          legacyDecision.commit_sha,
           "OVERRIDDEN_PASS",
           { 
-            description: `Override authorized by ${user.login || user.email}`,
-            prNumber: decision.pr_number
+            description: `Override (${category}) authorized by ${user.login || user.email}`,
+            prNumber: legacyDecision.pr_number
           }
         );
 

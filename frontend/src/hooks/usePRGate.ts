@@ -91,12 +91,12 @@ export const usePRGate = () => {
     }
   }, [handleError]);
 
-  const executeOverride = useCallback(async (owner: string, repo: string, prNumber: number, reason: string) => {
+  const executeOverride = useCallback(async (owner: string, repo: string, prNumber: number, reason: string, category: string = 'BUSINESS_EXCEPTION', ttlHours: number = 24) => {
     setIsLoading(true);
     try {
       const response = await api.post<{ decision: string }>(
         `/v1/github/repos/${owner}/${repo}/pr/${prNumber}/override`,
-        { reason }
+        { reason, category, ttl_hours: ttlHours }
       );
       handleSuccess('Override applied successfully');
       return true;

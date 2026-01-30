@@ -22,7 +22,7 @@ interface AnalysisViewProps {
   // PR Gate Props
   prDecision: PRDecision | null;
   isPrLoading: boolean;
-  onOverride: (reason: string) => Promise<void>;
+  onOverride: (reason: string, category: string, ttlHours: number) => Promise<void>;
   repoOwner?: string;
   repoName?: string;
   // Manual PR fetch
