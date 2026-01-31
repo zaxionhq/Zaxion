@@ -106,7 +106,7 @@ describe('ErrorToast', () => {
         status: 429,
         retryable: true,
       };
-      showErrorToast(rateLimitError);
+      showErrorToast(rateLimitError, () => {});
       expect(toast.error).toHaveBeenCalledWith('Too many requests', {
         description: 'Too many requests. Please wait a moment and try again.',
         duration: 10000,
@@ -119,7 +119,7 @@ describe('ErrorToast', () => {
         message: 'Network error',
         retryable: true,
       };
-      showErrorToast(networkError);
+      showErrorToast(networkError, () => {});
       expect(toast.error).toHaveBeenCalledWith('Network error', {
         description: 'Network error. Please check your internet connection.',
         duration: 10000,

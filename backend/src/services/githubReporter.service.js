@@ -64,7 +64,8 @@ export class GitHubReporterService {
 
     if (typeof decisionObject === 'object') {
       const frontendUrl = process.env.FRONTEND_URL || "https://git-code-guru.app";
-      const deepLink = `${frontendUrl}/workspace?repo=${repo}&owner=${owner}&pr=${prNumber}&sha=${headSha}`;
+      // Deep link to Decision Resolution Console
+      const deepLink = `${frontendUrl}/pr/${owner}/${repo}/${prNumber}`;
       
       summary = `### ${title}\n${description}\n\n[🔍 Fix with Zaxion](${deepLink})`;
 

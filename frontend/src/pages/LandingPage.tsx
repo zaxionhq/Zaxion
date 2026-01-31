@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Shield, 
   Zap, 
@@ -24,6 +24,18 @@ import { cn } from '@/lib/utils';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Handle deep link redirects from GitHub "Fix with Zaxion" button
+  useEffect(() => {
+    const owner = searchParams.get('owner');
+    const repo = searchParams.get('repo');
+    const pr = searchParams.get('pr');
+
+    if (owner && repo && pr) {
+      navigate(`/pr/${owner}/${repo}/${pr}`);
+    }
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen bg-[#020617] text-white selection:bg-neon-cyan/30 overflow-x-hidden">
@@ -43,7 +55,6 @@ const LandingPage = () => {
           
           <div className="hidden md:flex items-center gap-8">
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
-            <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
             <button 
               onClick={() => navigate('/governance')}
               className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors"
@@ -110,16 +121,16 @@ const LandingPage = () => {
               transition={{ delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-6"
             >
-              <NeonButton color="cyan" onClick={() => navigate('/architecture')}>
-                Read the Architecture
+              <NeonButton color="cyan" onClick={() => navigate('/workspace')}>
+                Open Resolution Console
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               <NeonButton 
                 variant="glass" 
                 color="purple"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/governance')}
               >
-                Explore the Model
+                Governance Dashboard
               </NeonButton>
             </motion.div>
 

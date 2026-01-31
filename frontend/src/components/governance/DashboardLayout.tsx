@@ -53,7 +53,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to IDE
+            Back to Console
           </Link>
           <div className="flex items-center justify-between px-3">
             <span className="text-xs text-muted-foreground">Theme</span>

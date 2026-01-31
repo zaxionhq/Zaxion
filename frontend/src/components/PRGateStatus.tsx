@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History, CheckCircle2, ListChecks, FileCode, Lightbulb, Clock } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, Info, Loader2, Lock, Unlock, History, CheckCircle2, ListChecks, FileCode, Lightbulb, Clock, Brain, AlertCircle } from 'lucide-react';
 import { PRDecision, DecisionObject } from '@/hooks/usePRGate';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -22,6 +22,18 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
   const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const data = React.useMemo(() => {
+    if (!decision?.raw_data) return null;
+    try {
+      return typeof decision.raw_data === 'string' 
+        ? JSON.parse(decision.raw_data) as DecisionObject
+        : decision.raw_data as unknown as DecisionObject;
+    } catch (e) {
+      console.error("Failed to parse decision raw_data in PRGateStatus:", e);
+      return null;
+    }
+  }, [decision]);
+
   if (isLoading && !decision) {
     return (
       <Card className="animate-pulse">
@@ -33,26 +45,25 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
     );
   }
 
-  if (!decision) return null;
+  if (!decision || !data) return null;
 
-  const data: DecisionObject = JSON.parse(decision.raw_data);
   const isBlocked = decision.decision === 'BLOCK';
   const isPassed = decision.decision === 'PASS' || decision.decision === 'OVERRIDDEN_PASS';
   const isWarning = decision.decision === 'WARN';
   const isOverridden = decision.decision === 'OVERRIDDEN_PASS';
 
   const getStatusIcon = () => {
-    if (isOverridden) return <Unlock className="h-5 w-5 text-amber-500" />;
-    if (isPassed) return <ShieldCheck className="h-5 w-5 text-green-500" />;
-    if (isBlocked) return <ShieldAlert className="h-5 w-5 text-destructive" />;
-    return <Info className="h-5 w-5 text-amber-500" />;
+    if (isOverridden) return <Unlock className="h-6 w-6 text-amber-500" />;
+    if (isPassed) return <ShieldCheck className="h-6 w-6 text-green-500" />;
+    if (isBlocked) return <ShieldAlert className="h-6 w-6 text-destructive" />;
+    return <Info className="h-6 w-6 text-amber-500" />;
   };
 
   const getStatusColor = () => {
-    if (isOverridden) return 'bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400';
-    if (isPassed) return 'bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400';
-    if (isBlocked) return 'bg-destructive/10 border-destructive/50 text-destructive';
-    return 'bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400';
+    if (isOverridden) return 'bg-amber-500/5 border-amber-500/20 text-amber-400';
+    if (isPassed) return 'bg-green-500/5 border-green-500/20 text-green-400';
+    if (isBlocked) return 'bg-destructive/5 border-destructive/20 text-destructive';
+    return 'bg-amber-500/5 border-amber-500/20 text-amber-400';
   };
 
   const handleOverrideSubmit = async () => {
@@ -68,194 +79,178 @@ export const PRGateStatus: React.FC<PRGateStatusProps> = ({ decision, isLoading,
   };
 
   return (
-    <Card className={`border-2 ${getStatusColor()}`}>
-      <CardHeader className="pb-2">
+    <Card className={`border border-white/10 bg-black/40 backdrop-blur-xl overflow-hidden`}>
+      <div className={`h-1 w-full ${isPassed ? 'bg-green-500' : isBlocked ? 'bg-destructive' : 'bg-amber-500'}`} />
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {getStatusIcon()}
-            <CardTitle className="text-lg">Zaxion Guard: {decision.decision.replace('_', ' ')}</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${getStatusColor()}`}>
+              {getStatusIcon()}
+            </div>
+            <div>
+              <CardTitle className="text-xl font-black tracking-tight uppercase">
+                Status: {decision.decision.replace('_', ' ')}
+              </CardTitle>
+              <CardDescription className="text-white/40 font-mono text-[10px] mt-1 uppercase tracking-widest">
+                Governance Evaluation ID: {decision.id}
+              </CardDescription>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono text-[10px] bg-background/50">
-              ID: {decision.id}
-            </Badge>
-            <Badge variant={isPassed ? "default" : isBlocked ? "destructive" : "outline"} className="capitalize">
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant="outline" className={`font-black text-[10px] px-3 py-1 border-current/30 ${getStatusColor()}`}>
               {data.evaluationStatus}
             </Badge>
+            <span className="text-[10px] text-white/20 font-mono uppercase tracking-tighter">
+              v{data.policy_version || '1.0.0'}
+            </span>
           </div>
         </div>
-        <CardDescription className="font-medium mt-1">
-          {decision.decisionReason}
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <Alert variant="default" className="bg-background/50 border-none">
-          <Brain className="h-4 w-4" />
-          <AlertTitle>Zaxion Advisor Insights</AlertTitle>
-          <AlertDescription className="text-sm italic">
-            "{data.advisor.rationale}"
-          </AlertDescription>
-        </Alert>
-
-        {/* Resolution Path Checklist */}
-        {(isBlocked || isWarning) && (
-          <div className="p-4 rounded-lg bg-primary/5 border border-primary/10 space-y-3">
-            <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
-              <ListChecks className="h-4 w-4" />
-              Resolution Path
-            </h4>
-            <div className="space-y-3">
-              {/* 1. Policy Step */}
-              <div className="flex gap-3">
-                <div className="mt-0.5">
-                  {isPassed ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <div className="h-4 w-4 rounded-full border-2 border-primary/30" />}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold">Step 1: Policy Compliance</p>
-                  <p className="text-[11px] text-muted-foreground">{decision.decisionReason}</p>
-                </div>
-              </div>
-
-              {/* 2. File Step */}
-              <div className="flex gap-3">
-                <div className="mt-0.5">
-                  <div className="h-4 w-4 rounded-full border-2 border-primary/30" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold">Step 2: Affected Files</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {data.facts.changedFiles.slice(0, 3).map((f, i) => (
-                      <Badge key={i} variant="outline" className="text-[9px] py-0 px-1 font-mono">
-                        {f.split('/').pop()}
-                      </Badge>
-                    ))}
-                    {data.facts.changedFiles.length > 3 && (
-                      <span className="text-[9px] text-muted-foreground">+{data.facts.changedFiles.length - 3} more</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Intent Step */}
-              <div className="flex gap-3">
-                <div className="mt-0.5">
-                  <div className="h-4 w-4 rounded-full border-2 border-primary/30" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold">Step 3: Resolve with Intent</p>
-                  <p className="text-[11px] text-muted-foreground italic">"Analyze these files to generate missing tests and satisfy the Zaxion Guard."</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-current/10">
-          <div className="flex items-center gap-4">
-            <span>Risk: <Badge variant="outline" className="text-[10px] h-4">{data.advisor.riskAssessment.riskLevel}</Badge></span>
-            <span>Policy: v{data.policy_version || '1.0.0'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] opacity-70">SHA: {decision.commit_sha.substring(0, 7)}</span>
-          </div>
+      
+      <CardContent className="space-y-6">
+        {/* Core Decision Summary */}
+        <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-2">
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-2">
+            <AlertCircle className="h-3 w-3" />
+            Policy Verdict
+          </h4>
+          <p className="text-sm font-bold text-white/90 leading-relaxed">
+            {decision.decisionReason}
+          </p>
         </div>
 
-        {isOverridden && data.override && (
-          <div className="mt-4 p-3 rounded-md bg-amber-500/5 border border-amber-500/20 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <History className="h-4 w-4" />
-              Zaxion Ledger: Bypass History
-            </div>
-            <p className="text-xs italic">"{data.override.justification}"</p>
-            <div className="flex justify-between text-[10px] opacity-70">
-              <span>Authorized by: {data.override.by} ({data.override.role})</span>
-              <span>{new Date(data.override.timestamp).toLocaleString()}</span>
+        {/* Resolution Path Checklist - Only if blocked */}
+        {(isBlocked || isWarning) && !isOverridden && (
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-neon-cyan flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              Required Remediation
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-2 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <FileCode className="h-8 w-8" />
+                </div>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Step 01</div>
+                <div className="text-xs font-bold">Fix Violations</div>
+                <p className="text-[10px] text-white/50 leading-relaxed">
+                  Modify the {data.facts.totalChanges} changed files to comply with policy.
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-2 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <History className="h-8 w-8" />
+                </div>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Step 02</div>
+                <div className="text-xs font-bold">Push Changes</div>
+                <p className="text-[10px] text-white/50 leading-relaxed">
+                  Zaxion will auto-trigger on the new commit SHA.
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 space-y-2 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Shield className="h-8 w-8" />
+                </div>
+                <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Step 03</div>
+                <div className="text-xs font-bold">Audit Approval</div>
+                <p className="text-[10px] text-white/50 leading-relaxed">
+                  Once passed, the PR status check will turn green.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {isBlocked && !isOverridden && (
-          <div className="pt-2 flex justify-end">
+        {/* Override History - Only if overridden */}
+        {isOverridden && data.override && (
+          <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 space-y-3">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500 flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Governance Override Record
+            </h4>
+            <div className="space-y-2">
+              <p className="text-sm italic text-amber-200/80">
+                "{data.override.justification}"
+              </p>
+              <div className="flex justify-between items-center text-[10px] text-amber-500/60 font-mono uppercase tracking-widest pt-2 border-t border-amber-500/10">
+                <span>Authorized by: {data.override.by}</span>
+                <span>{new Date(data.override.timestamp).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Bar */}
+        <div className="flex items-center justify-between pt-4 border-t border-white/5">
+          <div className="flex items-center gap-4 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+            <span>Risk: {data.advisor.riskAssessment.riskLevel}</span>
+            <span className="w-1 h-1 rounded-full bg-white/10" />
+            <span>SHA: {decision.commit_sha.substring(0, 7)}</span>
+          </div>
+          
+          {isBlocked && !isOverridden && (
             <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="h-8 gap-2 bg-white/5 border-white/10 hover:bg-white/10 text-xs font-bold uppercase tracking-widest">
                   <Lock className="h-3 w-3" />
-                  Zaxion Bypass
+                  Request Override
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[425px] bg-[#020617] border-white/10 text-white">
                 <DialogHeader>
-                  <DialogTitle>Zaxion Guard: Manual Bypass</DialogTitle>
-                  <DialogDescription>
-                    Bypassing the quality gate is an audited action recorded in the Zaxion Ledger.
+                  <DialogTitle className="text-xl font-black uppercase tracking-tight">Governance Override</DialogTitle>
+                  <DialogDescription className="text-white/40 text-xs">
+                    Overrides are immutable audit events. Please provide a high-fidelity business justification.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</label>
-                      <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
-                          <SelectItem value="EMERGENCY_HOTFIX">Emergency Hotfix</SelectItem>
-                          <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
-                          <SelectItem value="LEGACY_CODE">Legacy Code</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Expiry (TTL)</label>
-                      <Select value={ttlHours} onValueChange={setTtlHours}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Select TTL" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="4">4 Hours</SelectItem>
-                          <SelectItem value="24">24 Hours</SelectItem>
-                          <SelectItem value="48">48 Hours</SelectItem>
-                          <SelectItem value="168">1 Week</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="py-6 space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Exception Category</label>
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="bg-white/5 border-white/10 h-10 text-sm">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#020617] border-white/10 text-white">
+                        <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
+                        <SelectItem value="URGENT_HOTFIX">Urgent Hotfix</SelectItem>
+                        <SelectItem value="LEGACY_TECHNICAL_DEBT">Technical Debt</SelectItem>
+                        <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Justification (min 10 chars)</label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Audit Justification</label>
                     <Textarea 
-                      placeholder="e.g., Emergency production fix, tests will be added in follow-up PR..." 
+                      placeholder="Explain why this policy violation should be permitted..."
+                      className="min-h-[120px] bg-white/5 border-white/10 focus:border-neon-cyan/50 text-sm resize-none"
                       value={justification}
                       onChange={(e) => setJustification(e.target.value)}
-                      className="h-24 resize-none"
                     />
-                  </div>
-                  
-                  <div className="p-3 rounded-md bg-destructive/5 border border-destructive/10 flex gap-3 items-start">
-                    <Shield className="h-4 w-4 text-destructive mt-0.5" />
-                    <p className="text-[11px] text-destructive leading-relaxed">
-                      <strong>Authorization Required:</strong> Only users with Admin or Maintainer permissions on GitHub are authorized to execute this override.
+                    <p className="text-[10px] text-white/30 italic">
+                      Minimum 10 characters required for audit integrity.
                     </p>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="ghost" size="sm" onClick={() => setIsOverrideDialogOpen(false)}>Cancel</Button>
                   <Button 
-                    variant="destructive" 
-                    size="sm"
-                    disabled={justification.length < 10 || isSubmitting}
-                    onClick={handleOverrideSubmit}
-                    className="gap-2"
+                    variant="ghost" 
+                    onClick={() => setIsOverrideDialogOpen(false)}
+                    className="text-xs font-bold uppercase tracking-widest hover:bg-white/5"
                   >
-                    {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlock className="h-3 w-3" />}
-                    Confirm Zaxion Bypass
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleOverrideSubmit}
+                    disabled={justification.length < 10 || isSubmitting}
+                    className="bg-neon-cyan text-black hover:bg-neon-cyan/90 text-xs font-bold uppercase tracking-widest px-6"
+                  >
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Override'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );

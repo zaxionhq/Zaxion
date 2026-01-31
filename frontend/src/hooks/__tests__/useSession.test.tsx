@@ -12,9 +12,10 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // Mock the error handler
+const mockHandleError = vi.fn();
 vi.mock('@/components/ErrorToast', () => ({
   useApiErrorHandler: () => ({
-    handleError: vi.fn(),
+    handleError: mockHandleError,
     handleSuccess: vi.fn(),
   }),
 }));
@@ -34,17 +35,18 @@ describe('useSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset URL search params
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: '',
-        pathname: '/',
-      },
-      writable: true,
+    vi.stubGlobal('location', {
+      search: '',
+      pathname: '/',
+      href: 'http://localhost/',
     });
+    // Mock history.replaceState
+    window.history.replaceState = vi.fn();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('should initialize with loading state', () => {
@@ -160,7 +162,9 @@ describe('useSession', () => {
     mockApi.post.mockResolvedValueOnce({ ok: true });
     await result.current.logout();
 
-    expect(result.current.user).toBe(null);
+    await waitFor(() => {
+      expect(result.current.user).toBe(null);
+    });
     expect(result.current.error).toBe(null);
     expect(mockApi.post).toHaveBeenCalledWith('/v1/auth/logout');
   });
@@ -189,7 +193,9 @@ describe('useSession', () => {
     await result.current.logout();
 
     // Should still clear local session even if backend fails
-    expect(result.current.user).toBe(null);
+    await waitFor(() => {
+      expect(result.current.user).toBe(null);
+    });
     expect(result.current.error).toBe(null);
   });
 
@@ -210,13 +216,16 @@ describe('useSession', () => {
       .mockRejectedValueOnce(mockError)
       .mockResolvedValueOnce({ user: mockUser });
 
+    // Mock handleError to call the retry callback
+    mockHandleError.mockImplementationOnce((err, retry) => retry());
+
     const { result } = renderHook(() => useSession());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
+      expect(result.current.user).toEqual(mockUser);
     });
 
-    expect(result.current.user).toEqual(mockUser);
     expect(result.current.retryCount).toBe(0);
   });
 });

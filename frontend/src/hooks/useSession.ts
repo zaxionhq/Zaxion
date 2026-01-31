@@ -44,8 +44,13 @@ export const useSession = () => {
       const authSuccess = urlParams.get('auth');
       
       if (authSuccess === 'success') {
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+        // Clean up URL while preserving other query parameters
+        const newParams = new URLSearchParams(window.location.search);
+        newParams.delete('auth');
+        const search = newParams.toString();
+        const newUrl = `${window.location.pathname}${search ? `?${search}` : ''}`;
+        
+        window.history.replaceState({}, document.title, newUrl);
         handleSuccess('Successfully signed in!');
         
         // Delay the event dispatch slightly to ensure listeners are set up
@@ -106,7 +111,8 @@ export const useSession = () => {
 
   useEffect(() => {
     checkSession();
-  }, [checkSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const logout = useCallback(async () => {
     try {

@@ -21,6 +21,8 @@ export default function authControllerFactory(db) {
     try {
       const clientId = process.env.GITHUB_CLIENT_ID;
       const redirectUri = process.env.GITHUB_REDIRECT_URI;
+      const { redirect_url } = req.query;
+
       if (!clientId || !redirectUri) {
         return res.status(500).json({ error: "GitHub OAuth not configured" });
       }
@@ -34,6 +36,14 @@ export default function authControllerFactory(db) {
         maxAge: 1000 * 60 * 15, // 15 mins
       };
       res.cookie("oauth_state", state, stateCookieOpts);
+
+      // Store redirect URL if provided
+      if (redirect_url) {
+        res.cookie("oauth_redirect", redirect_url, {
+          ...stateCookieOpts,
+          maxAge: 1000 * 60 * 10, // 10 mins
+        });
+      }
 
       const url = `${GITHUB_AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo%20read:user%20user:email&state=${encodeURIComponent(state)}`;
       
@@ -139,10 +149,28 @@ export default function authControllerFactory(db) {
 
       res.cookie("app_jwt", token, cookieOpts);
 
+      // Get stored redirect URL
+      const oauthRedirect = req.cookies.oauth_redirect;
+      res.clearCookie("oauth_redirect");
+
       // redirect to frontend
       const frontend = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || "http://localhost:8080";
-      console.log(`Redirecting to frontend: ${frontend}/?auth=success`);
-      return res.redirect(302, `${frontend}/?auth=success`);
+      const targetUrl = oauthRedirect || `${frontend}/?auth=success`;
+      
+      // Ensure targetUrl is absolute if it's from oauthRedirect
+      let finalRedirect;
+      if (oauthRedirect) {
+        // If it's already an absolute URL, use it; otherwise prepend frontend origin
+        finalRedirect = oauthRedirect.startsWith('http') ? oauthRedirect : `${frontend}${oauthRedirect}`;
+        // Append auth=success if not present
+        const separator = finalRedirect.includes('?') ? '&' : '?';
+        finalRedirect += `${separator}auth=success`;
+      } else {
+        finalRedirect = targetUrl;
+      }
+
+      console.log(`Redirecting to frontend: ${finalRedirect}`);
+      return res.redirect(302, finalRedirect);
     } catch (err) {
       console.error("githubCallback error:", err?.response?.data || err);
       return res.status(500).json({ error: "GitHub callback error" });
@@ -186,19 +214,12 @@ export default function authControllerFactory(db) {
   }
 
   async function me(req, res) {
-    const db = req.app.locals.db; // Retrieve db from app.locals
     try {
-      // The auth middleware should set req.user if JWT present; fallback: try cookie decode
-      const token = req.cookies.app_jwt;
-      if (!token) return res.status(401).json({ error: "Not logged in" });
-
-      // If middleware already decoded user, return that; otherwise read from DB
       if (req.user) {
         return res.status(200).json({ user: req.user });
       }
 
-      // Fallback decoding handled by middleware typically; here we return minimal payload
-      return res.status(200).json({ ok: true });
+      return res.status(401).json({ error: "Not logged in" });
     } catch (err) {
       console.error("me() error:", err);
       return res.status(500).json({ error: "Failed to fetch user profile" });

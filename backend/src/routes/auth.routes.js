@@ -16,7 +16,7 @@ export default function authRoutesFactory(db) {
   // Session routes
   router.post("/logout", requireLoginSoft, authController.logout); 
   router.post("/refresh", authController.refreshTokens); 
-  router.get("/me", authController.me);
+  router.get("/me", requireLoginSoft, authController.me);
 
   return router;
 }

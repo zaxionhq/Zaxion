@@ -42,11 +42,13 @@ const getCSRFToken = async (): Promise<string | null> => {
   return null;
 };
 
+const IS_TEST = import.meta.env.MODE === 'test';
+
 // Default retry configuration
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
-  baseDelay: 1000, // 1 second
-  maxDelay: 10000, // 10 seconds
+  baseDelay: IS_TEST ? 10 : 1000, // 10ms in tests, 1s otherwise
+  maxDelay: IS_TEST ? 100 : 10000, // 100ms in tests, 10s otherwise
   retryCondition: (error: ApiError) => {
     // Retry on network errors, 5xx server errors, and rate limiting
     return (
@@ -59,12 +61,12 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
 };
 
 function buildUrl(path: string): string {
-  if (!path.startsWith("/")) {
-    path = `/${path}`;
-  }
   // Allow callers to pass full URLs for redirects if needed
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
+  }
+  if (!path.startsWith("/")) {
+    path = `/${path}`;
   }
   // Ensure single slash between base and path
   return `${API_BASE.replace(/\/$/, "")}${path}`;
@@ -148,8 +150,9 @@ async function requestWithRetry<TResponse>(
         // Log the error for debugging
         console.error(`API Error (${res.status}):`, error.message, data);
         
-        // If this is the last attempt or error is not retryable, throw immediately
-        if (attempt === retryConfig.maxRetries || !retryConfig.retryCondition?.(error)) {
+        // Mark as non-retryable if condition is not met
+        if (!retryConfig.retryCondition?.(error)) {
+          error.retryable = false;
           throw error;
         }
         
@@ -173,8 +176,8 @@ async function requestWithRetry<TResponse>(
         lastError = error as ApiError;
       }
       
-      // If this is the last attempt, throw the error
-      if (attempt === retryConfig.maxRetries) {
+      // If this is the last attempt or error is not retryable, throw immediately
+      if (attempt === retryConfig.maxRetries || lastError.retryable === false) {
         throw lastError;
       }
     }

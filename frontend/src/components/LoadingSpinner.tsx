@@ -34,6 +34,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <Icon
+      role="img"
       className={cn(
         'animate-spin text-primary',
         sizeClass,
