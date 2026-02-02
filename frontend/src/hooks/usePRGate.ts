@@ -12,6 +12,9 @@ export interface PRDecision {
   evaluationStatus: 'FINAL' | 'PENDING';
   decisionReason: string;
   raw_data: string;
+  override_by?: string;
+  override_reason?: string;
+  overridden_at?: string;
   created_at: string;
   updated_at: string;
 }
