@@ -293,18 +293,32 @@ export async function generateSummaries({ files = [], repo = null, user = null }
 
     // Attempt to parse JSON out of raw response (strip Code fences if present)
     const text = typeof raw === "string" ? raw : JSON.stringify(raw);
-    // Heuristic: find first JSON array in the text
-    const jsonMatch = text.match(/\[([\s\S]*)\]\s*$/m) || text.match(/\[([\s\S]*?)\]/m);
+    
+    // Improved JSON extraction: Look for the first '[' and last ']'
+    const startIdx = text.indexOf("[");
+    const endIdx = text.lastIndexOf("]");
+    
     let parsed = null;
-    if (jsonMatch) {
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      const jsonStr = text.substring(startIdx, endIdx + 1);
       try {
-        parsed = JSON.parse(text.substring(text.indexOf("["), text.lastIndexOf("]") + 1));
+        parsed = JSON.parse(jsonStr);
       } catch (e) {
-        // fallback: try eval-safe
+        console.warn("JSON.parse failed, attempting manual cleanup...", e.message);
+        // Fallback: try to clean up common LLM artifacts like trailing commas or single quotes
         try {
-          parsed = eval("(" + text.substring(text.indexOf("["), text.lastIndexOf("]") + 1) + ")");
+          const cleaned = jsonStr
+            .replace(/,\s*([\]}])/g, '$1') // remove trailing commas
+            .replace(/'/g, '"'); // replace single quotes with double quotes (risky but sometimes needed)
+          parsed = JSON.parse(cleaned);
         } catch (ee) {
-          parsed = null;
+          // Final fallback: use eval (last resort)
+          try {
+            parsed = eval("(" + jsonStr + ")");
+          } catch (eee) {
+            console.error("All JSON parsing attempts failed.");
+            parsed = null;
+          }
         }
       }
     }

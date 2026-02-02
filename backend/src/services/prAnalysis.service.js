@@ -50,9 +50,15 @@ export class PrAnalysisService {
           
           // Re-report the existing decision from DB
           let decisionObj = existingDecision;
-          try {
-            decisionObj = JSON.parse(existingDecision.raw_data);
-          } catch (e) { /* ignore */ }
+          if (existingDecision.raw_data) {
+            try {
+              decisionObj = typeof existingDecision.raw_data === 'string' 
+                ? JSON.parse(existingDecision.raw_data) 
+                : existingDecision.raw_data;
+            } catch (e) {
+              console.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for IDEMPOTENT_HIT:`, e.message);
+            }
+          }
           
           await reporter.reportStatus(owner, repo, headSha, decisionObj, { prNumber });
           await t.commit();
@@ -106,9 +112,15 @@ export class PrAnalysisService {
         console.log(`[PrAnalysisService] [trace:${traceId}] action: POST_RACE_IDEMPOTENT_HIT status: FINAL version: ${finalExistingDecision.policy_version}`);
         
         let decisionObj = finalExistingDecision;
-        try {
-          decisionObj = JSON.parse(finalExistingDecision.raw_data);
-        } catch (e) { /* ignore */ }
+        if (finalExistingDecision.raw_data) {
+          try {
+            decisionObj = typeof finalExistingDecision.raw_data === 'string' 
+              ? JSON.parse(finalExistingDecision.raw_data) 
+              : finalExistingDecision.raw_data;
+          } catch (e) {
+            console.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for POST_RACE_IDEMPOTENT_HIT:`, e.message);
+          }
+        }
 
         await reporter.reportStatus(owner, repo, headSha, decisionObj, { prNumber });
         return;
