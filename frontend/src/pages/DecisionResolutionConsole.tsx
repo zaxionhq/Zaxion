@@ -23,7 +23,7 @@ const DecisionResolutionConsole = () => {
   const { user, loading: sessionLoading } = useSession();
 
   // PR Gate Hook
-  const { latestDecision, isLoading: isPrLoading, fetchLatestDecision, executeOverride } = usePRGate();
+  const { latestDecision, isLoading: isPrLoading, fetchLatestDecision, executeOverride, mergePullRequest } = usePRGate();
   
   // Override Dialog State
   const [justification, setJustification] = useState('');
@@ -31,6 +31,7 @@ const DecisionResolutionConsole = () => {
   const [ttlHours, setTtlHours] = useState('24');
   const [isOverrideDialogOpen, setIsOverrideDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
 
   // Extract PR context from either URL params or query params
   const pOwner = owner || searchParams.get('owner');
@@ -78,8 +79,22 @@ const DecisionResolutionConsole = () => {
     }
   };
 
+  const handleMergeSubmit = async () => {
+    if (!pOwner || !pRepo || !pPr) return;
+    setIsMerging(true);
+    try {
+      const success = await mergePullRequest(pOwner, pRepo, parseInt(pPr));
+      if (success) {
+        fetchLatestDecision(pOwner, pRepo, parseInt(pPr));
+      }
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   const isBlocked = latestDecision?.decision === 'BLOCK';
   const isOverridden = latestDecision?.decision === 'OVERRIDDEN_PASS';
+  const isPassed = latestDecision?.decision === 'PASS' || latestDecision?.decision === 'OVERRIDDEN_PASS';
 
   const [showDetails, setShowDetails] = useState(false);
   const [isAcknowledged, setIsAcknowledged] = useState(false);
@@ -194,20 +209,22 @@ const DecisionResolutionConsole = () => {
             </div>
 
             {/* POLICY VIOLATION BREAKDOWN (MAPPING CARD) */}
-            {isBlocked && (
+            {(isBlocked || isOverridden) && (
               <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-1 h-full bg-destructive/50" />
+                <div className={`absolute top-0 left-0 w-1 h-full ${isBlocked ? 'bg-destructive/50' : 'bg-amber-500/50'}`} />
                 
                 <div className="relative z-10 space-y-8">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">Policy Violation Breakdown</h3>
+                    {isBlocked ? <AlertCircle className="h-5 w-5 text-destructive" /> : <Shield className="h-5 w-5 text-amber-500" />}
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">
+                      {isOverridden ? 'Overridden Policy Context' : 'Policy Violation Breakdown'}
+                    </h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12">
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Policy Violated</h4>
-                      <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/10 px-3 py-1.5 rounded-lg inline-block">
+                      <p className={`text-sm font-mono px-3 py-1.5 rounded-lg inline-block border ${isBlocked ? 'text-destructive bg-destructive/5 border-destructive/10' : 'text-amber-500 bg-amber-500/5 border-amber-500/10'}`}>
                         {decisionData?.violated_policy || "coverage-auth-required"}
                       </p>
                       <p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter mt-1">MANDATORY · HIGH SEVERITY</p>
@@ -227,6 +244,21 @@ const DecisionResolutionConsole = () => {
                       </p>
                     </div>
 
+                    {isOverridden && (
+                      <div className="space-y-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Authorization Actor</h4>
+                        <div className="flex items-center gap-2">
+                          <Fingerprint className="h-3 w-3 text-amber-500" />
+                          <p className="text-sm font-bold text-amber-500">
+                            {latestDecision?.override_by || "System Admin"}
+                          </p>
+                        </div>
+                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter mt-1">
+                          Verified Governance Signature
+                        </p>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Observed Change</h4>
                       <p className="text-sm font-medium text-white/70">
@@ -235,11 +267,17 @@ const DecisionResolutionConsole = () => {
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Required Action</h4>
-                      <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/5 border border-white/5">
-                        <ListChecks className="h-4 w-4 text-neon-cyan mt-0.5" />
-                        <p className="text-sm text-white/80">
-                          Add unit tests covering authentication logic in <code className="text-neon-cyan font-mono">{decisionData?.facts?.affectedAreas?.[0] || "auth/login.js"}</code>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">
+                        {isOverridden ? 'Override Justification' : 'Required Action'}
+                      </h4>
+                      <div className={`flex items-start gap-3 p-4 rounded-2xl border ${isBlocked ? 'bg-white/5 border-white/5' : 'bg-amber-500/5 border-amber-500/10'}`}>
+                        {isBlocked ? <ListChecks className="h-4 w-4 text-neon-cyan mt-0.5" /> : <FileText className="h-4 w-4 text-amber-500 mt-0.5" />}
+                        <p className={`text-sm ${isBlocked ? 'text-white/80' : 'text-amber-500/80 italic'}`}>
+                          {isBlocked ? (
+                            <>Add unit tests covering authentication logic in <code className="text-neon-cyan font-mono">{decisionData?.facts?.affectedAreas?.[0] || "auth/login.js"}</code></>
+                          ) : (
+                            `"${latestDecision?.override_reason || "Administrative bypass granted for emergency resolution."}"`
+                          )}
                         </p>
                       </div>
                     </div>
@@ -470,23 +508,130 @@ const DecisionResolutionConsole = () => {
             </Accordion>
           </section>
 
-          {/* ZONE 3: RESOLUTION CONSOLE (PRIMARY ACTIONS) */}
-          <section className="space-y-10 py-8">
+          {/* ZONE 3: RESOLUTION & ACTIONS */}
+          <section className="space-y-10">
             <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <h2 className="text-4xl font-black tracking-tight text-white/90">What will unblock this PR</h2>
-                <p className="text-lg text-white/30 font-medium">Follow these steps to satisfy the governance protocol</p>
+              <div className="flex items-center gap-3">
+                <Scale className="h-5 w-5 text-neon-cyan" />
+                <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">Limited Allowed Actions</h2>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAcknowledged(true)}
-                disabled={isAcknowledged}
-                className={`rounded-full px-6 gap-2 transition-all border-white/10 ${isAcknowledged ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-white/5 text-white/60 hover:text-white'}`}
-              >
-                {isAcknowledged ? <CheckCircle2 className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-                {isAcknowledged ? 'Decision Acknowledged' : 'Acknowledge Decision'}
-              </Button>
-            </div>
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={handleMergeSubmit}
+                  disabled={isMerging || isPrLoading || !isPassed}
+                  className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
+                    isPassed
+                      ? 'bg-green-600 hover:bg-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.2)]'
+                      : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+                  }`}
+                >
+                  {isMerging ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {isPassed ? 'Merge Pull Request' : 'Merge Blocked'}
+                </Button>
+                 
+                 <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
+                   <DialogTrigger asChild>
+                     <Button 
+                       disabled={!isBlocked || isPrLoading}
+                       className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
+                         isBlocked 
+                           ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]' 
+                           : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+                       }`}
+                     >
+                       <Shield className="h-4 w-4" />
+                       Request Override
+                     </Button>
+                   </DialogTrigger>
+                   <DialogContent className="bg-[#0B0F1A] border-white/10 rounded-3xl backdrop-blur-3xl">
+                     <DialogHeader className="space-y-4">
+                       <div className="flex items-center gap-3">
+                         <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                           <Shield className="h-5 w-5 text-amber-500" />
+                         </div>
+                         <DialogTitle className="text-xl font-black text-white uppercase tracking-tight">Administrative Override</DialogTitle>
+                       </div>
+                       <DialogDescription className="text-white/40 text-sm leading-relaxed">
+                         You are about to authorize a manual bypass of the governance block for PR #{pPr}. 
+                         This action will be permanently recorded in the immutable audit log.
+                       </DialogDescription>
+                     </DialogHeader>
+                     <div className="py-8 space-y-6">
+                       <div className="space-y-4">
+                         <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Exception Category</label>
+                             <Select value={category} onValueChange={setCategory}>
+                               <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
+                                 <SelectValue placeholder="Select category" />
+                               </SelectTrigger>
+                               <SelectContent className="bg-[#0B0F1A] border-white/10">
+                                 <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
+                                 <SelectItem value="EMERGENCY_FIX">Emergency Fix</SelectItem>
+                                 <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
+                                 <SelectItem value="LEGACY_CODEBASE">Legacy Codebase</SelectItem>
+                               </SelectContent>
+                             </Select>
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Override TTL</label>
+                             <Select value={ttlHours} onValueChange={setTtlHours}>
+                               <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
+                                 <SelectValue placeholder="Select TTL" />
+                               </SelectTrigger>
+                               <SelectContent className="bg-[#0B0F1A] border-white/10">
+                                 <SelectItem value="1">1 Hour</SelectItem>
+                                 <SelectItem value="4">4 Hours</SelectItem>
+                                 <SelectItem value="12">12 Hours</SelectItem>
+                                 <SelectItem value="24">24 Hours (Standard)</SelectItem>
+                                 <SelectItem value="168">7 Days (Long-term)</SelectItem>
+                               </SelectContent>
+                             </Select>
+                           </div>
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification (Required)</label>
+                           <Textarea 
+                             placeholder="Provide a detailed reason for this governance exception..."
+                             className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
+                             value={justification}
+                             onChange={(e) => setJustification(e.target.value)}
+                           />
+                           <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
+                         </div>
+                       </div>
+                       <DialogFooter className="gap-3">
+                         <Button 
+                           variant="ghost" 
+                           onClick={() => setIsOverrideDialogOpen(false)}
+                           className="text-white/40 hover:text-white"
+                         >
+                           Cancel
+                         </Button>
+                         <Button 
+                           onClick={handleOverrideSubmit}
+                           disabled={justification.length < 10 || isSubmitting}
+                           className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
+                         >
+                           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                           Authorize Override
+                         </Button>
+                       </DialogFooter>
+                     </div>
+                   </DialogContent>
+                 </Dialog>
+
+                 <Button 
+                   variant="outline" 
+                   onClick={() => setIsAcknowledged(true)}
+                   disabled={isAcknowledged}
+                   className={`h-10 px-6 rounded-xl gap-2 transition-all border-white/10 ${isAcknowledged ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                 >
+                   {isAcknowledged ? <CheckCircle2 className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                   {isAcknowledged ? 'Decision Acknowledged' : 'Acknowledge Decision'}
+                 </Button>
+               </div>
+             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-neon-cyan/40 transition-all group relative overflow-hidden">
@@ -550,80 +695,82 @@ const DecisionResolutionConsole = () => {
             </div>
 
             {/* SECONDARY OVERRIDE ACTION */}
-            <div className="pt-12 flex flex-col items-center gap-6 text-center border-t border-white/5">
-              <div className="space-y-2 max-w-md">
-                <h5 className="text-sm font-bold text-white/60">Can't satisfy this policy?</h5>
-                <p className="text-xs text-white/30 leading-relaxed">
-                  If this is an emergency or an intentional policy deviation, you may request a governance override.
-                  <span className="block mt-1 opacity-50 italic">All overrides are audited and require business justification.</span>
-                </p>
+            {isBlocked && (
+              <div className="pt-12 flex flex-col items-center gap-6 text-center border-t border-white/5">
+                <div className="space-y-2 max-w-md">
+                  <h5 className="text-sm font-bold text-white/60">Can't satisfy this policy?</h5>
+                  <p className="text-xs text-white/30 leading-relaxed">
+                    If this is an emergency or an intentional policy deviation, you may request a governance override.
+                    <span className="block mt-1 opacity-50 italic">All overrides are audited and require business justification.</span>
+                  </p>
+                </div>
+                <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-full px-8 py-6 bg-white/5 border-white/10 hover:bg-white/10 text-white/60 hover:text-white gap-3 transition-all group"
+                    >
+                      <Lock className="h-4 w-4 text-white/40 group-hover:text-amber-500 transition-colors" />
+                      Request Governance Override
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-[#0B0F1A] border-white/10 text-white sm:max-w-[500px] backdrop-blur-2xl">
+                    <DialogHeader className="space-y-3">
+                      <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
+                        <Lock className="h-6 w-6 text-amber-500" />
+                        Override Request
+                      </DialogTitle>
+                      <DialogDescription className="text-white/40 leading-relaxed">
+                        You are requesting to bypass a mandatory security protocol. This action will be logged in the permanent audit trail.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 py-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification Category</label>
+                        <Select value={category} onValueChange={setCategory}>
+                          <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl">
+                            <SelectValue placeholder="Select reason" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0B0F1A] border-white/10 text-white">
+                            <SelectItem value="BUSINESS_EXCEPTION">Business Exception (Critical Path)</SelectItem>
+                            <SelectItem value="EMERGENCY_FIX">Emergency Production Fix</SelectItem>
+                            <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
+                            <SelectItem value="FALSE_POSITIVE">False Positive / Tooling Error</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Business Justification</label>
+                        <Textarea 
+                          placeholder="Explain why this policy cannot be satisfied..."
+                          className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
+                          value={justification}
+                          onChange={(e) => setJustification(e.target.value)}
+                        />
+                        <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
+                      </div>
+                    </div>
+                    <DialogFooter className="gap-3">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setIsOverrideDialogOpen(false)}
+                        className="text-white/40 hover:text-white"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleOverrideSubmit}
+                        disabled={justification.length < 10 || isSubmitting}
+                        className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
+                      >
+                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                        Authorize Override
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="rounded-full px-8 py-6 bg-white/5 border-white/10 hover:bg-white/10 text-white/60 hover:text-white gap-3 transition-all group"
-                  >
-                    <Lock className="h-4 w-4 text-white/40 group-hover:text-amber-500 transition-colors" />
-                    Request Governance Override
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-[#0B0F1A] border-white/10 text-white sm:max-w-[500px] backdrop-blur-2xl">
-                  <DialogHeader className="space-y-3">
-                    <DialogTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
-                      <Lock className="h-6 w-6 text-amber-500" />
-                      Override Request
-                    </DialogTitle>
-                    <DialogDescription className="text-white/40 leading-relaxed">
-                      You are requesting to bypass a mandatory security protocol. This action will be logged in the permanent audit trail.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6 py-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification Category</label>
-                      <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl">
-                          <SelectValue placeholder="Select reason" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#0B0F1A] border-white/10 text-white">
-                          <SelectItem value="BUSINESS_EXCEPTION">Business Exception (Critical Path)</SelectItem>
-                          <SelectItem value="EMERGENCY_FIX">Emergency Production Fix</SelectItem>
-                          <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
-                          <SelectItem value="FALSE_POSITIVE">False Positive / Tooling Error</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Business Justification</label>
-                      <Textarea 
-                        placeholder="Explain why this policy cannot be satisfied..."
-                        className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
-                        value={justification}
-                        onChange={(e) => setJustification(e.target.value)}
-                      />
-                      <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
-                    </div>
-                  </div>
-                  <DialogFooter className="gap-3">
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => setIsOverrideDialogOpen(false)}
-                      className="text-white/40 hover:text-white"
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleOverrideSubmit}
-                      disabled={justification.length < 10 || isSubmitting}
-                      className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
-                    >
-                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                      Authorize Override
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+            )}
           </section>
 
           {/* ZONE 4: AUDIT & INTEGRITY (TRUST LAYER) */}

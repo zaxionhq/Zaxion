@@ -46,6 +46,11 @@ export default (sequelize) => {
         allowNull: true,
         comment: 'Pillar 1.3: Deterministic evaluation hash for integrity verification',
       },
+      github_check_run_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+        comment: 'Link to the GitHub Check Run for precise PATCHing',
+      },
     },
     {
       sequelize,

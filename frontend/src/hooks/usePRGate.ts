@@ -111,12 +111,27 @@ export const usePRGate = () => {
     }
   }, [handleError, handleSuccess]);
 
+  const mergePullRequest = useCallback(async (owner: string, repo: string, prNumber: number) => {
+    setIsLoading(true);
+    try {
+      await api.post(`/v1/github/repos/${owner}/${repo}/pr/${prNumber}/merge`);
+      handleSuccess('Pull request merged successfully');
+      return true;
+    } catch (err) {
+      handleError(err as ApiError);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleError, handleSuccess]);
+
   return {
     latestDecision,
     isLoading,
     error,
     fetchLatestDecision,
     fetchDecisionById,
-    executeOverride
+    executeOverride,
+    mergePullRequest
   };
 };

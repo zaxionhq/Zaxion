@@ -167,13 +167,17 @@ export class PrAnalysisService {
         };
       }
 
-      // D. Update DB with Final Decision
+      // D. Report Final Status to GitHub
+      const checkRunId = await reporter.reportStatus(owner, repo, headSha, decisionObject, { prNumber });
+
+      // E. Update DB with Final Decision
       // Hardened: Setting evaluation_status to 'FINAL' to trigger DB-level immutability
       const [, affectedRows] = await sequelize.query(
         `UPDATE pr_decisions 
          SET decision = :decision, 
              reason = :reason, 
              raw_data = :rawData, 
+             github_check_run_id = :checkRunId,
              evaluation_status = 'FINAL',
              updated_at = NOW()
          WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber AND commit_sha = :headSha
@@ -183,6 +187,7 @@ export class PrAnalysisService {
             decision: decisionObject.decision,
             reason: decisionObject.decisionReason,
             rawData: JSON.stringify(decisionObject),
+            checkRunId: checkRunId || null,
             owner,
             repo,
             prNumber,
@@ -208,9 +213,6 @@ export class PrAnalysisService {
         raceError.code = 'POLICY_VERSION_RACE';
         throw raceError;
       }
-
-      // E. Report Final Status to GitHub
-      await reporter.reportStatus(owner, repo, headSha, decisionObject, { prNumber });
       
       console.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
 

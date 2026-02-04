@@ -4,6 +4,7 @@ import { decrypt } from "../utils/crypto.js";
 import { getRepoTree as fetchRepoTreeService, listBranches as fetchBranchesService } from "../services/github.service.js";
 import { formatPRBody } from "../services/prFormatter.service.js";
 import { GitHubReporterService } from "../services/githubReporter.service.js";
+import githubAppService from "../services/githubApp.service.js";
 
 /**
  * Helper: create Octokit client with token
@@ -268,7 +269,12 @@ export default function githubControllerFactory(db) {
         const { decisionId } = req.params;
         
         const [decision] = await db.sequelize.query(
-          `SELECT d.*, o.user_login as override_by, o.override_reason, o.created_at as overridden_at
+          `SELECT 
+            d.*, 
+            CASE WHEN o.id IS NOT NULL THEN 'OVERRIDDEN_PASS' ELSE d.decision END as decision,
+            o.user_login as override_by, 
+            o.override_reason, 
+            o.created_at as overridden_at
            FROM pr_decisions d
            LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
            WHERE d.id = :decisionId 
@@ -299,7 +305,12 @@ export default function githubControllerFactory(db) {
         const { owner, repo, prNumber } = req.params;
         
         const [decision] = await db.sequelize.query(
-          `SELECT d.*, o.user_login as override_by, o.override_reason, o.created_at as overridden_at
+          `SELECT 
+            d.*, 
+            CASE WHEN o.id IS NOT NULL THEN 'OVERRIDDEN_PASS' ELSE d.decision END as decision,
+            o.user_login as override_by, 
+            o.override_reason, 
+            o.created_at as overridden_at
            FROM pr_decisions d
            LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
            WHERE d.repo_owner = :owner AND d.repo_name = :repo AND d.pr_number = :prNumber 
@@ -403,7 +414,7 @@ export default function githubControllerFactory(db) {
           const { data: permissionData } = await octokit.rest.repos.getCollaboratorPermissionLevel({
             owner,
             repo,
-            username: user.login || user.email,
+            username: user.username || user.login || user.email,
           });
 
           const userPermission = permissionData.permission; // 'admin', 'maintain', 'write', 'triage', 'read'
@@ -417,7 +428,7 @@ export default function githubControllerFactory(db) {
             });
           }
 
-          console.log(`Override authorized: User ${user.login} has ${userPermission} permission on ${owner}/${repo}`);
+          console.log(`Override authorized: User ${user.username || user.login} has ${userPermission} permission on ${owner}/${repo}`);
           // Update the role used in the audit log to the actual GitHub role
           req.body.role = userPermission.toUpperCase();
 
@@ -437,7 +448,7 @@ export default function githubControllerFactory(db) {
           {
             replacements: {
               decisionId: legacyDecision.id,
-              userLogin: user.login || user.email,
+              userLogin: user.username || user.login || user.email,
               reason: reason,
               category: category,
               ttlHours: ttl_hours
@@ -447,16 +458,50 @@ export default function githubControllerFactory(db) {
           }
         );
 
-        // 4. Update GitHub Check Run
-        const reporter = new GitHubReporterService(octokit);
+        // 4. Update GitHub Check Run & Commit Status
+        // We prefer using the GitHub App token if available, because it has permission
+        // to update the check runs it created. Fallback to user token if needed.
+        let reportingOctokit = octokit;
+        try {
+          // Attempt to get installation ID to use App token
+          const { data: installation } = await octokit.rest.apps.getRepoInstallation({ owner, repo });
+          if (installation && installation.id) {
+            const appToken = await githubAppService.getInstallationAccessToken(installation.id);
+            reportingOctokit = new Octokit({ auth: appToken });
+            console.log(`[Override] Using GitHub App token for reporting (Installation: ${installation.id})`);
+          }
+        } catch (appErr) {
+          console.warn("[Override] Could not get App installation, falling back to user token for reporting:", appErr.message);
+        }
+
+        const reporter = new GitHubReporterService(reportingOctokit);
+        
+        // Fetch current PR head SHA to ensure status is reported to the latest commit
+        // GitHub branch protection requires the LATEST commit to have the passing status
+        let headSha = legacyDecision.commit_sha;
+        try {
+          const { data: prData } = await octokit.rest.pulls.get({
+            owner,
+            repo,
+            pull_number: prNumber
+          });
+          headSha = prData.head.sha;
+          console.log(`Reporting override to current PR head: ${headSha}`);
+        } catch (prErr) {
+          console.warn("Could not fetch latest PR head SHA, falling back to decision SHA:", prErr.message);
+        }
+
         await reporter.reportStatus(
           owner,
           repo,
-          legacyDecision.commit_sha,
+          headSha,
           "OVERRIDDEN_PASS",
           { 
-            description: `Override (${category}) authorized by ${user.login || user.email}`,
-            prNumber: legacyDecision.pr_number
+            description: `Override (${category}) authorized by ${user.username || user.login || user.email}`,
+            prNumber: prNumber,
+            checkRunId: legacyDecision.github_check_run_id, // Hardened: Precise PATCHing
+            override_by: user.username || user.login || user.email,
+            overridden_at: new Date().toISOString()
           }
         );
 
@@ -470,6 +515,187 @@ export default function githubControllerFactory(db) {
       } catch (err) {
         await transaction.rollback();
         console.error("executeOverride error", err);
+        next(err);
+      }
+    },
+
+    /**
+     * Merge a pull request.
+     * POST /api/v1/github/repos/:owner/:repo/pr/:prNumber/merge
+     */
+    mergePullRequest: async (req, res, next) => {
+      try {
+        const { owner, repo, prNumber } = req.params;
+        const token = req.githubToken;
+        const user = req.user;
+
+        if (!token) {
+          return res.status(401).json({ error: "GitHub token missing" });
+        }
+
+        const octokit = getOctokit(token);
+
+        // 1. Check if PR is mergeable and its current state
+        const { data: pr } = await octokit.rest.pulls.get({
+          owner,
+          repo,
+          pull_number: prNumber,
+        });
+
+        if (pr.merged) {
+          return res.status(400).json({ error: "PR is already merged" });
+        }
+
+        if (pr.state === 'closed') {
+          return res.status(400).json({ error: "PR is closed" });
+        }
+
+        // 2. Verify Zaxion Decision (PASS or OVERRIDDEN_PASS)
+        const [decision] = await db.sequelize.query(
+          `SELECT 
+            CASE WHEN o.id IS NOT NULL THEN 'OVERRIDDEN_PASS' ELSE d.decision END as decision
+           FROM pr_decisions d
+           LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
+           WHERE d.repo_owner = :owner AND d.repo_name = :repo AND d.pr_number = :prNumber 
+           ORDER BY d.created_at DESC LIMIT 1`,
+          {
+            replacements: { owner, repo, prNumber },
+            type: db.sequelize.QueryTypes.SELECT
+          }
+        );
+
+        if (!decision) {
+          return res.status(404).json({ error: "No Zaxion decision found for this PR" });
+        }
+
+        if (decision.decision !== 'PASS' && decision.decision !== 'OVERRIDDEN_PASS') {
+          return res.status(403).json({ 
+            error: "PR is blocked by Zaxion", 
+            message: "PR must have a PASS or OVERRIDDEN_PASS status to be merged." 
+          });
+        }
+
+        // 3. Perform the merge
+        // We use a small delay if this was just overridden to give GitHub time to process the status check
+        // However, the caller should usually wait for the UI to refresh.
+        
+        try {
+          const mergeResponse = await octokit.rest.pulls.merge({
+            owner,
+            repo,
+            pull_number: prNumber,
+            merge_method: 'merge', // default to merge
+            commit_title: `Zaxion Authorized Merge: PR #${prNumber}`,
+            commit_message: `PR merged via Zaxion Governance Console by ${user.username || user.login || user.email}. Decision: ${decision.decision}.`
+          });
+
+          return res.status(200).json({
+            status: "SUCCESS",
+            message: "Pull request merged successfully",
+            data: mergeResponse.data
+          });
+        } catch (mergeErr) {
+          console.error("GitHub Merge API Error:", mergeErr);
+          
+          if (mergeErr.status === 405) {
+            // Fetch PR details to provide a better error message
+            const { data: prDetails } = await octokit.rest.pulls.get({ owner, repo, pull_number: prNumber });
+            
+            console.log(`[Merge Diagnostic] PR #${prNumber} state:`, {
+              mergeable: prDetails.mergeable,
+              mergeable_state: prDetails.mergeable_state,
+              rebaseable: prDetails.rebaseable
+            });
+
+            // Fetch check runs and statuses to see what exactly is blocking
+            const [{ data: checkRuns }, { data: statuses }] = await Promise.all([
+              octokit.rest.checks.listForRef({ owner, repo, ref: prDetails.head.sha }),
+              octokit.rest.repos.listCommitStatusesForRef({ owner, repo, ref: prDetails.head.sha })
+            ]);
+
+            console.log(`[Merge Diagnostic] Check Runs for ${prDetails.head.sha.substring(0,7)}:`, 
+              checkRuns.check_runs.map(cr => `${cr.name}: ${cr.status}/${cr.conclusion}`)
+            );
+            console.log(`[Merge Diagnostic] Commit Statuses for ${prDetails.head.sha.substring(0,7)}:`, 
+              statuses.map(s => `${s.context}: ${s.state}`)
+            );
+
+            let detailedMessage = mergeErr.message;
+            const failingCheckNames = checkRuns.check_runs
+              .filter(cr => cr.conclusion === 'failure' || cr.conclusion === 'action_required')
+              .map(cr => cr.name);
+            
+            const failingStatusContexts = statuses
+              .filter(s => s.state === 'failure' || s.state === 'error')
+              .map(s => s.context);
+
+            const allFailingNames = [...new Set([...failingCheckNames, ...failingStatusContexts])];
+
+            // DETECT GHOST CHECKS: Multiple entities with same name/context where at least one is failing
+            // and at least one is successful.
+            const instancesMap = {};
+            [
+              ...checkRuns.check_runs.map(cr => ({ 
+                name: cr.name, 
+                type: 'check', 
+                conclusion: cr.conclusion, 
+                app: cr.app?.name || 'unknown',
+                id: cr.id 
+              })),
+              ...statuses.map(s => ({ 
+                name: s.context, 
+                type: 'status', 
+                conclusion: s.state, 
+                creator: s.creator?.login || 'unknown' 
+              }))
+            ].forEach(inst => {
+              if (!instancesMap[inst.name]) instancesMap[inst.name] = [];
+              instancesMap[inst.name].push(inst);
+            });
+
+            const duplicateFailingCheck = allFailingNames.find(name => {
+              const instances = instancesMap[name] || [];
+              const hasSuccess = instances.some(i => i.conclusion === 'success');
+              return instances.length > 1 && hasSuccess;
+            });
+
+            if (duplicateFailingCheck) {
+              const identities = (instancesMap[duplicateFailingCheck] || [])
+                .map(i => `${i.type} by ${i.app || i.creator} (${i.conclusion})`)
+                .join(', ');
+              
+              detailedMessage = `Merge blocked by an Identity Conflict. GitHub sees ${instancesMap[duplicateFailingCheck].length} different items named "${duplicateFailingCheck}": [${identities}]. Zaxion has passed, but the other identity is failing. GitHub requires ALL items with this name to pass.`;
+            } else if (prDetails.mergeable_state === 'behind') {
+              detailedMessage = "Branch Out of Date: Your Branch Protection rules require this branch to be up-to-date with the base branch (main) before merging. Please click 'Update branch' in the GitHub PR UI first.";
+            } else if (prDetails.mergeable_state === 'blocked') {
+              detailedMessage = "PR is blocked by GitHub branch protection rules. This could be due to missing reviews, failing status checks, or other requirements. Check the GitHub PR page for details.";
+            } else if (prDetails.mergeable_state === 'dirty') {
+              detailedMessage = "PR has merge conflicts that must be resolved before merging.";
+            }
+
+            return res.status(405).json({ 
+              error: "PR is not mergeable", 
+              message: detailedMessage,
+              mergeable_state: prDetails.mergeable_state,
+              diagnostics: {
+                mergeable: prDetails.mergeable,
+                head_sha: prDetails.head.sha.substring(0, 7),
+                failing_checks: failingCheckNames,
+                has_ghost_checks: !!duplicateFailingCheck
+              }
+            });
+          }
+          throw mergeErr;
+        }
+
+      } catch (err) {
+        console.error("mergePullRequest error", err);
+        if (err.status === 405) {
+          return res.status(405).json({ error: "PR is not mergeable", message: err.message });
+        }
+        if (err.status === 403) {
+          return res.status(403).json({ error: "Insufficient permissions to merge PR" });
+        }
         next(err);
       }
     }

@@ -65,5 +65,12 @@ export default function githubRoutesFactory(db) {
     githubController.executeOverride
   );
 
+  // Merge PR
+  router.post(
+    "/repos/:owner/:repo/pr/:prNumber/merge",
+    requireGithub,
+    githubController.mergePullRequest
+  );
+
   return router;
 }
