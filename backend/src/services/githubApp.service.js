@@ -111,6 +111,28 @@ class GitHubAppService {
       throw new Error(`Failed to authenticate as GitHub App installation: ${error.message}`);
     }
   }
+
+  /**
+   * Finds the installation ID for a specific repository using App JWT
+   */
+  async getInstallationIdForRepo(owner, repo) {
+    try {
+      const appJwt = this.generateJwt();
+      const response = await axios.get(
+        `https://api.github.com/repos/${owner}/${repo}/installation`,
+        {
+          headers: {
+            Authorization: `Bearer ${appJwt}`,
+            Accept: "application/vnd.github+json",
+          },
+        }
+      );
+      return response.data.id;
+    } catch (error) {
+      logger.error({ error: error.response?.data || error.message, owner, repo }, "Failed to get installation ID for repository");
+      return null;
+    }
+  }
 }
 
 export default new GitHubAppService();

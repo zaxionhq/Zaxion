@@ -459,19 +459,28 @@ export default function githubControllerFactory(db) {
         );
 
         // 4. Update GitHub Check Run & Commit Status
-        // We prefer using the GitHub App token if available, because it has permission
-        // to update the check runs it created. Fallback to user token if needed.
+        // MANDATORY: Use GitHub App identity for reporting status.
+        // GitHub requires the SAME identity that created the check to update it.
+        // User tokens will create a separate "identity" that blocks the PR.
         let reportingOctokit = octokit;
+        let identityType = "USER_OAUTH";
+
         try {
-          // Attempt to get installation ID to use App token
-          const { data: installation } = await octokit.rest.apps.getRepoInstallation({ owner, repo });
-          if (installation && installation.id) {
-            const appToken = await githubAppService.getInstallationAccessToken(installation.id);
+          console.log(`[Override] Attempting to assume App identity for ${owner}/${repo}...`);
+          const installationId = await githubAppService.getInstallationIdForRepo(owner, repo);
+          
+          if (installationId) {
+            const appToken = await githubAppService.getInstallationAccessToken(installationId);
             reportingOctokit = new Octokit({ auth: appToken });
-            console.log(`[Override] Using GitHub App token for reporting (Installation: ${installation.id})`);
+            identityType = "GITHUB_APP";
+            console.log(`[Override] Successfully assumed App identity (Installation: ${installationId})`);
+          } else {
+            console.warn(`[Override] WARNING: Could not find App installation for ${owner}/${repo}.`);
+            console.warn(`[Override] Falling back to User Token. If the original check was created by the Zaxion App, this override WILL FAIL due to GitHub Identity Conflict.`);
           }
         } catch (appErr) {
-          console.warn("[Override] Could not get App installation, falling back to user token for reporting:", appErr.message);
+          console.error("[Override] Identity switch failed:", appErr.message);
+          // Don't crash, but log it clearly
         }
 
         const reporter = new GitHubReporterService(reportingOctokit);
@@ -486,24 +495,35 @@ export default function githubControllerFactory(db) {
             pull_number: prNumber
           });
           headSha = prData.head.sha;
-          console.log(`Reporting override to current PR head: ${headSha}`);
+          console.log(`[Override] Targeting latest PR head SHA: ${headSha} (Identity: ${identityType})`);
         } catch (prErr) {
-          console.warn("Could not fetch latest PR head SHA, falling back to decision SHA:", prErr.message);
+          console.warn("[Override] Could not fetch latest PR head SHA, falling back to decision SHA:", prErr.message);
         }
 
-        await reporter.reportStatus(
-          owner,
-          repo,
-          headSha,
-          "OVERRIDDEN_PASS",
-          { 
-            description: `Override (${category}) authorized by ${user.username || user.login || user.email}`,
-            prNumber: prNumber,
-            checkRunId: legacyDecision.github_check_run_id, // Hardened: Precise PATCHing
-            override_by: user.username || user.login || user.email,
-            overridden_at: new Date().toISOString()
-          }
-        );
+        try {
+          await reporter.reportStatus(
+            owner,
+            repo,
+            headSha,
+            "OVERRIDDEN_PASS",
+            { 
+              description: `Override (${category}) authorized by ${user.username || user.login || user.email}`,
+              prNumber: prNumber,
+              checkRunId: legacyDecision.github_check_run_id, // Precise PATCHing
+              override_by: user.username || user.login || user.email,
+              overridden_at: new Date().toISOString()
+            }
+          );
+        } catch (reportErr) {
+          console.error("[Override] Status reporting failed:", reportErr.message);
+          await transaction.rollback();
+          return res.status(500).json({
+            error: "GitHub Update Failed",
+            message: reportErr.message,
+            identity: identityType,
+            hint: "This usually means Zaxion (as an App) doesn't have permission to update the check run, or you are experiencing an Identity Conflict. Ensure the Zaxion GitHub App is installed on your repository."
+          });
+        }
 
         await transaction.commit();
         res.status(200).json({
@@ -620,7 +640,6 @@ export default function githubControllerFactory(db) {
               statuses.map(s => `${s.context}: ${s.state}`)
             );
 
-            let detailedMessage = mergeErr.message;
             const failingCheckNames = checkRuns.check_runs
               .filter(cr => cr.conclusion === 'failure' || cr.conclusion === 'action_required')
               .map(cr => cr.name);
@@ -629,10 +648,6 @@ export default function githubControllerFactory(db) {
               .filter(s => s.state === 'failure' || s.state === 'error')
               .map(s => s.context);
 
-            const allFailingNames = [...new Set([...failingCheckNames, ...failingStatusContexts])];
-
-            // DETECT GHOST CHECKS: Multiple entities with same name/context where at least one is failing
-            // and at least one is successful.
             const instancesMap = {};
             [
               ...checkRuns.check_runs.map(cr => ({ 
@@ -653,35 +668,38 @@ export default function githubControllerFactory(db) {
               instancesMap[inst.name].push(inst);
             });
 
+            const allFailingNames = [...new Set([...failingCheckNames, ...failingStatusContexts])];
+
+            // DETECT GHOST CHECKS / IDENTITY CONFLICTS
+            // Check if there's a required name that has BOTH a success and a failure
             const duplicateFailingCheck = allFailingNames.find(name => {
               const instances = instancesMap[name] || [];
               const hasSuccess = instances.some(i => i.conclusion === 'success');
               return instances.length > 1 && hasSuccess;
             });
 
+            let detailedMessage = "PR analysis complete. One or more mandatory policies are blocking this merge.";
+
             if (duplicateFailingCheck) {
               const identities = (instancesMap[duplicateFailingCheck] || [])
                 .map(i => `${i.type} by ${i.app || i.creator} (${i.conclusion})`)
                 .join(', ');
               
-              detailedMessage = `Merge blocked by an Identity Conflict. GitHub sees ${instancesMap[duplicateFailingCheck].length} different items named "${duplicateFailingCheck}": [${identities}]. Zaxion has passed, but the other identity is failing. GitHub requires ALL items with this name to pass.`;
-            } else if (prDetails.mergeable_state === 'behind') {
-              detailedMessage = "Branch Out of Date: Your Branch Protection rules require this branch to be up-to-date with the base branch (main) before merging. Please click 'Update branch' in the GitHub PR UI first.";
+              detailedMessage = `Merge blocked by an Identity Conflict. GitHub sees ${instancesMap[duplicateFailingCheck].length} different items named "${duplicateFailingCheck}": [${identities}]. Zaxion has passed, but another identity with the same name is failing. GitHub requires ALL items with this name to pass.`;
             } else if (prDetails.mergeable_state === 'blocked') {
               detailedMessage = "PR is blocked by GitHub branch protection rules. This could be due to missing reviews, failing status checks, or other requirements. Check the GitHub PR page for details.";
-            } else if (prDetails.mergeable_state === 'dirty') {
-              detailedMessage = "PR has merge conflicts that must be resolved before merging.";
             }
 
-            return res.status(405).json({ 
-              error: "PR is not mergeable", 
+            return res.status(405).json({
+              error: "PR is not mergeable",
               message: detailedMessage,
               mergeable_state: prDetails.mergeable_state,
               diagnostics: {
                 mergeable: prDetails.mergeable,
                 head_sha: prDetails.head.sha.substring(0, 7),
-                failing_checks: failingCheckNames,
-                has_ghost_checks: !!duplicateFailingCheck
+                failing_checks: allFailingNames,
+                has_ghost_checks: !!duplicateFailingCheck,
+                identities: duplicateFailingCheck ? instancesMap[duplicateFailingCheck] : undefined
               }
             });
           }

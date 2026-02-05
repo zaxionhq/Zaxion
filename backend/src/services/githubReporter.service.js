@@ -115,10 +115,8 @@ export class GitHubReporterService {
     try {
       let checkRunsToUpdate = [];
       
-      if (explicitCheckRunId) {
-        checkRunsToUpdate.push({ id: explicitCheckRunId });
-      } else {
-        // Find ALL check runs with the same name to avoid "Ghost Checks" blocking the PR
+      // We always fetch existing check runs for this SHA to ensure we clear any "Ghost Checks"
+      try {
         const { data: { check_runs } } = await this.octokit.rest.checks.listForRef({
           owner,
           repo,
@@ -126,6 +124,14 @@ export class GitHubReporterService {
           check_name: this.CHECK_NAME
         });
         checkRunsToUpdate = check_runs.filter(cr => cr.name === this.CHECK_NAME);
+      } catch (listErr) {
+        console.warn(`[GitHubReporter] Failed to list check runs for ${headSha}: ${listErr.message}`);
+      }
+
+      // If we have an explicit ID but it wasn't in the list (e.g., reported on a different SHA previously), 
+      // add it to the update queue
+      if (explicitCheckRunId && !checkRunsToUpdate.some(c => c.id === explicitCheckRunId)) {
+        checkRunsToUpdate.push({ id: explicitCheckRunId });
       }
 
       if (checkRunsToUpdate.length > 0) {
@@ -150,17 +156,28 @@ export class GitHubReporterService {
           }
 
           try {
+            console.log(`[GitHubReporter] Attempting PATCH on check run ${check.id} with conclusion ${conclusion}...`);
             const { data: updatedCheck } = await this.octokit.rest.checks.update(updateParams);
             checkRunId = updatedCheck.id;
             updateCount++;
             console.log(`[GitHubReporter] Successfully updated check run ${check.id} to ${conclusion}`);
           } catch (updateErr) {
             console.warn(`[GitHubReporter] Failed to update check run ${check.id} (status: ${updateErr.status}).`);
+            
+            // If we are performing an override, we MUST update the existing check.
+            // Creating a new one will cause an identity conflict in GitHub's eyes.
+            if (decisionState === "OVERRIDDEN_PASS") {
+              const errorMsg = `Identity Conflict: Zaxion found the required check run (${check.id}) but could not update it. This usually happens if the GitHub App identity doesn't match the one that created the check. GitHub Status: ${updateErr.status}`;
+              console.error(`[GitHubReporter] ${errorMsg}`);
+              throw new Error(errorMsg);
+            }
           }
         }
 
-        // If we found checks but failed to update any of them, or if we need a fresh one
-        if (updateCount === 0) {
+        // If we found checks but failed to update any of them, and this IS NOT an override, 
+        // then we fallback to creating a new one. For overrides, we already threw an error above.
+        if (updateCount === 0 && decisionState !== "OVERRIDDEN_PASS") {
+          console.log(`[GitHubReporter] No checks were updated. Creating new check run as fallback.`);
           const createParams = {
             owner,
             repo,
@@ -176,10 +193,10 @@ export class GitHubReporterService {
           if (status === "completed") createParams.conclusion = conclusion;
           const { data: newCheck } = await this.octokit.rest.checks.create(createParams);
           checkRunId = newCheck.id;
-          console.log(`[GitHubReporter] Created new check run ${checkRunId} as fallback.`);
         }
       } else {
-        // No existing check runs found, create a new one
+        // No existing checks found for this SHA, create a new one
+        console.log(`[GitHubReporter] No existing check runs found for SHA ${headSha.substring(0, 7)}. Creating new check run...`);
         const createParams = {
           owner,
           repo,
@@ -192,17 +209,16 @@ export class GitHubReporterService {
             text
           }
         };
-
-        if (status === "completed") {
-          createParams.conclusion = conclusion;
-        }
-
-        const { data: newCheck } = await this.octokit.rest.checks.create(createParams);
-        checkRunId = newCheck.id;
-        console.log(`[GitHubReporter] Created new check run for ${headSha.substring(0, 7)}: ${conclusion}`);
+        if (status === "completed") createParams.conclusion = conclusion;
+        
+        const { data: createdCheck } = await this.octokit.rest.checks.create(createParams);
+        checkRunId = createdCheck.id;
+        console.log(`[GitHubReporter] Created fresh check run ${checkRunId} for ${headSha}`);
       }
-    } catch (error) {
-      console.error("[GitHubReporter] Failed to report Check Run status:", error.message);
+    } catch (checkErr) {
+      console.error("[GitHubReporter] Check Runs API failed:", checkErr.response?.data || checkErr.message);
+      // Re-throw so the controller knows it failed
+      throw checkErr;
     }
 
     // 2. Commit Status API (Disabled)
