@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
-import { usePRGate, PRDecision } from '@/hooks/usePRGate';
+import { usePRGate, PRDecision, DecisionObject, PolicyResult } from '@/hooks/usePRGate';
 
 const DecisionResolutionConsole = () => {
   const { owner, repo: repoName, prNumber: prNumStr } = useParams<{ owner: string; repo: string; prNumber: string }>();
@@ -38,12 +38,12 @@ const DecisionResolutionConsole = () => {
   const pRepo = repoName || searchParams.get('repo');
   const pPr = prNumStr || searchParams.get('pr');
 
-  const decisionData = React.useMemo(() => {
+  const decisionData = React.useMemo<DecisionObject | null>(() => {
     if (!latestDecision?.raw_data) return null;
     try {
-      return typeof latestDecision.raw_data === 'string' 
+      return (typeof latestDecision.raw_data === 'string' 
         ? JSON.parse(latestDecision.raw_data) 
-        : latestDecision.raw_data;
+        : latestDecision.raw_data) as DecisionObject;
     } catch (e) {
       console.error("Failed to parse decision raw_data:", e);
       return null;
@@ -300,7 +300,7 @@ const DecisionResolutionConsole = () => {
                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/20">Decision Context</h3>
                 <p className="text-2xl font-bold text-white/90 leading-tight">
                   {isBlocked 
-                    ? `Mandatory policy violation: ${decisionData?.policies?.find((p: any) => !p.passed)?.name || "High-risk Code Coverage"}`
+                    ? `Mandatory policy violation: ${decisionData?.policies?.find((p: PolicyResult) => !p.passed)?.name || "High-risk Code Coverage"}`
                     : isOverridden
                     ? "Governance Authorization Granted"
                     : "All Security Protocols Satisfied"}
@@ -316,7 +316,7 @@ const DecisionResolutionConsole = () => {
                       ? "An authorized administrator has bypassed the block for this specific commit. The override justification is recorded in the audit log below."
                       : "This PR has passed all deterministic security checks and is eligible for merge according to Zaxion protocols."}
                   </p>
-                  {isBlocked && decisionData?.facts?.affectedAreas?.length > 0 && (
+                  {isBlocked && decisionData?.facts?.affectedAreas && decisionData.facts.affectedAreas.length > 0 && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -345,10 +345,10 @@ const DecisionResolutionConsole = () => {
                                 </div>
                               ))}
                             </div>
-                            {decisionData?.policies?.filter((p: any) => !p.passed).length > 1 && (
+                            {decisionData?.policies && decisionData.policies.filter((p: PolicyResult) => !p.passed).length > 1 && (
                               <div className="pt-2 border-t border-white/5 mt-2">
                                 <p className="text-[9px] text-white/30 font-bold uppercase tracking-tighter">
-                                  + {decisionData.policies.filter((p: any) => !p.passed).length - 1} more policy constraints violated
+                                  + {decisionData.policies.filter((p: PolicyResult) => !p.passed).length - 1} more policy constraints violated
                                 </p>
                               </div>
                             )}

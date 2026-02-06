@@ -19,11 +19,23 @@ export interface PRDecision {
   updated_at: string;
 }
 
+export interface PolicyResult {
+  id: string;
+  name: string;
+  passed: boolean;
+  description: string;
+}
+
 export interface DecisionObject {
   decision: string;
   evaluationStatus: string;
   decisionReason: string;
+  violation_reason?: string;
+  violated_policy?: string;
+  observed_change?: string;
+  affected_files?: string[];
   policy_version: string;
+  policies?: PolicyResult[];
   facts: {
     changedFiles: string[];
     testFilesAdded: number;

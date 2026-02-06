@@ -141,7 +141,9 @@ export class PolicyEngineService {
       facts: {
         changedFiles: prContext.files || [],
         testFilesAdded: testFiles.length,
-        affectedAreas: Object.keys(prContext.categories).filter(cat => prContext.categories[cat].length > 0),
+        affectedAreas: Object.entries(prContext.categories)
+          .filter(([_, files]) => Array.isArray(files) && files.length > 0)
+          .map(([cat]) => cat),
         totalChanges: prContext.totalChanges,
         isMainBranch: isMainBranch,
         hasCriticalChanges: highRiskFiles.length > 0
