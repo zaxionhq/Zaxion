@@ -6,10 +6,11 @@ export class GitHubReporterService {
   constructor(octokit) {
     this.octokit = octokit;
     this.CHECK_NAME = "Zaxion/pr-gate";
+    this.STICKY_MARKER = "<!-- ZAXION_STICKY_COMMENT -->";
   }
 
   /**
-   * Report status to GitHub Checks API with rich intelligence
+   * Report status to GitHub Checks API and maintain a sticky PR comment
    * @param {string} owner 
    * @param {string} repo 
    * @param {string} headSha 
@@ -26,6 +27,7 @@ export class GitHubReporterService {
     let status = "completed";
     let conclusion = "neutral";
     let title = "Gateway Analysis";
+    let badge = "⚪";
     
     // State Mapping
     switch (decisionState) {
@@ -33,34 +35,40 @@ export class GitHubReporterService {
         status = "in_progress";
         conclusion = null;
         title = "Analyzing Risk...";
+        badge = "⏳";
         break;
       case "BLOCK":
         status = "completed";
         conclusion = "failure";
         title = "Gateway Blocked";
+        badge = "🔴";
         break;
       case "PASS":
         status = "completed";
         conclusion = "success";
         title = "Gateway Passed";
+        badge = "🟢";
         break;
       case "WARN":
         status = "completed";
         conclusion = "neutral";
         title = "Gateway Warning";
+        badge = "🟡";
         break;
       case "OVERRIDDEN_PASS":
         status = "completed";
         conclusion = "success";
         title = "⚠️ Bypass Authorized";
+        badge = "🔓";
         break;
       default:
         status = "completed";
         conclusion = "failure";
         title = "System Error";
+        badge = "❌";
     }
 
-    // 0. Build Rich Markdown Output (Step 3: Enriched Reporting)
+    // 0. Build Rich Markdown Output
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
     const deepLink = `${frontendUrl}/pr/${owner}/${repo}/${prNumber}`;
     
@@ -70,7 +78,7 @@ export class GitHubReporterService {
     text += `**Timestamp:** ${new Date().toISOString()}\n\n`;
 
     if (typeof decisionObject === 'object' && decisionObject !== null && decisionObject.decision) {
-      summary = `### ${title}\n${description}\n\n[🔍 Fix with Zaxion](${deepLink})`;
+      summary = `### ${title}\n${description}\n\n[📋 Full Report](${deepLink})`;
       
       text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n`;
 
@@ -108,6 +116,44 @@ export class GitHubReporterService {
     }
 
     text += `---\n*This report was generated automatically by Zaxion-PR GATE. Decisions are deterministic and based on project-defined policies.*`;
+
+    // --- STICKY COMMENT LOGIC ---
+    if (prNumber) {
+      try {
+        const commentBody = `${this.STICKY_MARKER}\n### 🛡️ Zaxion Policy Status: ${badge} **${decisionState}**\n\n${summary}\n\n---\n*Updated for commit \`${headSha.substring(0, 7)}\`*`;
+
+        // 1. List comments to find existing sticky
+        const { data: comments } = await this.octokit.rest.issues.listComments({
+          owner,
+          repo,
+          issue_number: prNumber
+        });
+
+        const existingComment = comments.find(c => c.body.includes(this.STICKY_MARKER));
+
+        if (existingComment) {
+          // 2. Update existing comment
+          await this.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existingComment.id,
+            body: commentBody
+          });
+          console.log(`[GitHubReporter] Sticky comment updated for PR #${prNumber}`);
+        } else {
+          // 3. Create new comment if none exists
+          await this.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body: commentBody
+          });
+          console.log(`[GitHubReporter] New sticky comment created for PR #${prNumber}`);
+        }
+      } catch (commentErr) {
+        console.warn(`[GitHubReporter] Failed to manage sticky comment: ${commentErr.message}`);
+      }
+    }
 
     let checkRunId = explicitCheckRunId;
 

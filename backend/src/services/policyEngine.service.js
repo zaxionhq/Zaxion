@@ -33,7 +33,10 @@ export class PolicyEngineService {
     if (highRiskFiles.length > 0) {
       if (testFiles.length === 0) {
         policy1.passed = false;
-        policy1.message = `**FAILED:** Modified ${highRiskFiles.length} high-risk file(s) (auth/payment/config) without adding tests.`;
+        const displayedFiles = highRiskFiles.slice(0, 3).join(', ');
+        const overflowCount = highRiskFiles.length - 3;
+        const overflowText = overflowCount > 0 ? `... and ${overflowCount} more. Click ( ? ) for full list.` : '';
+        policy1.message = `**FAILED:** Modified ${highRiskFiles.length} high-risk file(s) (${displayedFiles}${overflowText}) without adding tests.`;
         isBlocked = true;
       } else {
         policy1.message = `**PASSED:** High-risk changes covered by ${testFiles.length} test file(s).`;

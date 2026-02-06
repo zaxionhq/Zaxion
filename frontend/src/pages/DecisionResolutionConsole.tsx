@@ -79,6 +79,15 @@ const DecisionResolutionConsole = () => {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (justification.length >= 10 && !isSubmitting) {
+        handleOverrideSubmit();
+      }
+    }
+  };
+
   const handleMergeSubmit = async () => {
     if (!pOwner || !pRepo || !pPr) return;
     setIsMerging(true);
@@ -315,29 +324,34 @@ const DecisionResolutionConsole = () => {
                             <HelpCircle className="h-4 w-4" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent className="bg-[#0B0F1A] border-white/10 p-4 rounded-2xl max-w-xs shadow-2xl backdrop-blur-xl">
-                          <div className="space-y-3">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-neon-cyan">Policy Violations</h4>
-                            <div className="space-y-2">
+                        <TooltipContent className="bg-[#0B0F1A] border-white/10 p-4 rounded-2xl w-80 shadow-2xl backdrop-blur-xl">
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-neon-cyan">Policy Violations</h4>
+                              <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/20 px-2 py-0">
+                                {decisionData?.facts?.affectedAreas?.length || 0} FILES
+                              </Badge>
+                            </div>
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                               {decisionData?.facts?.affectedAreas?.map((file: string, i: number) => (
-                                <div key={i} className="space-y-1">
+                                <div key={i} className="space-y-1.5 p-2 rounded-xl bg-white/[0.02] border border-white/5">
                                   <div className="flex items-center gap-2">
-                                    <div className="h-1 w-1 bg-destructive rounded-full" />
-                                    <span className="text-[11px] font-mono text-white/80 truncate">{file}</span>
+                                    <div className="h-1.5 w-1.5 bg-destructive rounded-full shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+                                    <span className="text-[11px] font-mono text-white/80 break-all">{file}</span>
                                   </div>
-                                  <p className="text-[10px] text-white/40 pl-3 leading-tight italic">
-                                    {decisionData?.violated_policy || "coverage-auth-required"} violation: Missing tests for modified critical path logic.
+                                  <p className="text-[10px] text-white/40 pl-3 leading-relaxed italic">
+                                    {decisionData?.violated_policy || "coverage-auth-required"} violation: Missing tests for critical path logic.
                                   </p>
                                 </div>
                               ))}
-                              {decisionData?.policies?.filter((p: any) => !p.passed).length > 1 && (
-                                <div className="pt-2 border-t border-white/5 mt-2">
-                                  <p className="text-[9px] text-white/30 font-bold uppercase tracking-tighter">
-                                    + {decisionData.policies.filter((p: any) => !p.passed).length - 1} more policy violations detected
-                                  </p>
-                                </div>
-                              )}
                             </div>
+                            {decisionData?.policies?.filter((p: any) => !p.passed).length > 1 && (
+                              <div className="pt-2 border-t border-white/5 mt-2">
+                                <p className="text-[9px] text-white/30 font-bold uppercase tracking-tighter">
+                                  + {decisionData.policies.filter((p: any) => !p.passed).length - 1} more policy constraints violated
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>
@@ -567,9 +581,9 @@ const DecisionResolutionConsole = () => {
                                </SelectTrigger>
                                <SelectContent className="bg-[#0B0F1A] border-white/10">
                                  <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
-                                 <SelectItem value="EMERGENCY_FIX">Emergency Fix</SelectItem>
+                                 <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
                                  <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
-                                 <SelectItem value="LEGACY_CODEBASE">Legacy Codebase</SelectItem>
+                                 <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
                                </SelectContent>
                              </Select>
                            </div>
@@ -591,12 +605,13 @@ const DecisionResolutionConsole = () => {
                          </div>
                          <div className="space-y-2">
                            <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification (Required)</label>
-                           <Textarea 
-                             placeholder="Provide a detailed reason for this governance exception..."
-                             className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
-                             value={justification}
-                             onChange={(e) => setJustification(e.target.value)}
-                           />
+                          <Textarea 
+                            placeholder="Provide a detailed reason for this governance exception..."
+                            className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
+                            value={justification}
+                            onChange={(e) => setJustification(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                          />
                            <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
                          </div>
                        </div>
@@ -733,7 +748,7 @@ const DecisionResolutionConsole = () => {
                           </SelectTrigger>
                           <SelectContent className="bg-[#0B0F1A] border-white/10 text-white">
                             <SelectItem value="BUSINESS_EXCEPTION">Business Exception (Critical Path)</SelectItem>
-                            <SelectItem value="EMERGENCY_FIX">Emergency Production Fix</SelectItem>
+                            <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
                             <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
                             <SelectItem value="FALSE_POSITIVE">False Positive / Tooling Error</SelectItem>
                           </SelectContent>
@@ -746,6 +761,7 @@ const DecisionResolutionConsole = () => {
                           className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
                           value={justification}
                           onChange={(e) => setJustification(e.target.value)}
+                          onKeyDown={handleKeyDown}
                         />
                         <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
                       </div>

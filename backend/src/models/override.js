@@ -56,7 +56,7 @@ export default (sequelize, DataTypes) => {
         comment: 'Scope confinement: only valid for this commit SHA',
       },
       category: {
-        type: DataTypes.ENUM('EMERGENCY_HOTFIX', 'FALSE_POSITIVE', 'LEGACY_CODE', 'BUSINESS_EXCEPTION'),
+        type: DataTypes.ENUM('EMERGENCY_PRODUCTION_FIX', 'FALSE_POSITIVE', 'LEGACY_REFACTOR', 'BUSINESS_EXCEPTION'),
         allowNull: false,
         defaultValue: 'BUSINESS_EXCEPTION',
       },
