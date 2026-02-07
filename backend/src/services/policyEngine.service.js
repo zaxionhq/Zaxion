@@ -114,13 +114,21 @@ export class PolicyEngineService {
     // --- FINAL DECISION ---
     let finalDecision = "PASS";
     let decisionReason = "All policies passed.";
+    let violatedPolicyName = null;
+    let violationReason = null;
     
     if (isBlocked) {
       finalDecision = "BLOCK";
-      decisionReason = policies.find(p => !p.passed && p.severity === "BLOCK")?.message || "Policy violation detected.";
+      const failingPolicy = policies.find(p => !p.passed && p.severity === "BLOCK");
+      violatedPolicyName = failingPolicy?.name || "Policy Violation";
+      violationReason = failingPolicy?.message || "Policy violation detected.";
+      decisionReason = violationReason;
     } else if (isWarned) {
       finalDecision = "WARN";
-      decisionReason = policies.find(p => !p.passed && p.severity === "WARN")?.message || "Policy warnings detected.";
+      const warningPolicy = policies.find(p => !p.passed && p.severity === "WARN");
+      violatedPolicyName = warningPolicy?.name || "Policy Warning";
+      violationReason = warningPolicy?.message || "Policy warnings detected.";
+      decisionReason = violationReason;
     }
 
     if (overrideValid) {
@@ -136,14 +144,14 @@ export class PolicyEngineService {
       prNumber: metadata.prNumber,
       decision: finalDecision,
       decisionReason: decisionReason.replace(/\*\*/g, ''), // Clean markdown for the field
+      violated_policy: violatedPolicyName,
+      violation_reason: violationReason?.replace(/\*\*/g, ''),
       policy_version: this.POLICY_VERSION,
       evaluationStatus: "FINAL",
       facts: {
         changedFiles: prContext.files || [],
         testFilesAdded: testFiles.length,
-        affectedAreas: Object.entries(prContext.categories)
-          .filter(([_, files]) => Array.isArray(files) && files.length > 0)
-          .map(([cat]) => cat),
+        affectedAreas: highRiskFiles.length > 0 ? highRiskFiles : (prContext.totalChanges > N_LARGE ? ["Repository Scope"] : []),
         totalChanges: prContext.totalChanges,
         isMainBranch: isMainBranch,
         hasCriticalChanges: highRiskFiles.length > 0

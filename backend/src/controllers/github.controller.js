@@ -287,6 +287,19 @@ export default function githubControllerFactory(db) {
           return res.status(404).json({ error: "Decision not found" });
         }
 
+        // Parse raw_data if it exists (Phase 6 structural requirement)
+        if (decision.raw_data) {
+          try {
+            const parsed = typeof decision.raw_data === 'string' ? JSON.parse(decision.raw_data) : decision.raw_data;
+            decision.facts = parsed.facts;
+            decision.advisor = parsed.advisor;
+            decision.violated_policy = parsed.violated_policy;
+            decision.violation_reason = parsed.violation_reason;
+          } catch (e) {
+            warn("Failed to parse decision raw_data", e);
+          }
+        }
+
         res.status(200).json(DecisionDTO.toPublic(decision));
       } catch (err) {
         error("getDecisionById error", err);
@@ -321,6 +334,19 @@ export default function githubControllerFactory(db) {
 
         if (!decision) {
           return res.status(404).json({ error: "No PR decision found" });
+        }
+
+        // Parse raw_data if it exists (Phase 6 structural requirement)
+        if (decision.raw_data) {
+          try {
+            const parsed = typeof decision.raw_data === 'string' ? JSON.parse(decision.raw_data) : decision.raw_data;
+            decision.facts = parsed.facts;
+            decision.advisor = parsed.advisor;
+            decision.violated_policy = parsed.violated_policy;
+            decision.violation_reason = parsed.violation_reason;
+          } catch (e) {
+            warn("Failed to parse latest decision raw_data", e);
+          }
         }
 
         res.status(200).json(DecisionDTO.toPublic(decision));

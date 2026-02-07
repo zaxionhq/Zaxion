@@ -38,16 +38,35 @@ const DecisionResolutionConsole = () => {
   const pRepo = repoName || searchParams.get('repo');
   const pPr = prNumStr || searchParams.get('pr');
 
-  const decisionData = React.useMemo<DecisionObject | null>(() => {
-    if (!latestDecision?.raw_data) return null;
-    try {
-      return (typeof latestDecision.raw_data === 'string' 
-        ? JSON.parse(latestDecision.raw_data) 
-        : latestDecision.raw_data) as DecisionObject;
-    } catch (e) {
-      console.error("Failed to parse decision raw_data:", e);
-      return null;
+  const decisionData = React.useMemo<any | null>(() => {
+    if (!latestDecision) return null;
+    
+    // Phase 6 Structural Requirement:
+    // If we have a structured object from the DTO, use it directly.
+    // If we have raw_data (legacy or nested), parse it.
+    
+    let baseData = latestDecision;
+    
+    // If raw_data exists and is valid, merge it in as the source of truth for 'facts'
+    if (latestDecision.raw_data) {
+      try {
+        const parsed = typeof latestDecision.raw_data === 'string' 
+          ? JSON.parse(latestDecision.raw_data) 
+          : latestDecision.raw_data;
+        
+        // Merge structured facts from raw_data if they exist
+        baseData = {
+          ...latestDecision,
+          ...parsed,
+          facts: parsed.facts || latestDecision.facts,
+          advisor: parsed.advisor || latestDecision.advisor
+        };
+      } catch (e) {
+        console.error("Failed to parse decision raw_data:", e);
+      }
     }
+    
+    return baseData;
   }, [latestDecision]);
 
   // Fetch decision when context is available and user is logged in
@@ -381,11 +400,11 @@ const DecisionResolutionConsole = () => {
                 <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
                   <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 font-mono text-[9px] text-white/40">
                     <Fingerprint className="h-3 w-3" />
-                    {latestDecision?.commit_sha?.substring(0, 7) || "0000000"}
+                    {decisionData?.commit_sha?.substring(0, 7) || "7-HEX-ID"}
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 font-mono text-[9px] text-white/40">
                     <Scale className="h-3 w-3" />
-                    v{decisionData?.policy_version || "1.0.0"}
+                    v{decisionData?.policy_version || "2.0.0"}
                   </div>
                 </div>
               )}

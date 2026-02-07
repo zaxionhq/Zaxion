@@ -18,11 +18,36 @@ export class DecisionDTO {
       pr_number: decision.pr_number,
       repo_owner: decision.repo_owner,
       repo_name: decision.repo_name,
+      commit_sha: decision.commit_sha,
+      policy_version: decision.policy_version,
       decision: decision.decision, // PASS, BLOCK, OVERRIDDEN_PASS, etc.
       rationale: decision.rationale,
       created_at: decision.created_at,
       updated_at: decision.updated_at,
       
+      // Public Evidence for UI (Phase 6 structural requirements)
+      facts: decision.facts || {
+        totalChanges: 0,
+        testFilesAdded: 0,
+        affectedAreas: [],
+        hasCriticalChanges: false,
+        changedFiles: [],
+        isMainBranch: false
+      },
+      
+      // Advisor Insights (Redacted for Enterprise)
+      advisor: decision.advisor ? {
+        riskAssessment: {
+          riskLevel: decision.advisor.riskAssessment?.riskLevel || "HIGH"
+        },
+        rationale: decision.advisor.rationale // The "Plain English" explanation
+      } : null,
+
+      // UI/Policies context
+      policies: decision.policies || [],
+      violation_reason: decision.violation_reason || null,
+      violated_policy: decision.violated_policy || null,
+
       // Override details (from JOIN)
       override_by: decision.override_by || null,
       override_reason: decision.override_reason || null,
