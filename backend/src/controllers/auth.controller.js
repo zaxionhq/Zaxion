@@ -97,7 +97,7 @@ export default function authControllerFactory(db) {
           headers: { Accept: "application/json" },
         });
 
-        console.log("GitHub token response:", JSON.stringify(tokenResponse.data));
+        // console.log("GitHub token response:", JSON.stringify(tokenResponse.data)); // Redacted for security (Phase B Hardening)
 
         const accessToken = tokenResponse.data?.access_token;
         if (!accessToken) {

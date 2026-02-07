@@ -5,6 +5,7 @@ import { getRepoTree as fetchRepoTreeService, listBranches as fetchBranchesServi
 import { formatPRBody } from "../services/prFormatter.service.js";
 import { GitHubReporterService } from "../services/githubReporter.service.js";
 import githubAppService from "../services/githubApp.service.js";
+import { DecisionDTO } from "../dtos/decision.dto.js";
 
 /**
  * Helper: create Octokit client with token
@@ -289,7 +290,7 @@ export default function githubControllerFactory(db) {
           return res.status(404).json({ error: "Decision not found" });
         }
 
-        res.status(200).json(decision);
+        res.status(200).json(DecisionDTO.toPublic(decision));
       } catch (err) {
         console.error("getDecisionById error", err);
         next(err);
@@ -325,7 +326,7 @@ export default function githubControllerFactory(db) {
           return res.status(404).json({ error: "No PR decision found" });
         }
 
-        res.status(200).json(decision);
+        res.status(200).json(DecisionDTO.toPublic(decision));
       } catch (err) {
         console.error("getLatestDecision error", err);
         next(err);
@@ -475,12 +476,19 @@ export default function githubControllerFactory(db) {
             identityType = "GITHUB_APP";
             console.log(`[Override] Successfully assumed App identity (Installation: ${installationId})`);
           } else {
-            console.warn(`[Override] WARNING: Could not find App installation for ${owner}/${repo}.`);
-            console.warn(`[Override] Falling back to User Token. If the original check was created by the Zaxion App, this override WILL FAIL due to GitHub Identity Conflict.`);
+            // Hard failure for identity conflict (Phase B Hardening)
+            const error = new Error(`GitHub App installation not found for ${owner}/${repo}. Status reporting requires the Zaxion App to be installed.`);
+            error.status = 403;
+            throw error;
           }
         } catch (appErr) {
           console.error("[Override] Identity switch failed:", appErr.message);
-          // Don't crash, but log it clearly
+          await transaction.rollback();
+          return res.status(appErr.status || 500).json({ 
+            error: "Identity Conflict", 
+            message: appErr.message,
+            hint: "Please ensure the Zaxion GitHub App is installed on this repository. Status reporting cannot fall back to User Tokens without causing conflicts."
+          });
         }
 
         const reporter = new GitHubReporterService(reportingOctokit);

@@ -3,6 +3,7 @@ import globals from "globals";
 import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import securityPlugin from "eslint-plugin-security";
+import importPlugin from "eslint-plugin-import";
 
 export default [
   // 1. Base JS Recommended Config
@@ -68,7 +69,39 @@ export default [
     },
   },
 
-  // 6. Global Ignores
+  // 6. Boundary Enforcement (Phase A: Structural Safeguards)
+  {
+    files: ["src/controllers/**/*.js", "src/routes/**/*.js"],
+    plugins: {
+      import: importPlugin,
+    },
+    rules: {
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./src/controllers",
+              from: "./src/models",
+              message: "❌ Security Breach: Controllers are strictly forbidden from importing Models directly. Use DTOs or Services instead.",
+            },
+            {
+              target: "./src/routes",
+              from: "./src/models",
+              message: "❌ Security Breach: Routes are strictly forbidden from importing Models directly. Use DTOs or Services instead.",
+            },
+            {
+              target: "./src/controllers",
+              from: "./src/app.js",
+              message: "❌ Architectural Violation: Controllers must not import from app.js (which initializes DB). Use a factory pattern or services.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // 7. Global Ignores
   {
     ignores: [
       "**/node_modules/**",
