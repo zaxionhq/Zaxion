@@ -6,6 +6,7 @@ import { formatPRBody } from "../services/prFormatter.service.js";
 import { GitHubReporterService } from "../services/githubReporter.service.js";
 import githubAppService from "../services/githubApp.service.js";
 import { DecisionDTO } from "../dtos/decision.dto.js";
+import { log, error, warn } from "../utils/logger.js";
 
 /**
  * Helper: create Octokit client with token
@@ -44,7 +45,7 @@ export default function githubControllerFactory(db) {
 
         res.status(200).json(mapped);
       } catch (err) {
-        console.error("listRepos error", err);
+        error("listRepos error", err);
         next(err);
       }
     },
@@ -62,12 +63,12 @@ export default function githubControllerFactory(db) {
           return res.status(401).json({ error: "GitHub token missing" });
         }
 
-        console.log(`[listBranches] owner: ${owner}, repo: ${repo}`);
+        log(`[listBranches] owner: ${owner}, repo: ${repo}`);
 
         const branches = await fetchBranchesService(githubToken, owner, repo);
         res.status(200).json(branches);
       } catch (err) {
-        console.error("listBranches error", err);
+        error("listBranches error", err);
         if (err.status === 401) {
           return res.status(401).json({ error: "Unauthorized access to GitHub repository" });
         } else if (err.status === 404) {
@@ -87,7 +88,7 @@ export default function githubControllerFactory(db) {
         const path = req.query.path !== undefined ? req.query.path : "";
         const githubToken = req.githubToken;
         
-        console.log(`[listRepoFiles] owner: ${owner}, repo: ${repo}, path: '${path}'`);
+        log(`[listRepoFiles] owner: ${owner}, repo: ${repo}, path: '${path}'`);
         
         if (!githubToken) {
           return res.status(401).json({ error: "GitHub token missing" });
@@ -101,27 +102,23 @@ export default function githubControllerFactory(db) {
           path,
         });
 
-        const files = Array.isArray(data)
-          ? data.map((f) => ({
-              name: f.name,
-              path: f.path,
-              type: f.type,
-              sha: f.sha,
-              size: f.size,
-            }))
-          : [{
-              name: data.name,
-              path: data.path,
-              type: data.type,
-              sha: data.sha,
-              size: data.size,
-              content: data.content,
-              encoding: data.encoding,
-            }];
+        const files = Array.isArray(data) ? data.map(f => ({
+          name: f.name,
+          path: f.path,
+          type: f.type,
+          sha: f.sha,
+          download_url: f.download_url
+        })) : [{
+          name: data.name,
+          path: data.path,
+          type: data.type,
+          sha: data.sha,
+          download_url: data.download_url
+        }];
 
         res.status(200).json(files);
       } catch (err) {
-        console.error("listRepoFiles error", err);
+        error("listRepoFiles error", err);
         if (err.status === 401) {
           return res.status(401).json({ error: "Unauthorized access to GitHub repository" });
         } else if (err.status === 404) {
@@ -149,13 +146,13 @@ export default function githubControllerFactory(db) {
           return res.status(401).json({ error: "GitHub token missing" });
         }
 
-        console.log(`[getRepoTree] owner: ${owner}, repo: ${repo}, branch: ${branch || 'default'}, includeIgnored: ${shouldIncludeIgnored}`);
+        log(`[getRepoTree] owner: ${owner}, repo: ${repo}, branch: ${branch || 'default'}, includeIgnored: ${shouldIncludeIgnored}`);
         
         const tree = await fetchRepoTreeService(githubToken, owner, repo, branch, shouldIncludeIgnored);
         
         res.status(200).json(tree);
       } catch (err) {
-        console.error("getRepoTree error", err);
+        error("getRepoTree error", err);
         if (err.status === 401) {
           return res.status(401).json({ error: "Unauthorized access to GitHub repository" });
         } else if (err.status === 404) {
@@ -292,7 +289,7 @@ export default function githubControllerFactory(db) {
 
         res.status(200).json(DecisionDTO.toPublic(decision));
       } catch (err) {
-        console.error("getDecisionById error", err);
+        error("getDecisionById error", err);
         next(err);
       }
     },
@@ -328,7 +325,7 @@ export default function githubControllerFactory(db) {
 
         res.status(200).json(DecisionDTO.toPublic(decision));
       } catch (err) {
-        console.error("getLatestDecision error", err);
+        error("getLatestDecision error", err);
         next(err);
       }
     },
@@ -429,12 +426,12 @@ export default function githubControllerFactory(db) {
             });
           }
 
-          console.log(`Override authorized: User ${user.username || user.login} has ${userPermission} permission on ${owner}/${repo}`);
+          log(`Override authorized: User ${user.username || user.login} has ${userPermission} permission on ${owner}/${repo}`);
           // Update the role used in the audit log to the actual GitHub role
           req.body.role = userPermission.toUpperCase();
 
         } catch (githubErr) {
-          console.error("GitHub Permission Check Failed:", githubErr);
+          error("GitHub Permission Check Failed:", githubErr);
           await transaction.rollback();
           return res.status(500).json({ 
             error: "Authorization Error", 
@@ -467,14 +464,14 @@ export default function githubControllerFactory(db) {
         let identityType = "USER_OAUTH";
 
         try {
-          console.log(`[Override] Attempting to assume App identity for ${owner}/${repo}...`);
+          log(`[Override] Attempting to assume App identity for ${owner}/${repo}...`);
           const installationId = await githubAppService.getInstallationIdForRepo(owner, repo);
           
           if (installationId) {
             const appToken = await githubAppService.getInstallationAccessToken(installationId);
             reportingOctokit = new Octokit({ auth: appToken });
             identityType = "GITHUB_APP";
-            console.log(`[Override] Successfully assumed App identity (Installation: ${installationId})`);
+            log(`[Override] Successfully assumed App identity (Installation: ${installationId})`);
           } else {
             // Hard failure for identity conflict (Phase B Hardening)
             const error = new Error(`GitHub App installation not found for ${owner}/${repo}. Status reporting requires the Zaxion App to be installed.`);
@@ -503,9 +500,9 @@ export default function githubControllerFactory(db) {
             pull_number: prNumber
           });
           headSha = prData.head.sha;
-          console.log(`[Override] Targeting latest PR head SHA: ${headSha} (Identity: ${identityType})`);
+          log(`[Override] Targeting latest PR head SHA: ${headSha} (Identity: ${identityType})`);
         } catch (prErr) {
-          console.warn("[Override] Could not fetch latest PR head SHA, falling back to decision SHA:", prErr.message);
+          warn("[Override] Could not fetch latest PR head SHA, falling back to decision SHA:", prErr.message);
         }
 
         try {
@@ -523,7 +520,7 @@ export default function githubControllerFactory(db) {
             }
           );
         } catch (reportErr) {
-          console.error("[Override] Status reporting failed:", reportErr.message);
+          error("[Override] Status reporting failed:", reportErr.message);
           await transaction.rollback();
           return res.status(500).json({
             error: "GitHub Update Failed",

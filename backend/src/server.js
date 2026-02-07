@@ -1,7 +1,7 @@
 // src/server.js
 import env from "./config/env.js";
 import sequelize from "./config/sequelize.js";
-import logger from "./logger.js";
+import { log, error as logError, warn } from "./utils/logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
 
 // Initialize DB and get the db object
@@ -27,7 +27,7 @@ const NODE_ENV = env.NODE_ENV;
 
 // Minimal, non-sensitive env check
 const pwd = env.get("DB_PASSWORD") ? `set (len=${env.get("DB_PASSWORD").length})` : "not set";
-logger.info({ env: { PORT: env.get("PORT"), NODE_ENV: env.NODE_ENV, DB_USER: env.get("DB_USER"), DB_PASSWORD: pwd, DB_NAME: env.get("DB_NAME"), DB_HOST: env.get("DB_HOST"), DB_PORT: env.get("DB_PORT"), DB_DIALECT: env.get("DB_DIALECT") } }, "ENV CHECK");
+log(`[ENV CHECK] PORT: ${env.get("PORT")}, NODE_ENV: ${env.NODE_ENV}, DB_USER: ${env.get("DB_USER")}, DB_PASSWORD: ${pwd}, DB_NAME: ${env.get("DB_NAME")}, DB_HOST: ${env.get("DB_HOST")}, DB_PORT: ${env.get("DB_PORT")}, DB_DIALECT: ${env.get("DB_DIALECT")}`);
 
 // Removed telemetry initialization
 // initTelemetry();
@@ -35,43 +35,42 @@ logger.info({ env: { PORT: env.get("PORT"), NODE_ENV: env.NODE_ENV, DB_USER: env
 async function assertDatabaseConnectionOk() {
   // Guard DB bootstrap in CI mode
   if (env.APP_MODE === "ci") {
-    console.log("⏩ CI mode detected: Skipping DB authentication check");
+    log("⏩ CI mode detected: Skipping DB authentication check");
     return;
   }
 
   try {
     // Test DB connection
     await db.sequelize.authenticate();
-    console.log("✅ DB connection authenticated");
+    log("✅ DB connection authenticated");
 
     // In dev only, sync models for convenience. In production, use migrations.
     if (NODE_ENV !== "production") {
       // Using force:false and alter:false to prevent automatic schema changes
       // that could cause data loss. Use migrations for schema changes instead.
       await db.sequelize.sync({ force: false, alter: false });
-      console.log("✅ Sequelize sync completed (dev mode)");
+      log("✅ Sequelize sync completed (dev mode)");
     }
-  } catch (error) {
-    logger.error({ error }, "Unable to connect to the database:");
+  } catch (err) {
+    logError("Unable to connect to the database:", err);
     process.exit(1);
   }
-  // console.log("✅ Database connection check (temporarily skipped)");
 }
 
 function shutdown(server) {
-  logger.info("Shutting down gracefully...");
+  log("Shutting down gracefully...");
   server.close(async (err) => {
     if (err) {
-      logger.error({ err }, "Error during server shutdown");
+      logError("Error during server shutdown", err);
       process.exit(1);
     }
-    logger.info("HTTP server closed.");
+    log("HTTP server closed.");
     try {
       await db.sequelize.close(); 
-      logger.info("Database connection closed.");
+      log("Database connection closed.");
       process.exit(0);
     } catch (dbError) {
-      logger.error({ dbError }, "Error closing database connection");
+      logError("Error closing database connection", dbError);
       process.exit(1);
     }
   });
@@ -85,14 +84,14 @@ async function startServer() {
   // Initialize PR Analysis Worker (PR Gate)
   try {
     initPrAnalysisWorker();
-    console.log("✅ PR Analysis Worker initialized");
+    log("✅ PR Analysis Worker initialized");
   } catch (err) {
-    logger.error({ err }, "Failed to initialize PR Analysis Worker");
+    logError("Failed to initialize PR Analysis Worker", err);
     // We don't exit process here, as API should still work even if worker fails (though Gate is down)
   }
 
   const server = app.listen(PORT, () => {
-    logger.info(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
+    log(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
   });
 
   process.on("SIGTERM", () => shutdown(server));

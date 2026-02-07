@@ -10,6 +10,7 @@ import * as healthController from "./controllers/health.controller.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import logger from "./logger.js";
+import { log, error, warn } from "./utils/logger.js";
 // import pinoHttp from "pino-http"; // Import pino-http
 import crypto from "crypto"; // Import crypto for random UUID generation
 import { Registry, Counter, Histogram } from 'prom-client';
@@ -50,7 +51,7 @@ export default function createApp(db) { // Accepts db as an argument
   }));
 
   // Debug CORS origin
-  console.log(`[CORS] Frontend origin: ${FRONTEND_ORIGIN}`);
+  log(`[CORS] Frontend origin: ${FRONTEND_ORIGIN}`);
 
   // Global rate limiter (low frequency to avoid accidental DoS in dev)
   const globalLimiter = rateLimit({

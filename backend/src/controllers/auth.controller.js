@@ -1,5 +1,6 @@
 // src/controllers/auth.controller.js
 import axios from "axios";
+import { log, error, warn } from "../utils/logger.js";
 import { generateToken, verifyToken } from "../utils/jwt.js";
 import { parseDuration } from "../utils/time.utils.js"; // Correct import for parseDuration
 import { encrypt, decrypt } from "../utils/crypto.js";
@@ -15,7 +16,10 @@ const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const GITHUB_API_USER = "https://api.github.com/user";
 
-export default function authControllerFactory(db) {
+/**
+ * Controller for authentication-related operations
+ */
+const authController = (db) => {
   async function githubLogin(req, res) {
     const db = req.app.locals.db; // Retrieve db from app.locals
     try {
@@ -50,7 +54,7 @@ export default function authControllerFactory(db) {
       // Properly redirect to GitHub OAuth
       return res.redirect(302, url);
     } catch (err) {
-      console.error("githubLogin error:", err);
+      error("githubLogin error:", err);
       return res.status(500).json({ error: "Failed to initiate GitHub OAuth" });
     }
   }
@@ -74,7 +78,7 @@ export default function authControllerFactory(db) {
       // State validation is important for security but can be relaxed for testing
       // Only log a warning if state doesn't match instead of failing
       if (state !== cookieState) {
-        console.warn("OAuth state mismatch, but continuing for testing purposes", {
+        warn("OAuth state mismatch, but continuing for testing purposes", {
           state,
           cookieState,
           stateMatch: state === cookieState
@@ -101,13 +105,13 @@ export default function authControllerFactory(db) {
 
         const accessToken = tokenResponse.data?.access_token;
         if (!accessToken) {
-          console.error("No GitHub access token returned:", tokenResponse.data);
+          error("No GitHub access token returned:", tokenResponse.data);
           return res.status(400).json({ error: "Failed to obtain GitHub access token", details: tokenResponse.data });
         }
         
         ghAccessToken = accessToken;
       } catch (tokenError) {
-        console.error("Error exchanging code for token:", tokenError.response?.data || tokenError.message);
+        error("Error exchanging code for token:", tokenError.response?.data || tokenError.message);
         return res.status(400).json({ 
           error: "Failed to obtain GitHub access token", 
           details: tokenError.response?.data || tokenError.message 
@@ -169,10 +173,10 @@ export default function authControllerFactory(db) {
         finalRedirect = targetUrl;
       }
 
-      console.log(`Redirecting to frontend: ${finalRedirect}`);
+      log(`Redirecting to frontend: ${finalRedirect}`);
       return res.redirect(302, finalRedirect);
     } catch (err) {
-      console.error("githubCallback error:", err?.response?.data || err);
+      error("githubCallback error:", err?.response?.data || err);
       return res.status(500).json({ error: "GitHub callback error" });
     }
   }
@@ -208,7 +212,7 @@ export default function authControllerFactory(db) {
         message: 'Successfully logged out' 
       });
     } catch (err) {
-      console.error("logout error:", err);
+      error("logout error:", err);
       return res.status(500).json({ error: "Logout failed" });
     }
   }
@@ -221,7 +225,7 @@ export default function authControllerFactory(db) {
 
       return res.status(401).json({ error: "Not logged in" });
     } catch (err) {
-      console.error("me() error:", err);
+      error("me() error:", err);
       return res.status(500).json({ error: "Failed to fetch user profile" });
     }
   }
@@ -314,7 +318,7 @@ export default function authControllerFactory(db) {
 
     } catch (err) {
       logAuthEvent(userId, 'REFRESH_TOKEN', 'FAILURE', { error: err.message, ipAddress: req.ip, userAgent: req.get('User-Agent') });
-      console.error("refreshTokens error:", err);
+      error("refreshTokens error:", err);
       return res.status(500).json({ error: "Failed to refresh tokens." });
     }
   }
@@ -326,4 +330,6 @@ export default function authControllerFactory(db) {
     me,
     refreshTokens,
   };
-}
+};
+
+export default authController;

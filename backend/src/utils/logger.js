@@ -1,4 +1,5 @@
 // src/utils/logger.js
+import winston from 'winston';
 
 /**
  * Redacts sensitive fields from objects before logging
@@ -10,7 +11,7 @@ export const redact = (data) => {
   
   const SENSITIVE_KEYS = [
     'access_token', 'token', 'client_secret', 'password', 
-    'secret', 'key', 'githubToken', 'refreshToken'
+    'secret', 'key', 'githubToken', 'refreshToken', 'authorization'
   ];
   
   if (Array.isArray(data)) {
@@ -28,18 +29,48 @@ export const redact = (data) => {
   return redacted;
 };
 
-export const log = (msg, data = null) => {
-  const sanitizedData = data ? redact(data) : '';
-  console.log(`[${new Date().toISOString()}] ${msg}`, sanitizedData);
+// Winston custom format for redaction
+const redactionFormat = winston.format((info) => {
+  const { message, ...meta } = info;
+  const redactedMeta = redact(meta);
+  return { ...redactedMeta, message };
+});
+
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    redactionFormat(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, ...meta }) => {
+          const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+          return `[${timestamp}] ${level}: ${message}${metaStr}`;
+        })
+      ),
+    }),
+  ],
+});
+
+export const log = (msg, data = {}) => {
+  logger.info(msg, data);
 };
 
-export const error = (msg, err = null) => {
-  const sanitizedErr = err ? redact(err) : '';
-  console.error(`[${new Date().toISOString()}] ERROR: ${msg}`, sanitizedErr);
+export const error = (msg, err = {}) => {
+  logger.error(msg, err);
 };
 
-export const warn = (msg, data = null) => {
-  const sanitizedData = data ? redact(data) : '';
-  console.warn(`[${new Date().toISOString()}] WARN: ${msg}`, sanitizedData);
+export const warn = (msg, data = {}) => {
+  logger.warn(msg, data);
 };
+
+export const debug = (msg, data = {}) => {
+  logger.debug(msg, data);
+};
+
+export default logger;
 
