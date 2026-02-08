@@ -76,7 +76,8 @@ export async function chunkFile(file) {
   let currentLine = 1;
 
   for (let i = 0; i < entities.length; i++) {
-    const entity = entities[i];
+    const entity = entities.at(i);
+    if (!entity) continue;
 
     // Skip entities that start before currentLine (overlaps)
     if (entity.line < currentLine) continue;
