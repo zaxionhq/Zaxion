@@ -16,8 +16,8 @@ const app = createApp(db); // Pass the initialized db to the app factory
 const args = process.argv.slice(2);
 let portArg;
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--port' && i + 1 < args.length) {
-    portArg = parseInt(args[i + 1], 10);
+  if (args.at(i) === '--port' && i + 1 < args.length) {
+    portArg = parseInt(args.at(i + 1), 10);
     break;
   }
 }
