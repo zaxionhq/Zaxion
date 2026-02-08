@@ -2,6 +2,8 @@
 // Uses VITE_API_BASE_URL or defaults to '/api'
 // frontend/src/lib/api.ts
 
+import logger from './logger';
+
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export interface ApiError extends Error {
@@ -37,7 +39,7 @@ const getCSRFToken = async (): Promise<string | null> => {
       return csrfToken;
     }
   } catch (error) {
-    console.warn('Failed to get CSRF token:', error);
+    logger.warn('Failed to get CSRF token:', error);
   }
   return null;
 };
@@ -148,7 +150,7 @@ async function requestWithRetry<TResponse>(
         const error = createApiError(res, data);
         
         // Log the error for debugging
-        console.error(`API Error (${res.status}):`, error.message, data);
+        logger.error(`API Error (${res.status}):`, error.message, data);
         
         // Mark as non-retryable if condition is not met
         if (!retryConfig.retryCondition?.(error)) {
