@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
+import logger from '@/lib/logger';
 import { usePRGate, PRDecision, DecisionObject, PolicyResult } from '@/hooks/usePRGate';
 
 const DecisionResolutionConsole = () => {
@@ -62,7 +63,7 @@ const DecisionResolutionConsole = () => {
           advisor: parsed.advisor || latestDecision.advisor
         };
       } catch (e) {
-        console.error("Failed to parse decision raw_data:", e);
+        logger.error("Failed to parse decision raw_data:", e);
       }
     }
     
