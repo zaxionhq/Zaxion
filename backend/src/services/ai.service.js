@@ -10,6 +10,7 @@ import * as llmService from "./llm.service.js";
 import env from "../config/env.js";
 import { aiServiceCallCounter } from "../utils/metrics.js";
 import { chunkFile } from "./chunking.service.js";
+import * as logger from "../utils/logger.js";
 
 const LLM_PROVIDER = env.get("LLM_PROVIDER") || "gemini";
 const GEMINI_API_KEY = env.get("GEMINI_API_KEY");
@@ -64,7 +65,7 @@ export async function generateTestCode({ summaryId, files, framework, user, cont
           };
         }
       } catch (chunkErr) {
-        console.warn(`Chunking failed for ${file.path}:`, chunkErr.message);
+        logger.warn(`Chunking failed for ${file.path}:`, chunkErr.message);
         // Proceed with original content
       }
     }
