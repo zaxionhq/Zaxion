@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
@@ -38,9 +40,9 @@ module.exports = {
         CHECK (decision::text IN ('PENDING', 'PASS', 'BLOCK', 'WARN', 'OVERRIDDEN_PASS'));
       `);
 
-      console.log('Migration 20251229000000-harden-pr-decisions-schema successful');
+      logger.log('Migration 20251229000000-harden-pr-decisions-schema successful');
     } catch (error) {
-      console.error('Migration error:', error);
+      logger.error('Migration error:', error);
       throw error;
     }
   },
@@ -51,7 +53,7 @@ module.exports = {
       await queryInterface.removeConstraint('pr_decisions', 'unique_pr_sha');
       await queryInterface.sequelize.query('ALTER TABLE pr_decisions DROP CONSTRAINT IF EXISTS check_decision_valid;');
     } catch (error) {
-      console.error('Migration rollback error:', error);
+      logger.error('Migration rollback error:', error);
       throw error;
     }
   }
