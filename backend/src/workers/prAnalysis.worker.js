@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import env from "../config/env.js";
 import { PrAnalysisService } from "../services/prAnalysis.service.js";
+import * as logger from "../utils/logger.js";
 
 // Ensure Redis URL is available
 const redisUrl = env.get("REDIS_URL");
@@ -30,16 +31,16 @@ export const initPrAnalysisWorker = () => {
     );
 
     worker.on("completed", (job) => {
-      console.log(`[Worker] Job ${job.id} completed`);
+      logger.log(`[Worker] Job ${job.id} completed`);
     });
 
     worker.on("failed", (job, err) => {
-      console.error(`[Worker] Job ${job.id} failed: ${err.message}`);
+      logger.error(`[Worker] Job ${job.id} failed: ${err.message}`);
     });
     
     return worker;
   } catch (err) {
-    console.error("Failed to create PR Analysis Worker (likely Redis missing). PR Gate will not function via Queue.", err.message);
+    logger.error("Failed to create PR Analysis Worker (likely Redis missing). PR Gate will not function via Queue.", err.message);
     // Don't throw, just log. This allows app to start even if Worker fails.
     return null; 
   }
