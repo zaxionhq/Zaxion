@@ -1,5 +1,6 @@
 // config/db.js
 import env from "./env.js";
+import * as logger from "../utils/logger.js";
 
 export default {
   username: env.get("APP_DB_USER"),
@@ -8,7 +9,7 @@ export default {
   host: env.get("DB_HOST"),
   port: env.get("DB_PORT") || 5432,
   dialect: "postgres",
-  logging: env.get("NODE_ENV") === "development" ? console.log : false,
+  logging: env.get("NODE_ENV") === "development" ? (msg) => logger.debug(msg) : false,
   pool: {
     max: 10,
     min: 0,
