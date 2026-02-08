@@ -1,26 +1,9 @@
-import request from 'supertest';
 import { expect } from 'chai';
-import createApp from '../../src/app.js';
-import { initDb } from '../../src/models/index.js';
 import { DecisionDTO } from '../../src/dtos/decision.dto.js';
 import { redactionFormat } from '../../src/utils/logger.js';
 import winston from 'winston';
 
 describe('Trust Boundary & Data Leakage Integration Tests', () => {
-  let app;
-  let db;
-
-  beforeAll(async () => {
-    db = await initDb();
-    app = createApp(db);
-  });
-
-  afterAll(async () => {
-    if (db && db.sequelize) {
-      await db.sequelize.close();
-    }
-  });
-
   describe('GET /api/v1/github/decisions/:id', () => {
     it('should only return whitelisted fields for a decision', async () => {
       // Mock a decision with some "internal" fields that should not be leaked
