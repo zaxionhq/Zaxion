@@ -2,6 +2,8 @@
  * Deterministic Policy Engine
  * Evaluates facts against rules. Handles Admin Overrides.
  */
+import * as logger from "../utils/logger.js";
+
 export class PolicyEngineService {
   constructor(octokit) {
     this.octokit = octokit;
@@ -106,7 +108,7 @@ export class PolicyEngineService {
             });
           }
         } catch (error) {
-          console.error("[PolicyEngine] Failed to check permissions:", error);
+          logger.error("[PolicyEngine] Failed to check permissions:", error);
         }
       }
     }
