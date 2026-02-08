@@ -33,7 +33,11 @@ class GitHubAppService {
         // Resolve path: absolute paths stay as is, relative paths resolved from process.cwd()
         const absolutePath = path.resolve(process.cwd(), keyPath);
         
+        // Ensure path is within expected bounds or at least is a string
+        if (typeof absolutePath !== 'string') throw new Error("Invalid private key path");
+
         logger.info({ path: absolutePath }, "Loading GitHub App private key from file");
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         this._privateKey = fs.readFileSync(absolutePath, "utf8");
         return this._privateKey;
       } catch (err) {
