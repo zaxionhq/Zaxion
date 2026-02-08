@@ -2,6 +2,7 @@ import { generateChatResponse } from '../services/ai.service.js';
 import { escapeForLLM, sanitizeCodeString } from '../utils/sanitization.utils.js';
 import { logResourceEvent } from '../services/audit.service.js';
 import { chunkFile } from '../services/chunking.service.js';
+import * as logger from '../utils/logger.js';
 
 export async function chatWithAI(req, res, next) {
   const userId = req.user ? req.user.id : null;
@@ -36,10 +37,10 @@ export async function chatWithAI(req, res, next) {
           .join('\n');
           
         if (summary) {
-          structureInfo = `\nCode Structure Analysis:\n${summary}\n`;
+          structureInfo = `\nSource Code Structure Analysis:\n${summary}\n`;
         }
       } catch (err) {
-        console.warn('Failed to chunk code for chatbot context:', err.message);
+        logger.warn('Failed to chunk source code for coverage analysis:', err.message);
         // Continue without structure info
       }
     }
@@ -77,7 +78,7 @@ Format your response as:
     });
 
   } catch (error) {
-    console.error('Chatbot error:', error);
+    logger.error('Chatbot error:', error);
     logResourceEvent(userId, 'CHAT_WITH_AI', 'Chatbot', null, 'FAILURE', { error: error.message, details: req.body });
     next(error);
   }
@@ -118,7 +119,7 @@ export async function analyzeTestCoverage(req, res, next) {
           sourceStructure = `\nSource Code Structure:\n${summary}\n`;
         }
       } catch (err) {
-        console.warn('Failed to chunk source code for coverage analysis:', err.message);
+        logger.warn('Failed to chunk source code for coverage analysis:', err.message);
       }
     }
 
@@ -150,7 +151,7 @@ Please provide:
     });
 
   } catch (error) {
-    console.error('Coverage analysis error:', error);
+    logger.error('Coverage analysis error:', error);
     logResourceEvent(userId, 'ANALYZE_COVERAGE', 'Chatbot', null, 'FAILURE', { error: error.message, details: req.body });
     next(error);
   }
