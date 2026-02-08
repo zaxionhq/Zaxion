@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 import dotenv from 'dotenv';
+import logger from '../src/utils/logger.js';
 
 dotenv.config({ path: './.env' });
 
@@ -21,19 +22,19 @@ async function createDatabase() {
 
   try {
     await client.connect();
-    console.log(`Connected to PostgreSQL server at ${dbHost}:${dbPort}`);
+    logger.info(`Connected to PostgreSQL server at ${dbHost}:${dbPort}`);
 
     // Check if database exists
     const res = await client.query(`SELECT 1 FROM pg_database WHERE datname = '${dbName}'`);
     if (res.rowCount === 0) {
       // Database does not exist, create it
       await client.query(`CREATE DATABASE "${dbName}"`);
-      console.log(`Database "${dbName}" created successfully.`);
+      logger.info(`Database "${dbName}" created successfully.`);
     } else {
-      console.log(`Database "${dbName}" already exists. Skipping creation.`);
+      logger.info(`Database "${dbName}" already exists. Skipping creation.`);
     }
   } catch (error) {
-    console.error(`Error creating database "${dbName}":`, error);
+    logger.error(`Error creating database "${dbName}"`, { error: error.message, stack: error.stack });
     process.exit(1);
   } finally {
     await client.end();
