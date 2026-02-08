@@ -34,7 +34,7 @@ export const redact = (data) => {
 };
 
 // Winston custom format for redaction
-const redactionFormat = winston.format((info) => {
+export const redactionFormat = winston.format((info) => {
   const { message, ...meta } = info;
   const redactedMeta = redact(meta);
   return { ...redactedMeta, message };
