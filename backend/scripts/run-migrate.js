@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import logger from '../src/utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,7 @@ const databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${db
 const sequelizeCliCommand = `sequelize-cli db:migrate --url ${databaseUrl} --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
 
 try {
-  console.log('Running Sequelize migrations...');
+  logger.info('Running Sequelize migrations...');
   // Execute the command synchronously with environment variables
   execSync(sequelizeCliCommand, {
     stdio: 'inherit',
@@ -33,8 +34,8 @@ try {
       // DATABASE_URL is now passed via --url, so no need to explicitly pass individual vars here
     },
   });
-  console.log('Sequelize migrations completed successfully.');
+  logger.info('Sequelize migrations completed successfully.');
 } catch (error) {
-  console.error('Error running Sequelize migrations:', error.message);
+  logger.error('Error running Sequelize migrations', { error: error.message });
   process.exit(1);
 }
