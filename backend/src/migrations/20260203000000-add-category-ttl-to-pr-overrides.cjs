@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
@@ -21,9 +23,9 @@ module.exports = {
         });
       }
       
-      console.log('Migration 20260203000000-add-category-ttl-to-pr-overrides successful');
+      logger.log('Migration 20260203000000-add-category-ttl-to-pr-overrides successful');
     } catch (error) {
-      console.error('Migration error:', error);
+      logger.error('Migration error:', error);
       throw error;
     }
   },
@@ -33,7 +35,7 @@ module.exports = {
       await queryInterface.removeColumn('pr_overrides', 'category');
       await queryInterface.removeColumn('pr_overrides', 'ttl_hours');
     } catch (error) {
-      console.error('Migration rollback error:', error);
+      logger.error('Migration rollback error:', error);
       throw error;
     }
   }
