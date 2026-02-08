@@ -1,6 +1,7 @@
 // src/middleware/auth.js
 import { verifyToken } from "../utils/jwt.js";
 import { decrypt } from "../utils/crypto.js";
+import * as logger from "../utils/logger.js";
 // import db from "../models/index.js"; // Remove direct import
 
 // const User = db.User; // Remove direct assignment
@@ -34,11 +35,11 @@ export async function authenticateJWT(req, res, next) {
 
     req.user = user;
     req.githubToken = githubToken;
-    console.log("authenticateJWT: req.githubToken =", req.githubToken); // Add this line
+    logger.debug("authenticateJWT: token checked"); // Redacted for security
 
     next();
   } catch (err) {
-    console.error("Auth middleware error:", err);
+    logger.error("Auth middleware error:", err);
     return res.status(401).json({ error: "Unauthorized" });
   }
 }
@@ -78,7 +79,7 @@ export async function requireLoginSoft(req, res, next) {
 
     next();
   } catch (err) {
-    console.error("Soft auth middleware error:", err);
+    logger.error("Soft auth middleware error:", err);
     req.user = null;
     next();
   }
@@ -89,14 +90,14 @@ export async function requireLoginSoft(req, res, next) {
 export async function requireGithub(req, res, next) {
   try {
     // Debug: Log cookies and headers
-    console.log(`[requireGithub] Cookies:`, req.cookies);
-    console.log(`[requireGithub] Origin:`, req.get('Origin'));
-    console.log(`[requireGithub] Path:`, req.path);
+    logger.debug(`[requireGithub] Cookies:`, req.cookies);
+    logger.debug(`[requireGithub] Origin:`, req.get('Origin'));
+    logger.debug(`[requireGithub] Path:`, req.path);
     
     // First authenticate the JWT
     const token = req.cookies.app_jwt;
     if (!token) {
-      console.log(`[requireGithub] No JWT token found in cookies`);
+      logger.debug(`[requireGithub] No JWT token found in cookies`);
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -120,10 +121,10 @@ export async function requireGithub(req, res, next) {
 
     req.user = user;
     req.githubToken = githubToken;
-    console.log("requireGithub: req.githubToken =", req.githubToken);
+    logger.debug("requireGithub: token checked");
     next();
   } catch (err) {
-    console.error("requireGithub middleware error:", err);
+    logger.error("requireGithub middleware error:", err);
     return res.status(401).json({ error: "Unauthorized" });
   }
 }
