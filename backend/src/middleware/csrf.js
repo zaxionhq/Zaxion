@@ -5,8 +5,20 @@ const csrfTokens = new Map();
 
 // Generate CSRF token
 export const generateCSRFToken = (req, res, next) => {
-  // Use IP + User-Agent as session identifier since we don't have session middleware
-  const sessionId = `${req.ip}-${req.get('User-Agent') || 'unknown'}`;
+  // Use session-based ID if available, otherwise fallback to cookie-based ID
+  // This is more secure than IP/UA as it survives network changes.
+  let sessionId = req.cookies?.app_session_id;
+  
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    // Set a session cookie if it doesn't exist
+    res.cookie('app_session_id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 60 * 1000 // 30 mins
+    });
+  }
   
   // Check if a valid token already exists for this session
   const existingToken = csrfTokens.get(sessionId);
@@ -19,7 +31,7 @@ export const generateCSRFToken = (req, res, next) => {
     // Generate a new token
     token = crypto.randomBytes(32).toString('hex');
     
-    // Store token with expiration (30 minutes instead of 5)
+    // Store token with expiration (30 minutes)
     csrfTokens.set(sessionId, {
       token,
       expires: Date.now() + 30 * 60 * 1000
@@ -43,91 +55,54 @@ export const verifyCSRFToken = (req, res, next) => {
   const token = 
     req.headers['x-csrf-token'] || 
     req.headers['X-CSRF-Token'] || 
-    req.body._csrf;
+    req.body?._csrf;
     
-  // Use IP + User-Agent as session identifier since we don't have session middleware
-  const sessionId = `${req.ip}-${req.get('User-Agent') || 'unknown'}`;
+  // Use session-based ID from cookie
+  const sessionId = req.cookies?.app_session_id;
   
   // For development debugging
   console.log(`[CSRF] Verifying token for ${req.method} ${req.path}`);
-  console.log(`[CSRF] Session ID: ${sessionId}`);
+  console.log(`[CSRF] Session ID: ${sessionId || 'None'}`);
   console.log(`[CSRF] Token provided: ${token ? 'Yes' : 'No'}`);
   
-  if (!token) {
-    // Generate a new token for the client to use
-    const newToken = crypto.randomBytes(32).toString('hex');
-    csrfTokens.set(sessionId, {
-      token: newToken,
-      expires: Date.now() + 30 * 60 * 1000
-    });
-    
-    // Include the new token in the error response
-    res.setHeader('X-CSRF-Token', newToken);
-    
+  if (!sessionId || !token) {
     return res.status(403).json({
       code: 'CSRF_TOKEN_MISSING',
-      message: 'CSRF token is required for this request. A new token has been provided in the X-CSRF-Token header.'
+      message: 'CSRF token or session ID is required for this request.'
     });
   }
   
   const storedToken = csrfTokens.get(sessionId);
   
   if (!storedToken) {
-    // No token found for this session, generate a new one
-    const newToken = crypto.randomBytes(32).toString('hex');
-    csrfTokens.set(sessionId, {
-      token: newToken,
-      expires: Date.now() + 30 * 60 * 1000
-    });
-    
-    // Include the new token in the error response
-    res.setHeader('X-CSRF-Token', newToken);
-    
     return res.status(403).json({
       code: 'CSRF_TOKEN_NOT_FOUND',
-      message: 'CSRF token not found or expired. A new token has been provided in the X-CSRF-Token header.'
+      message: 'CSRF token not found or expired.'
     });
   }
   
   // Check if token is expired
   if (Date.now() > storedToken.expires) {
-    // Token expired, generate a new one
-    const newToken = crypto.randomBytes(32).toString('hex');
-    csrfTokens.set(sessionId, {
-      token: newToken,
-      expires: Date.now() + 30 * 60 * 1000
-    });
-    
-    // Include the new token in the error response
-    res.setHeader('X-CSRF-Token', newToken);
-    
+    csrfTokens.delete(sessionId);
     return res.status(403).json({
       code: 'CSRF_TOKEN_EXPIRED',
-      message: 'CSRF token has expired. A new token has been provided in the X-CSRF-Token header.'
+      message: 'CSRF token has expired.'
     });
   }
   
-  // Verify token using timing-safe comparison
+  // Verify token matches using timing-safe comparison
   const providedTokenBuffer = Buffer.from(token);
   const storedTokenBuffer = Buffer.from(storedToken.token);
   
   if (providedTokenBuffer.length !== storedTokenBuffer.length || 
       !crypto.timingSafeEqual(providedTokenBuffer, storedTokenBuffer)) {
-    console.log(`[CSRF] Token mismatch.`);
-    
     return res.status(403).json({
       code: 'CSRF_TOKEN_INVALID',
-      message: 'Invalid CSRF token'
+      message: 'Invalid CSRF token.'
     });
   }
   
-  // Token is valid, refresh its expiration time
-  csrfTokens.set(sessionId, {
-    token: storedToken.token,
-    expires: Date.now() + 30 * 60 * 1000
-  });
-  
-  // Token is valid, continue
+  // Token is valid!
   next();
 };
 
