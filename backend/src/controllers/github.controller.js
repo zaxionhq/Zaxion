@@ -211,7 +211,7 @@ export default function githubControllerFactory(db) {
             sha = existing.data.sha;
           } catch (err) {
             if (err.status !== 404) {
-              console.warn("getContent warning", err);
+              warn("getContent warning", err);
             }
           }
 
@@ -248,13 +248,13 @@ export default function githubControllerFactory(db) {
         });
 
         res.status(200).json({ pr: pr.data });
-      } catch (error) {
-        console.error("❌ Error creating PR:", error);
-        if (error.status === 401) return res.status(401).json({ error: "Unauthorized access to GitHub repository" });
-        if (error.status === 404) return res.status(404).json({ error: "Repository not found" });
-        if (error.status === 403) return res.status(403).json({ error: "Access forbidden to repository" });
-        if (error.status === 422) return res.status(422).json({ error: "Invalid request data" });
-        return res.status(500).json({ error: "Failed to create pull request", details: error.message });
+      } catch (err) {
+        error("❌ Error creating PR:", err);
+        if (err.status === 401) return res.status(401).json({ error: "Unauthorized access to GitHub repository" });
+        if (err.status === 404) return res.status(404).json({ error: "Repository not found" });
+        if (err.status === 403) return res.status(403).json({ error: "Access forbidden to repository" });
+        if (err.status === 422) return res.status(422).json({ error: "Invalid request data" });
+        return res.status(500).json({ error: "Failed to create pull request", details: err.message });
       }
     },
 
@@ -500,12 +500,12 @@ export default function githubControllerFactory(db) {
             log(`[Override] Successfully assumed App identity (Installation: ${installationId})`);
           } else {
             // Hard failure for identity conflict (Phase B Hardening)
-            const error = new Error(`GitHub App installation not found for ${owner}/${repo}. Status reporting requires the Zaxion App to be installed.`);
-            error.status = 403;
-            throw error;
+            const err = new Error(`GitHub App installation not found for ${owner}/${repo}. Status reporting requires the Zaxion App to be installed.`);
+            err.status = 403;
+            throw err;
           }
         } catch (appErr) {
-          console.error("[Override] Identity switch failed:", appErr.message);
+          error("[Override] Identity switch failed:", appErr);
           await transaction.rollback();
           return res.status(appErr.status || 500).json({ 
             error: "Identity Conflict", 
@@ -565,7 +565,7 @@ export default function githubControllerFactory(db) {
 
       } catch (err) {
         await transaction.rollback();
-        console.error("executeOverride error", err);
+        error("executeOverride error", err);
         next(err);
       }
     },
@@ -646,13 +646,13 @@ export default function githubControllerFactory(db) {
             data: mergeResponse.data
           });
         } catch (mergeErr) {
-          console.error("GitHub Merge API Error:", mergeErr);
+          error("GitHub Merge API Error:", mergeErr);
           
           if (mergeErr.status === 405) {
             // Fetch PR details to provide a better error message
             const { data: prDetails } = await octokit.rest.pulls.get({ owner, repo, pull_number: prNumber });
             
-            console.log(`[Merge Diagnostic] PR #${prNumber} state:`, {
+            log(`[Merge Diagnostic] PR #${prNumber} state:`, {
               mergeable: prDetails.mergeable,
               mergeable_state: prDetails.mergeable_state,
               rebaseable: prDetails.rebaseable
@@ -664,10 +664,10 @@ export default function githubControllerFactory(db) {
               octokit.rest.repos.listCommitStatusesForRef({ owner, repo, ref: prDetails.head.sha })
             ]);
 
-            console.log(`[Merge Diagnostic] Check Runs for ${prDetails.head.sha.substring(0,7)}:`, 
+            log(`[Merge Diagnostic] Check Runs for ${prDetails.head.sha.substring(0,7)}:`, 
               checkRuns.check_runs.map(cr => `${cr.name}: ${cr.status}/${cr.conclusion}`)
             );
-            console.log(`[Merge Diagnostic] Commit Statuses for ${prDetails.head.sha.substring(0,7)}:`, 
+            log(`[Merge Diagnostic] Commit Statuses for ${prDetails.head.sha.substring(0,7)}:`, 
               statuses.map(s => `${s.context}: ${s.state}`)
             );
 
@@ -734,19 +734,19 @@ export default function githubControllerFactory(db) {
               }
             });
           }
-          throw mergeErr;
-        }
-
-      } catch (err) {
-        console.error("mergePullRequest error", err);
-        if (err.status === 405) {
-          return res.status(405).json({ error: "PR is not mergeable", message: err.message });
-        }
-        if (err.status === 403) {
-          return res.status(403).json({ error: "Insufficient permissions to merge PR" });
-        }
-        next(err);
+        throw mergeErr;
       }
+
+    } catch (err) {
+      error("mergePullRequest error", err);
+      if (err.status === 405) {
+        return res.status(405).json({ error: "PR is not mergeable", message: err.message });
+      }
+      if (err.status === 403) {
+        return res.status(403).json({ error: "Insufficient permissions to merge PR" });
+      }
+      next(err);
     }
-  };
+  }
+};
 }
