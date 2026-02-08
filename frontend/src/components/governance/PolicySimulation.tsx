@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import logger from '@/lib/logger';
 
 interface Policy {
   id: number;
@@ -37,7 +38,7 @@ export const PolicySimulation: React.FC = () => {
           setPolicies(data);
         }
       } catch (error) {
-        console.error('Failed to fetch policies:', error);
+        logger.error('Failed to fetch policies:', error);
       }
     };
     fetchPolicies();
