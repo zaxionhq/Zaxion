@@ -48,9 +48,9 @@ jobs:
       REDIS_HOST: localhost
       REDIS_PORT: 6379
       JWT_SECRET: ci_test_secret
-      GITHUB_APP_ID: 12345
-      GITHUB_PRIVATE_KEY: "${{ secrets.GITHUB_PRIVATE_KEY }}"
-      GITHUB_WEBHOOK_SECRET: "${{ secrets.GITHUB_WEBHOOK_SECRET }}"
+      GITHUB_APP_ID: "12345"
+      GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
+      GITHUB_WEBHOOK_SECRET: ${{ secrets.GITHUB_WEBHOOK_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
