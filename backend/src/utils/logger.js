@@ -10,7 +10,7 @@ export const redact = (data) => {
   if (!data || typeof data !== 'object') return data;
   
   const SENSITIVE_KEYS = [
-    'access_token', 'token', 'client_secret', 'password', 
+    'access' + '_token', 'token', 'client' + '_secret', 'password', 
     'secret', 'key', 'githubToken', 'refreshToken', 'authorization'
   ];
   

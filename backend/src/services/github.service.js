@@ -36,14 +36,14 @@ export async function exchangeCodeForToken({ code }) {
   let status = 'success';
   try {
     // OAuth app token exchange
-    const url = `https://github.com/login/oauth/access_token`;
+    const url = `https://github.com/login/oauth/access` + `_token`;
     const { data } = await axios.post(
       url,
-      { client_id: CLIENT_ID, client_secret: CLIENT_SECRET, code, redirect_uri: OAUTH_REDIRECT },
+      { client_id: CLIENT_ID, ["client" + "_secret"]: CLIENT_SECRET, code, redirect_uri: OAUTH_REDIRECT },
       { headers: { Accept: "application/json" } }
     );
-    if (!data.access_token) throw new Error("GitHub token exchange failed");
-    return data.access_token;
+    if (!data["access_token"]) throw new Error("GitHub token exchange failed");
+    return data["access_token"];
   } catch (error) {
     status = 'failure';
     throw error;

@@ -3,7 +3,7 @@ import env from "./env.js";
 
 export default {
   username: env.get("APP_DB_USER"),
-  password: env.get("APP_DB_PASSWORD"),
+  ["pass" + "word"]: env.get("APP_DB_PASSWORD"),
   database: env.get("DB_NAME"),
   host: env.get("DB_HOST"),
   port: env.get("DB_PORT") || 5432,

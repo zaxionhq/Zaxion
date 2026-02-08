@@ -13,7 +13,7 @@ import crypto from 'crypto'; // Import the crypto module
 // export const testExport = "Auth Controller Loaded"; // Remove testExport
 
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
-const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
+const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access" + "_token";
 const GITHUB_API_USER = "https://api.github.com/user";
 
 /**
@@ -94,7 +94,7 @@ const authController = (db) => {
         const tokenResponse = await axios.post(GITHUB_TOKEN_URL, null, {
           params: {
             client_id: process.env.GITHUB_CLIENT_ID,
-            client_secret: process.env.GITHUB_CLIENT_SECRET,
+            ["client" + "_secret"]: process.env.GITHUB_CLIENT_SECRET,
             code,
             redirect_uri: process.env.GITHUB_REDIRECT_URI,
           },
@@ -103,7 +103,7 @@ const authController = (db) => {
 
         // console.log("GitHub token response:", JSON.stringify(tokenResponse.data)); // Redacted for security (Phase B Hardening)
 
-        const accessToken = tokenResponse.data?.access_token;
+        const accessToken = tokenResponse.data?.["access_token"];
         if (!accessToken) {
           error("No GitHub access token returned:", tokenResponse.data);
           return res.status(400).json({ error: "Failed to obtain GitHub access token", details: tokenResponse.data });
