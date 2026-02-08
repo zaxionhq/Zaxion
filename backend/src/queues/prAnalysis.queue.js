@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import env from "../config/env.js";
+import * as logger from "../utils/logger.js";
 
 // Ensure we have a Redis URL
 const redisUrl = env.get("REDIS_URL");
@@ -15,7 +16,7 @@ try {
       retryStrategy: function(times) {
         // If we fail more than 3 times, stop trying to connect to avoid spamming logs
         if (times > 3) {
-            console.warn("Redis connection failed too many times. Disabling Queue.");
+            logger.warn("Redis connection failed too many times. Disabling Queue.");
             return null; // Stop retrying
         }
         return Math.min(times * 50, 2000);
@@ -34,13 +35,12 @@ try {
 
   queue.on('error', (err) => {
       // Log only once or nicely
-      // console.error('Queue connection error:', err.message);
   });
   
   prAnalysisQueue = queue;
   
 } catch (err) {
-  console.error("Failed to initialize BullMQ Queue:", err.message);
+  logger.error("Failed to initialize BullMQ Queue:", err.message);
 }
 
 export { prAnalysisQueue };
