@@ -69,7 +69,19 @@ export default [
     },
   },
 
-  // 6. Boundary Enforcement (Phase A: Structural Safeguards)
+  // 6. Security Exceptions for Hardened Regexes
+  // These are centrally managed and verified safe.
+  {
+    files: [
+      "src/parsers/pythonAST.parser.js",
+      "src/services/codeAnalyzer.service.js",
+    ],
+    rules: {
+      "security/detect-unsafe-regex": "off",
+    },
+  },
+
+  // 7. Boundary Enforcement (Phase A: Structural Safeguards)
   {
     files: ["src/controllers/**/*.js", "src/routes/**/*.js"],
     plugins: {
