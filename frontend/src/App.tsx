@@ -7,7 +7,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "./pages/LandingPage";
 import DecisionResolutionConsole from "./pages/DecisionResolutionConsole";
-import OAuthCallback from "./pages/OAuthCallback";
 import GovernanceDashboard from "./pages/GovernanceDashboard";
 import NotFound from "./pages/NotFound";
 
