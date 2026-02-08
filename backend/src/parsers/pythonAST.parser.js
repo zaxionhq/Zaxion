@@ -52,17 +52,18 @@ export function parsePythonCode(code) {
   let docstringQuote = '';
   let collectedDocstring = [];
 
-  // Regex patterns
-  const classRegex = /^\s*class\s+([a-zA-Z0-9_]+)(?:\(([^)]*)\))?:/;
-  const defRegex = /^\s*def\s+([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)\s*(?:->\s*[^:]+)?:/;
-  const importRegex = /^\s*import\s+(.+)$/;
-  const fromImportRegex = /^\s*from\s+([^\s]+)\s+import\s+(.+)$/;
-  const returnRegex = /^\s*return\s+(.*)$/;
-  const commentRegex = /^\s*#\s*(.*)$/;
-  
+  // Regex patterns - Hardened to avoid ReDoS by limiting repetitions
+  const classRegex = /^[ \t]{0,100}class[ \t]{1,100}([a-zA-Z0-9_]+)(?:\([ \t]{0,100}([^)]*?)[ \t]{0,100}\))?[ \t]{0,100}:/;
+  const defRegex = /^[ \t]{0,100}def[ \t]{1,100}([a-zA-Z0-9_]+)[ \t]{0,100}\(([^)]*?)\)(?:[ \t]{0,100}->[ \t]{0,100}[^:]{1,100})?[ \t]{0,100}:/;
+  const importRegex = /^[ \t]{0,100}import[ \t]{1,100}([a-zA-Z0-9_., \t]{1,500})$/;
+  const fromImportRegex = /^[ \t]{0,100}from[ \t]{1,100}([a-zA-Z0-9_.]+)[ \t]{1,100}import[ \t]{1,100}([a-zA-Z0-9_., \t]{1,500})$/;
+  const returnRegex = /^[ \t]{0,100}return[ \t]{1,100}(.{0,1000})$/;
+  const commentRegex = /^[ \t]{0,100}#[ \t]{0,100}(.{0,1000})$/;
+
   // Helper to get indentation level (number of spaces)
   const getIndent = (line) => {
-    const match = line.match(/^(\s*)/);
+    if (typeof line !== 'string') return 0;
+    const match = line.match(/^([ \t]*)/);
     return match ? match[1].length : 0;
   };
 
@@ -70,9 +71,9 @@ export function parsePythonCode(code) {
   const attachDocstring = (docText) => {
     // Find the most recently defined entity
     // We check classes, functions, and methods
-    const lastClass = classes.length > 0 ? classes[classes.length - 1] : null;
-    const lastFunc = functions.length > 0 ? functions[functions.length - 1] : null;
-    const lastMethod = lastClass && lastClass.methods.length > 0 ? lastClass.methods[lastClass.methods.length - 1] : null;
+    const lastClass = classes.at(-1);
+    const lastFunc = functions.at(-1);
+    const lastMethod = lastClass && lastClass.methods ? lastClass.methods.at(-1) : null;
     
     // Logic: 
     // If lastMethod is defined after lastFunc and lastClass, it's the target.
@@ -86,7 +87,7 @@ export function parsePythonCode(code) {
     ];
     
     candidates.sort((a, b) => b.line - a.line);
-    const target = candidates[0].entity;
+    const target = candidates.at(0).entity;
     
     if (target && !target.docstring) {
         target.docstring = docText;
@@ -94,7 +95,8 @@ export function parsePythonCode(code) {
   };
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines.at(i);
+    if (typeof line !== 'string') continue;
     const trimmedLine = line.trim();
     
     if (!trimmedLine) continue;
