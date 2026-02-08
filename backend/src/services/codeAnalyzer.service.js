@@ -11,25 +11,24 @@ function analyzeJsTsCode(code) {
 
   const lines = code.split(/\r?\n/);
 
-  // Regex patterns (applied to trimmed lines)
-  // Matches: function myFunc(
-  const funcDeclRegex = /^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([a-zA-Z_$][0-9a-zA-Z_$]*)\s*\(/;
-  // Matches: const myFunc = function( or const myFunc = (args) =>
-  const funcExprRegex = /^(?:export\s+)?const\s+([a-zA-Z_$][0-9a-zA-Z_$]*)\s*=\s*(?:async\s*)?(?:function\s*\(|\(.*\)\s*=>)/;
-  // Matches: class MyClass
-  const classRegex = /^(?:export\s+)?(?:default\s+)?class\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/;
+  // Regex patterns (applied to trimmed lines) - Hardened to avoid ReDoS by limiting repetitions
+   const funcDeclRegex = /^(?:export[ \t]{1,50})?(?:default[ \t]{1,50})?(?:async[ \t]{1,50})?function[ \t]{1,50}([a-zA-Z_$][0-9a-zA-Z_$]{0,100})[ \t]{0,50}\(/;
+   const funcExprRegex = /^(?:export[ \t]{1,50})?const[ \t]{1,50}([a-zA-Z_$][0-9a-zA-Z_$]{0,100})[ \t]{0,50}=[ \t]{0,50}(?:async[ \t]{1,50})?(?:function[ \t]{0,50}\(|(?:\([^)]*?\)|[a-zA-Z_$][0-9a-zA-Z_$]*)[ \t]{0,50}=>)/;
+   const classRegex = /^(?:export[ \t]{1,50})?(?:default[ \t]{1,50})?class[ \t]{1,50}([a-zA-Z_$][0-9a-zA-Z_$]{0,100})/;
   
   // Matches: import ... from '...'
-  const importFromRegex = /^import\s+(?:[\s\S]*?)\s+from\s+['"]([^'"]+)['"]/;
+  const importFromRegex = /^import[ \t]{1,50}(?:[^'"]{1,500}?)[ \t]{1,50}from[ \t]{1,50}['"]([^'"]{1,500}?)['"]/;
   // Matches: const ... = require('...')
-  const requireRegex = /const\s+.*?\s*=\s*require\(['"]([^'"]+)['"]\)/;
+  const requireRegex = /const[ \t]{1,50}[^=]{1,500}?[ \t]{0,50}=[ \t]{0,50}require\(['"]([^'"]{1,500}?)['"]\)/;
   // Matches: export ... from '...'
-  const exportFromRegex = /^export\s+(?:[\s\S]*?)\s+from\s+['"]([^'"]+)['"]/;
+  const exportFromRegex = /^export[ \t]{1,50}(?:[^'"]{1,500}?)[ \t]{1,50}from[ \t]{1,50}['"]([^'"]{1,500}?)['"]/;
   // Matches: import '...'
-  const importSideEffectRegex = /^import\s+['"]([^'"]+)['"]/;
+  const importSideEffectRegex = /^import[ \t]{1,50}['"]([^'"]{1,500}?)['"]/;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+    const rawLine = lines.at(i);
+    if (typeof rawLine !== 'string') continue;
+    const line = rawLine.trim();
     if (!line) continue;
 
     // Check for Class
