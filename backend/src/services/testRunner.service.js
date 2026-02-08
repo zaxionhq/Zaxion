@@ -5,6 +5,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { parseStringPromise } from 'xml2js'; // Import xml2js
 import { testRunnerExecutionCounter } from "../utils/metrics.js";
+import * as logger from "../utils/logger.js";
 
 const SANDBOX_DIR = path.resolve(process.cwd(), "./test-sandboxes");
 
@@ -122,7 +123,7 @@ export function parseJestOutput(output) {
       raw: output,
     };
   } catch (e) {
-    console.error("Error parsing Jest output:", e);
+    logger.error("Error parsing Jest output:", e);
     return { success: false, message: "Failed to parse Jest output.", raw: output };
   }
 }
@@ -165,7 +166,7 @@ export async function parsePytestOutput(outputFilePath) {
       raw: xml,
     };
   } catch (e) {
-    console.error("Error parsing Pytest (JUnit XML) output:", e);
+    logger.error("Error parsing Pytest (JUnit XML) output:", e);
     return { success: false, message: "Failed to parse Pytest output.", raw: "" };
   }
 }
@@ -208,7 +209,7 @@ export async function parseJUnitOutput(outputFilePath) {
       raw: xml,
     };
   } catch (e) {
-    console.error("Error parsing JUnit XML output:", e);
+    logger.error("Error parsing JUnit XML output:", e);
     return { success: false, message: "Failed to parse JUnit XML output.", raw: "" };
   }
 }
@@ -251,7 +252,7 @@ export async function parseNUnitOutput(outputFilePath) {
       raw: xml,
     };
   } catch (e) {
-    console.error("Error parsing NUnit XML output:", e);
+    logger.error("Error parsing NUnit XML output:", e);
     return { success: false, message: "Failed to parse NUnit XML output.", raw: "" };
   }
 }
@@ -296,11 +297,14 @@ export async function parseGoTestingOutput(output) {
     }
 
     // Populate final test results based on status map
-    for (const [testName, status] of testStatusMap.entries()) {
-      if (!testResults.find(tr => tr.name === testName)) {
-        testResults.push({ name: testName, status, message: "" });
+    testStatusMap.forEach((status, name) => {
+      const existing = testResults.find(tr => tr.name === name);
+      if (!existing) {
+        testResults.push({ name, status, message: "" });
+      } else {
+        existing.status = status;
       }
-    }
+    });
 
     return {
       totalTests,
@@ -311,42 +315,29 @@ export async function parseGoTestingOutput(output) {
       raw: output,
     };
   } catch (e) {
-    console.error("Error parsing Go testing output:", e);
+    logger.error("Error parsing Go testing output:", e);
     return { success: false, message: "Failed to parse Go testing output.", raw: output };
   }
 }
 
-export async function parseRspecOutput(outputFilePath) {
+export async function parseRSpecOutput(output) {
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    const jsonString = await readFile(validateSandboxPath(outputFilePath), "utf8");
-    const json = JSON.parse(jsonString);
-
-    let totalTests = json.summary.example_count;
-    let passedTests = json.summary.passed_count;
-    let failedTests = json.summary.failed_count;
-    let skippedTests = json.summary.pending_count;
-    const testResults = [];
-
-    for (const example of json.examples) {
-      testResults.push({
-        name: example.full_description,
-        status: example.status,
-        message: example.exception ? example.exception.message : "",
-      });
-    }
-
+    const json = JSON.parse(output);
     return {
-      totalTests,
-      passedTests,
-      failedTests,
-      skippedTests,
-      testResults,
-      raw: jsonString,
+      totalTests: json.summary.example_count,
+      passedTests: json.summary.example_count - json.summary.failure_count - json.summary.pending_count,
+      failedTests: json.summary.failure_count,
+      skippedTests: json.summary.pending_count,
+      testResults: json.examples.map(ex => ({
+        name: ex.full_description,
+        status: ex.status === "passed" ? "passed" : (ex.status === "pending" ? "skipped" : "failed"),
+        message: ex.exception ? `${ex.exception.class}: ${ex.exception.message}` : ""
+      })),
+      raw: output,
     };
   } catch (e) {
-    console.error("Error parsing RSpec JSON output:", e);
-    return { success: false, message: "Failed to parse RSpec JSON output.", raw: "" };
+    logger.error("Error parsing RSpec JSON output:", e);
+    return { success: false, message: "Failed to parse RSpec output.", raw: output };
   }
 }
 
@@ -399,28 +390,28 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
         const jestOutput = await readFile(validateSandboxPath(testOutputFilePath), "utf8");
         parsedResults = parseJestOutput(jestOutput);
       } catch (e) {
-        console.error("Error reading Jest output file:", e);
+        logger.error("Error reading Jest output file:", e);
         parsedResults = { success: false, message: "Failed to read Jest output file.", raw: stdout };
       }
     } else if (language === "python" && framework === "pytest") {
       try {
         parsedResults = await parsePytestOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
-        console.error("Error parsing Pytest output:", e);
+        logger.error("Error parsing Pytest output:", e);
         parsedResults = { success: false, message: "Failed to parse Pytest output.", raw: stdout };
       }
     } else if (language === "java" && framework === "junit") {
       try {
         parsedResults = await parseJUnitOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
-        console.error("Error parsing JUnit output:", e);
+        logger.error("Error parsing JUnit output:", e);
         parsedResults = { success: false, message: "Failed to parse JUnit output.", raw: stdout };
       }
     } else if (language === "csharp" && framework === "nunit") {
       try {
         parsedResults = await parseNUnitOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
-        console.error("Error parsing NUnit output:", e);
+        logger.error("Error parsing NUnit output:", e);
         parsedResults = { success: false, message: "Failed to parse NUnit output.", raw: stdout };
       }
     } else if (language === "go" && framework === "go_testing") {
@@ -428,14 +419,16 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
         // Go outputs JSON to stdout directly, no file needed unless redirected
         parsedResults = await parseGoTestingOutput(stdout);
       } catch (e) {
-        console.error("Error parsing Go testing output:", e);
+        logger.error("Error parsing Go testing output:", e);
         parsedResults = { success: false, message: "Failed to parse Go testing output.", raw: stdout };
       }
     } else if (language === "ruby" && framework === "rspec") {
       try {
-        parsedResults = await parseRspecOutput(testOutputFilePath);
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        const rspecOutput = await readFile(validateSandboxPath(testOutputFilePath), "utf8");
+        parsedResults = await parseRSpecOutput(rspecOutput);
       } catch (e) {
-        console.error("Error parsing RSpec output:", e);
+        logger.error("Error parsing RSpec output:", e);
         parsedResults = { success: false, message: "Failed to parse RSpec output.", raw: stdout };
       }
     } else {
