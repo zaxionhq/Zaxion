@@ -8,9 +8,23 @@ import { testRunnerExecutionCounter } from "../utils/metrics.js";
 
 const SANDBOX_DIR = path.resolve(process.cwd(), "./test-sandboxes");
 
+/**
+ * Validates that a path is within the allowed sandbox directory.
+ * @param {string} p - The path to validate
+ * @returns {string} - The resolved path
+ */
+function validateSandboxPath(p) {
+  const resolved = path.resolve(p);
+  if (!resolved.startsWith(SANDBOX_DIR)) {
+    throw new Error(`Security violation: Path ${p} is outside sandbox directory`);
+  }
+  return resolved;
+}
+
 async function createSandbox(testCode, sourceCode, language, framework) {
   const sandboxId = uuidv4();
-  const sandboxPath = path.join(SANDBOX_DIR, sandboxId);
+  const sandboxPath = validateSandboxPath(path.join(SANDBOX_DIR, sandboxId));
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   await mkdir(sandboxPath, { recursive: true });
 
   let testFilePath;
@@ -41,8 +55,14 @@ async function createSandbox(testCode, sourceCode, language, framework) {
     throw new Error(`Unsupported language/framework for test execution: ${language}/${framework}`);
   }
 
+  // Validate all constructed paths
+  validateSandboxPath(testFilePath);
+  validateSandboxPath(sourceFilePath);
+
   await Promise.all([
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFile(testFilePath, testCode),
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFile(sourceFilePath, sourceCode),
   ]);
 
@@ -50,7 +70,9 @@ async function createSandbox(testCode, sourceCode, language, framework) {
 }
 
 async function executeCommand(command, cwd) {
+  validateSandboxPath(cwd);
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line security/detect-child-process
     exec(command, { cwd, timeout: 60000 }, (error, stdout, stderr) => { // 60s timeout per run
       if (error) {
         reject({ error, stdout, stderr });
@@ -70,30 +92,31 @@ export function parseJestOutput(output) {
       failedTests: json.numFailedTests,
       skippedTests: json.numPendingTests,
       testResults: json.testResults.map(tr => {
-        const suitesMap = {};
+        const suitesMap = new Map();
         
         tr.testResults.forEach(test => {
           const suiteName = test.ancestorTitles.join(' > ') || 'Root';
-          if (!suitesMap[suiteName]) {
-            suitesMap[suiteName] = {
+          if (!suitesMap.has(suiteName)) {
+            suitesMap.set(suiteName, {
               name: suiteName,
               status: 'passed',
               tests: []
-            };
+            });
           }
-          suitesMap[suiteName].tests.push({
+          const suite = suitesMap.get(suiteName);
+          suite.tests.push({
             name: test.title,
             status: test.status,
             message: test.failureMessages.join("\n") || ""
           });
-          if (test.status === 'failed') suitesMap[suiteName].status = 'failed';
+          if (test.status === 'failed') suite.status = 'failed';
         });
 
         return {
           name: tr.testFilePath.split('/').pop(),
           status: tr.status,
           message: tr.message || "",
-          suites: Object.values(suitesMap)
+          suites: Array.from(suitesMap.values())
         };
       }),
       raw: output,
@@ -106,7 +129,8 @@ export function parseJestOutput(output) {
 
 export async function parsePytestOutput(outputFilePath) {
   try {
-    const xml = await readFile(outputFilePath, "utf8");
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
     const testsuite = result.testsuites.testsuite[0]; // Assuming one testsuite
@@ -148,7 +172,8 @@ export async function parsePytestOutput(outputFilePath) {
 
 export async function parseJUnitOutput(outputFilePath) {
   try {
-    const xml = await readFile(outputFilePath, "utf8");
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
     const testsuite = result.testsuites.testsuite[0]; // Assuming one testsuite
@@ -190,7 +215,8 @@ export async function parseJUnitOutput(outputFilePath) {
 
 export async function parseNUnitOutput(outputFilePath) {
   try {
-    const xml = await readFile(outputFilePath, "utf8");
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
     const testsuite = result['test-run'].testsuite[0]; // NUnit XML structure might differ slightly
@@ -242,24 +268,24 @@ export async function parseGoTestingOutput(output) {
     let failedTests = 0;
     let skippedTests = 0;
     const testResults = [];
-    const testStatusMap = {}; // To track status of each test by its Name
+    const testStatusMap = new Map(); // To track status of each test by its Name
 
     for (const event of events) {
       if (event.Action === "run" && event.Test) {
         totalTests++;
       } else if (event.Action === "pass" && event.Test) {
         passedTests++;
-        testStatusMap[event.Test] = "passed";
+        testStatusMap.set(event.Test, "passed");
       } else if (event.Action === "fail" && event.Test) {
         failedTests++;
-        testStatusMap[event.Test] = "failed";
+        testStatusMap.set(event.Test, "failed");
       } else if (event.Action === "skip" && event.Test) {
         skippedTests++;
-        testStatusMap[event.Test] = "skipped";
+        testStatusMap.set(event.Test, "skipped");
       }
 
       // Capture output for failed tests for message
-      if (event.Action === "output" && event.Test && testStatusMap[event.Test] === "failed") {
+      if (event.Action === "output" && event.Test && testStatusMap.get(event.Test) === "failed") {
         const existingResult = testResults.find(tr => tr.name === event.Test);
         if (existingResult) {
           existingResult.message += event.Output;
@@ -270,9 +296,9 @@ export async function parseGoTestingOutput(output) {
     }
 
     // Populate final test results based on status map
-    for (const testName in testStatusMap) {
+    for (const [testName, status] of testStatusMap.entries()) {
       if (!testResults.find(tr => tr.name === testName)) {
-        testResults.push({ name: testName, status: testStatusMap[testName], message: "" });
+        testResults.push({ name: testName, status, message: "" });
       }
     }
 
@@ -292,7 +318,8 @@ export async function parseGoTestingOutput(output) {
 
 export async function parseRspecOutput(outputFilePath) {
   try {
-    const jsonString = await readFile(outputFilePath, "utf8");
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    const jsonString = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const json = JSON.parse(jsonString);
 
     let totalTests = json.summary.example_count;
@@ -368,7 +395,8 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
     let parsedResults = {};
     if (language === "javascript" && framework === "jest") {
       try {
-        const jestOutput = await readFile(testOutputFilePath, "utf8");
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
+        const jestOutput = await readFile(validateSandboxPath(testOutputFilePath), "utf8");
         parsedResults = parseJestOutput(jestOutput);
       } catch (e) {
         console.error("Error reading Jest output file:", e);
@@ -376,21 +404,21 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
       }
     } else if (language === "python" && framework === "pytest") {
       try {
-        parsedResults = await parsePytestOutput(testOutputFilePath);
+        parsedResults = await parsePytestOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
         console.error("Error parsing Pytest output:", e);
         parsedResults = { success: false, message: "Failed to parse Pytest output.", raw: stdout };
       }
     } else if (language === "java" && framework === "junit") {
       try {
-        parsedResults = await parseJUnitOutput(testOutputFilePath);
+        parsedResults = await parseJUnitOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
         console.error("Error parsing JUnit output:", e);
         parsedResults = { success: false, message: "Failed to parse JUnit output.", raw: stdout };
       }
     } else if (language === "csharp" && framework === "nunit") {
       try {
-        parsedResults = await parseNUnitOutput(testOutputFilePath);
+        parsedResults = await parseNUnitOutput(validateSandboxPath(testOutputFilePath));
       } catch (e) {
         console.error("Error parsing NUnit output:", e);
         parsedResults = { success: false, message: "Failed to parse NUnit output.", raw: stdout };
@@ -464,7 +492,11 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
     testRunnerExecutionCounter.inc({ language, status });
     if (sandbox && sandbox.sandboxPath) {
       // Clean up sandbox directory after run
-      try { await rm(sandbox.sandboxPath, { recursive: true, force: true }); } catch (_e) {}
+      try { 
+        await rm(sandbox.sandboxPath, { recursive: true, force: true }); 
+      } catch (_e) {
+        // Ignore cleanup errors
+      }
     }
   }
 }
