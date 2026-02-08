@@ -3,6 +3,7 @@ import crypto from "crypto";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import logger from "../src/utils/logger.js";
 
 // Load .env
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,7 +14,7 @@ const PORT = process.env.PORT || 5000;
 const URL = `http://localhost:${PORT}/api/v1/webhooks/github`;
 
 if (!WEBHOOK_SECRET) {
-  console.error("Error: GITHUB_WEBHOOK_SECRET not found in .env");
+  logger.error("GITHUB_WEBHOOK_SECRET not found in .env");
   process.exit(1);
 }
 
@@ -348,7 +349,7 @@ const payload = {
 const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
 const signature = "sha256=" + hmac.update(JSON.stringify(payload)).digest("hex");
 
-console.log(`Sending webhook to ${URL}...`);
+logger.info(`Sending webhook to ${URL}...`);
 
 try {
   const response = await axios.post(URL, payload, {
@@ -358,13 +359,12 @@ try {
       "X-Hub-Signature-256": signature
     }
   });
-  console.log("Response:", response.status, response.data);
+  logger.info("Webhook response received", { status: response.status, data: response.data });
 } catch (error) {
-  console.error("Failed:", error.message);
-  if (error.response) {
-      console.error("Status:", error.response.status);
-      console.error("Data:", error.response.data);
-  } else if (error.request) {
-      console.error("No response received");
-  }
+  logger.error("Webhook flow failed", { 
+    message: error.message,
+    status: error.response?.status,
+    data: error.response?.data,
+    noResponse: !error.response && error.request
+  });
 }
