@@ -12,9 +12,29 @@ export interface PRDecision {
   evaluationStatus: 'FINAL' | 'PENDING';
   decisionReason: string;
   raw_data: string;
+  violated_policy?: string;
+  violation_reason?: string;
+  policy_version?: string;
+  facts?: {
+    totalChanges: number;
+    testFilesAdded: number;
+    affectedAreas: string[];
+    hasCriticalChanges: boolean;
+    changedFiles: string[];
+    isMainBranch: boolean;
+  };
+  advisor?: {
+    riskAssessment: {
+      riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    };
+    rationale: string;
+  };
   override_by?: string;
   override_reason?: string;
   overridden_at?: string;
+  observed_change?: string;
+  affected_files?: string[];
+  policies?: PolicyResult[];
   created_at: string;
   updated_at: string;
 }
