@@ -25,7 +25,6 @@ function validateSandboxPath(p) {
 async function createSandbox(testCode, sourceCode, language, framework) {
   const sandboxId = uuidv4();
   const sandboxPath = validateSandboxPath(path.join(SANDBOX_DIR, sandboxId));
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   await mkdir(sandboxPath, { recursive: true });
 
   let testFilePath;
@@ -61,9 +60,7 @@ async function createSandbox(testCode, sourceCode, language, framework) {
   validateSandboxPath(sourceFilePath);
 
   await Promise.all([
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFile(testFilePath, testCode),
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFile(sourceFilePath, sourceCode),
   ]);
 
@@ -73,7 +70,6 @@ async function createSandbox(testCode, sourceCode, language, framework) {
 async function executeCommand(command, cwd) {
   validateSandboxPath(cwd);
   return new Promise((resolve, reject) => {
-    // eslint-disable-next-line security/detect-child-process
     exec(command, { cwd, timeout: 60000 }, (error, stdout, stderr) => { // 60s timeout per run
       if (error) {
         reject({ error, stdout, stderr });
@@ -130,7 +126,6 @@ export function parseJestOutput(output) {
 
 export async function parsePytestOutput(outputFilePath) {
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
@@ -173,7 +168,6 @@ export async function parsePytestOutput(outputFilePath) {
 
 export async function parseJUnitOutput(outputFilePath) {
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
@@ -216,7 +210,6 @@ export async function parseJUnitOutput(outputFilePath) {
 
 export async function parseNUnitOutput(outputFilePath) {
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const xml = await readFile(validateSandboxPath(outputFilePath), "utf8");
     const result = await parseStringPromise(xml);
 
@@ -386,7 +379,6 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
     let parsedResults = {};
     if (language === "javascript" && framework === "jest") {
       try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const jestOutput = await readFile(validateSandboxPath(testOutputFilePath), "utf8");
         parsedResults = parseJestOutput(jestOutput);
       } catch (e) {
@@ -424,7 +416,6 @@ export async function runTests({ testCode, sourceCode, language, framework }) {
       }
     } else if (language === "ruby" && framework === "rspec") {
       try {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const rspecOutput = await readFile(validateSandboxPath(testOutputFilePath), "utf8");
         parsedResults = await parseRSpecOutput(rspecOutput);
       } catch (e) {

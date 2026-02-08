@@ -81,7 +81,24 @@ export default [
     },
   },
 
-  // 7. Boundary Enforcement (Phase A: Structural Safeguards)
+  // 7. Centralized Security Exceptions for Infrastructure Services
+  // These services require low-level access (child_process, fs) by design.
+  // Overrides are managed here to prevent inline silencing of security rules.
+  {
+    files: ["src/services/testRunner.service.js"],
+    rules: {
+      "security/detect-non-literal-fs-filename": "off",
+      "security/detect-child-process": "off",
+    },
+  },
+  {
+    files: ["src/services/githubApp.service.js"],
+    rules: {
+      "security/detect-non-literal-fs-filename": "off",
+    },
+  },
+
+  // 8. Boundary Enforcement (Phase A: Structural Safeguards)
   {
     files: ["src/controllers/**/*.js", "src/routes/**/*.js"],
     plugins: {
