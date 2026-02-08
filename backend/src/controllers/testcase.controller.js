@@ -6,6 +6,7 @@ import * as githubService from "../services/github.service.js";
 import * as testRunnerService from "../services/testRunner.service.js";
 import { analyzeCodeFile } from "../services/codeAnalyzer.service.js";
 import { logResourceEvent } from "../services/audit.service.js";
+import * as logger from "../utils/logger.js";
 
 export default function testcaseControllerFactory(db) {
   async function generateSummaries(req, res, next) {
@@ -107,14 +108,14 @@ export default function testcaseControllerFactory(db) {
           }
           
           // Log the file path being processed for debugging
-          console.log(`Processing file path: ${path}, repo: ${JSON.stringify(repo)}`);
+          logger.debug(`Processing file path: ${path}, repo: ${JSON.stringify(repo)}`);
           
           // Use the path directly as it comes from the recursive tree (which returns paths relative to repo root)
           // We trust the repo object provided in the request body.
           const cleanPath = path;
           
-          console.log(`Using clean path: ${cleanPath}`);
-          console.log(`Fetching file content with: token=${req.githubToken ? 'present' : 'missing'}, owner=${repo.owner}, repo=${repo.name}, path=${cleanPath}`);
+          logger.debug(`Using clean path: ${cleanPath}`);
+          logger.debug(`Fetching file content with: token=${req.githubToken ? 'present' : 'missing'}, owner=${repo.owner}, repo=${repo.name}, path=${cleanPath}`);
           const fileContent = await githubService.fetchRepoFileContent(req.githubToken, repo.owner, repo.name, cleanPath);
           filesWithContent.push({ path, content: fileContent, name: cleanPath.split('/').pop() });
         } catch (fileError) {
@@ -220,7 +221,7 @@ export default function testcaseControllerFactory(db) {
         try {
           const analysis = await analyzeCodeFile(fileWithContent);
           if (analysis && analysis.extractedElements && analysis.extractedElements.imports && analysis.extractedElements.imports.length > 0) {
-            console.log(`Found imports for context: ${analysis.extractedElements.imports.join(', ')}`);
+            logger.debug(`Found imports for context: ${analysis.extractedElements.imports.join(', ')}`);
             contextFiles = await githubService.fetchContextFiles(
               req.githubToken,
               req.body.repo.owner,
@@ -228,10 +229,10 @@ export default function testcaseControllerFactory(db) {
               targetPath,
               analysis.extractedElements.imports
             );
-            console.log(`Successfully fetched ${contextFiles.length} context files.`);
+            logger.debug(`Successfully fetched ${contextFiles.length} context files.`);
           }
         } catch (contextErr) {
-          console.warn(`Failed to fetch context files: ${contextErr.message}`);
+          logger.warn(`Failed to fetch context files: ${contextErr.message}`);
           // Continue without context
         }
 
