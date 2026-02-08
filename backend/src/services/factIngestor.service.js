@@ -175,7 +175,9 @@ export class FactIngestorService {
       if (parts.length > 1) {
         let current = "";
         for (let i = 0; i < parts.length - 1; i++) {
-          current = current ? `${current}/${parts[i]}` : parts[i];
+          const part = parts.at(i);
+          if (!part) continue;
+          current = current ? `${current}/${part}` : part;
           prefixes.add(current);
         }
       }
