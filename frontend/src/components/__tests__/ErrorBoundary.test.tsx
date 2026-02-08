@@ -74,7 +74,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('should show error details in development mode', () => {
-    // @ts-expect-error - Mocking process.env
     process.env.NODE_ENV = 'development';
 
     render(
@@ -87,7 +86,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('should not show error details in production mode', () => {
-    // @ts-expect-error - Mocking process.env
     process.env.NODE_ENV = 'production';
 
     render(
