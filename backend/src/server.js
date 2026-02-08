@@ -6,7 +6,6 @@ import { initDb } from "./models/index.js"; // Import initDb function
 
 // Initialize DB and get the db object
 const db = await initDb();
-// console.log('server.js: db object initialized. db.User:', db.User ? 'defined' : 'undefined', 'db.RefreshToken:', db.RefreshToken ? 'defined' : 'undefined');
 
 // Dynamically import app *after* db is loaded, and pass db to it
 const { default: createApp } = await import("./app.js");
