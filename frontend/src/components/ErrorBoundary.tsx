@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import logger from '@/lib/logger';
 
 interface Props {
   children: ReactNode;
@@ -29,10 +30,8 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ error, errorInfo });
     
-    // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
-    }
+    // Log error
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
     
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
@@ -68,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {!import.meta.env.PROD && this.state.error && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="font-mono text-xs">
@@ -103,7 +102,7 @@ export const useErrorHandler = () => {
 
   const handleError = React.useCallback((error: Error) => {
     setError(error);
-    console.error('Async error caught:', error);
+    logger.error('Async error caught:', error);
   }, []);
 
   const clearError = React.useCallback(() => {
