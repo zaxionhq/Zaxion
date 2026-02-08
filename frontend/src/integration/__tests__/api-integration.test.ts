@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { api } from '@/lib/api';
+import logger from '@/lib/logger';
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -7,13 +8,13 @@ global.fetch = mockFetch;
 
 describe('Frontend-Backend API Integration', () => {
   beforeEach(() => {
-    console.log('beforeEach starting');
+    logger.debug('beforeEach starting');
     mockFetch.mockClear();
     
     // Implementation that handles CSRF token and other requests by URL
     mockFetch.mockImplementation(async (url) => {
       const urlString = url.toString();
-      console.log('Default mockFetch called with:', urlString);
+      logger.debug('Default mockFetch called with', { url: urlString });
       
       if (urlString.endsWith('/csrf-token')) {
         return {
