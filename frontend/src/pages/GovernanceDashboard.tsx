@@ -6,6 +6,14 @@ import { PolicySimulation } from '@/components/governance/PolicySimulation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, BarChart3, History, Microscope, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+
+interface Hotspot {
+  repo: string;
+  count: number;
+}
 
 const GovernanceDashboard: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -97,7 +105,7 @@ const GovernanceDashboard: React.FC = () => {
               
               <div className="space-y-4">
                 {analyticsData?.hotspots?.length > 0 ? (
-                  analyticsData.hotspots.map((hotspot: any) => (
+                  analyticsData.hotspots.map((hotspot: Hotspot) => (
                     <div key={hotspot.repo} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
                       <div className="flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
