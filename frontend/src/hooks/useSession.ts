@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, ApiError } from '@/lib/api';
+import logger from '@/lib/logger';
 import { useApiErrorHandler } from '@/components/ErrorToast';
 
 interface User {
@@ -57,7 +58,7 @@ export const useSession = () => {
         setTimeout(() => {
           // If this was a GitHub repository connection (not just a sign-in),
           // we need to ensure the UI reflects that we're ready to select repositories
-          console.log('Dispatching github-connected event');
+          logger.log('Dispatching github-connected event');
           const connectEvent = new CustomEvent('github-connected');
           window.dispatchEvent(connectEvent);
         }, 500); // 500ms delay to ensure event listeners are set up
@@ -91,7 +92,7 @@ export const useSession = () => {
           error: null,
           retryCount: 0,
         });
-        console.info('Backend not available, running in demo mode');
+        logger.log('Backend not available, running in demo mode');
       } else {
         const errorMessage = apiError.message || 'Failed to check session';
         setSession({
@@ -116,12 +117,12 @@ export const useSession = () => {
 
   const logout = useCallback(async () => {
     try {
-      console.log('Starting logout process...');
+      logger.log('Starting logout process...');
       setSession(prev => ({ ...prev, loading: true }));
       
-      console.log('Calling logout API...');
+      logger.log('Calling logout API...');
       await api.post('/v1/auth/logout');
-      console.log('Logout API call successful');
+      logger.log('Logout API call successful');
       
       setSession({
         user: null,
@@ -134,13 +135,13 @@ export const useSession = () => {
       localStorage.removeItem('user');
       sessionStorage.clear();
       
-      console.log('Clearing session data and redirecting...');
+      logger.log('Clearing session data and redirecting...');
       // Redirect to home page
       window.location.href = '/';
       
       handleSuccess('Successfully signed out');
     } catch (error: unknown) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
       
       // Even if logout fails on backend, clear local session
       setSession({
@@ -154,7 +155,7 @@ export const useSession = () => {
       localStorage.removeItem('user');
       sessionStorage.clear();
       
-      console.log('Logout failed, but clearing local session and redirecting...');
+      logger.log('Logout failed, but clearing local session and redirecting...');
       // Redirect to home page
       window.location.href = '/';
       
