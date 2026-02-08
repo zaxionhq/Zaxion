@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // Check if the table exists
@@ -39,7 +41,7 @@ module.exports = {
         });
       }
     } catch (error) {
-      console.error('Migration error:', error);
+      logger.error('Migration error:', error);
       throw error;
     }
   },
@@ -65,7 +67,7 @@ module.exports = {
         await queryInterface.removeColumn('users', 'accessToken');
       }
     } catch (error) {
-      console.error('Migration rollback error:', error);
+      logger.error('Migration rollback error:', error);
       throw error;
     }
   }
