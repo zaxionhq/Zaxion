@@ -312,11 +312,15 @@ export async function generateSummaries({ files = [], repo = null, user = null }
             .replace(/'/g, '"'); // replace single quotes with double quotes (risky but sometimes needed)
           parsed = JSON.parse(cleaned);
         } catch (ee) {
-          // Final fallback: use eval (last resort)
+          // Final fallback: attempt a more aggressive regex cleanup for common LLM artifacts
           try {
-            parsed = eval("(" + jsonStr + ")");
+            const aggressiveCleanup = jsonStr
+              .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":') // Quote unquoted keys
+              .replace(/'/g, '"') // Replace single quotes with double quotes
+              .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
+            parsed = JSON.parse(aggressiveCleanup);
           } catch (eee) {
-            console.error("All JSON parsing attempts failed.");
+            console.error("All JSON parsing attempts failed, including aggressive cleanup.");
             parsed = null;
           }
         }
