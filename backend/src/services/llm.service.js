@@ -22,6 +22,7 @@ import { chunk } from "lodash-es";
 import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 import axios from "axios"; // Import axios for OpenRouter/OpenAI
 import { escapeForLLM, sanitizeCodeString } from "../utils/sanitization.utils.js";
+import * as logger from "../utils/logger.js";
 
 const LLM_PROVIDER = process.env.LLM_PROVIDER || "gemini"; // 'gemini', 'openai', 'openrouter'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
@@ -287,7 +288,7 @@ export async function generateSummaries({ files = [], repo = null, user = null }
     try {
       raw = await sendToProvider(prompt, { max_tokens: 2000 });
     } catch (err) {
-      console.error("generateSummaries provider error:", err);
+      logger.error("generateSummaries provider error:", err);
       throw new Error(`Failed to generate summaries: ${err.message}`);
     }
 
@@ -304,7 +305,7 @@ export async function generateSummaries({ files = [], repo = null, user = null }
       try {
         parsed = JSON.parse(jsonStr);
       } catch (e) {
-        console.warn("JSON.parse failed, attempting manual cleanup...", e.message);
+        logger.warn("JSON.parse failed, attempting manual cleanup...", e.message);
         // Fallback: try to clean up common LLM artifacts like trailing commas or single quotes
         try {
           const cleaned = jsonStr
@@ -320,7 +321,7 @@ export async function generateSummaries({ files = [], repo = null, user = null }
               .replace(/,\s*([\]}])/g, '$1'); // Remove trailing commas
             parsed = JSON.parse(aggressiveCleanup);
           } catch (eee) {
-            console.error("All JSON parsing attempts failed, including aggressive cleanup.");
+            logger.error("All JSON parsing attempts failed, including aggressive cleanup.");
             parsed = null;
           }
         }
@@ -384,7 +385,7 @@ export async function generateTestCode({ file, summaryId, framework, user, conte
       language: guessLangFromName(file.name)
     };
   } catch (error) {
-    console.error('Error generating test code:', error);
+    logger.error('Error generating test code:', error);
     throw error;
   }
 }
@@ -406,7 +407,7 @@ export async function generateExplanation({ file, contextFiles = [], user }) {
     const result = await sendToProvider(prompt);
     return result;
   } catch (error) {
-    console.error('Error generating explanation:', error);
+    logger.error('Error generating explanation:', error);
     throw error;
   }
 }
@@ -438,7 +439,7 @@ export async function generateChatResponse(prompt) {
       suggestions: parsed.suggestions
     };
   } catch (error) {
-    console.error('Error generating chat response:', error);
+    logger.error('Error generating chat response:', error);
     throw error;
   }
 }
