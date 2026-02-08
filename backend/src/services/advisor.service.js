@@ -3,6 +3,8 @@
  * Provides non-gating intelligence, explanations, and fix intents.
  * This service is "best-effort" and must not influence the deterministic decision.
  */
+import * as logger from "../utils/logger.js";
+
 export class AdvisorService {
   constructor(llmService) {
     this.llmService = llmService;
@@ -51,7 +53,7 @@ export class AdvisorService {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      console.error("[AdvisorService] Enrichment failed:", error);
+      logger.error("[AdvisorService] Enrichment failed:", error);
       // Best-effort rule: return a graceful fallback if enrichment fails
       return {
         status: "UNAVAILABLE",
