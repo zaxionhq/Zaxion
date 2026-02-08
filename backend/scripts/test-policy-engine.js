@@ -1,4 +1,5 @@
 import { PolicyEngineService } from "../src/services/policyEngine.service.js";
+import logger from "../src/utils/logger.js";
 
 // Mock Octokit for Override permissions check
 const mockOctokit = {
@@ -12,7 +13,7 @@ const mockOctokit = {
 const policyEngine = new PolicyEngineService(mockOctokit);
 
 async function runTests() {
-  console.log("🧪 Starting Policy Engine Tests...\n");
+  logger.info("🧪 Starting Policy Engine Tests...\n");
 
   const scenarios = [
     {
@@ -78,20 +79,19 @@ async function runTests() {
   ];
 
   for (const scenario of scenarios) {
-    console.log(`Running: ${scenario.name}`);
+    logger.info(`Running: ${scenario.name}`);
     const result = await policyEngine.evaluate(scenario.prContext, scenario.metadata);
     
     if (result.decision === scenario.expected) {
-      console.log(`  ✅ Passed (Got ${result.decision})`);
+      logger.info(`  ✅ Passed (Got ${result.decision})`);
       if (scenario.expected === "BLOCK") {
-        console.log("  Sample Decision Object (BLOCKED):", JSON.stringify(result, null, 2));
+        logger.info("  Sample Decision Object (BLOCKED)", result);
       }
     } else {
-      console.error(`  ❌ FAILED (Expected ${scenario.expected}, Got ${result.decision})`);
-      console.error("  Reason:", result.decisionReason);
+      logger.error(`  ❌ FAILED (Expected ${scenario.expected}, Got ${result.decision})`, { reason: result.decisionReason });
     }
-    console.log("---------------------------------------------------");
+    logger.info("---------------------------------------------------");
   }
 }
 
-runTests().catch(console.error);
+runTests().catch(err => logger.error('Unhandled error in policy engine tests', err));
