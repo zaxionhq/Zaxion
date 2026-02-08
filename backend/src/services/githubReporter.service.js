@@ -2,6 +2,8 @@
  * GitHub Check Run Reporter
  * Updates the PR UI on GitHub using the Checks API.
  */
+import * as logger from "../utils/logger.js";
+
 export class GitHubReporterService {
   constructor(octokit) {
     this.octokit = octokit;
@@ -139,7 +141,7 @@ export class GitHubReporterService {
             comment_id: existingComment.id,
             body: commentBody
           });
-          console.log(`[GitHubReporter] Sticky comment updated for PR #${prNumber}`);
+          logger.log(`[GitHubReporter] Sticky comment updated for PR #${prNumber}`);
         } else {
           // 3. Create new comment if none exists
           await this.octokit.rest.issues.createComment({
@@ -148,10 +150,10 @@ export class GitHubReporterService {
             issue_number: prNumber,
             body: commentBody
           });
-          console.log(`[GitHubReporter] New sticky comment created for PR #${prNumber}`);
+          logger.log(`[GitHubReporter] New sticky comment created for PR #${prNumber}`);
         }
       } catch (commentErr) {
-        console.warn(`[GitHubReporter] Failed to manage sticky comment: ${commentErr.message}`);
+        logger.warn(`[GitHubReporter] Failed to manage sticky comment: ${commentErr.message}`);
       }
     }
 
@@ -171,7 +173,7 @@ export class GitHubReporterService {
         });
         checkRunsToUpdate = check_runs.filter(cr => cr.name === this.CHECK_NAME);
       } catch (listErr) {
-        console.warn(`[GitHubReporter] Failed to list check runs for ${headSha}: ${listErr.message}`);
+        logger.warn(`[GitHubReporter] Failed to list check runs for ${headSha}: ${listErr.message}`);
       }
 
       // If we have an explicit ID but it wasn't in the list (e.g., reported on a different SHA previously), 
@@ -181,7 +183,7 @@ export class GitHubReporterService {
       }
 
       if (checkRunsToUpdate.length > 0) {
-        console.log(`[GitHubReporter] Found ${checkRunsToUpdate.length} check runs to update for ${this.CHECK_NAME}`);
+        logger.log(`[GitHubReporter] Found ${checkRunsToUpdate.length} check runs to update for ${this.CHECK_NAME}`);
         
         let updateCount = 0;
         for (const check of checkRunsToUpdate) {
@@ -202,19 +204,19 @@ export class GitHubReporterService {
           }
 
           try {
-            console.log(`[GitHubReporter] Attempting PATCH on check run ${check.id} with conclusion ${conclusion}...`);
+            logger.log(`[GitHubReporter] Attempting PATCH on check run ${check.id} with conclusion ${conclusion}...`);
             const { data: updatedCheck } = await this.octokit.rest.checks.update(updateParams);
             checkRunId = updatedCheck.id;
             updateCount++;
-            console.log(`[GitHubReporter] Successfully updated check run ${check.id} to ${conclusion}`);
+            logger.log(`[GitHubReporter] Successfully updated check run ${check.id} to ${conclusion}`);
           } catch (updateErr) {
-            console.warn(`[GitHubReporter] Failed to update check run ${check.id} (status: ${updateErr.status}).`);
+            logger.warn(`[GitHubReporter] Failed to update check run ${check.id} (status: ${updateErr.status}).`);
             
             // If we are performing an override, we MUST update the existing check.
             // Creating a new one will cause an identity conflict in GitHub's eyes.
             if (decisionState === "OVERRIDDEN_PASS") {
               const errorMsg = `Identity Conflict: Zaxion found the required check run (${check.id}) but could not update it. This usually happens if the GitHub App identity doesn't match the one that created the check. GitHub Status: ${updateErr.status}`;
-              console.error(`[GitHubReporter] ${errorMsg}`);
+              logger.error(`[GitHubReporter] ${errorMsg}`);
               throw new Error(errorMsg);
             }
           }
@@ -223,7 +225,7 @@ export class GitHubReporterService {
         // If we found checks but failed to update any of them, and this IS NOT an override, 
         // then we fallback to creating a new one. For overrides, we already threw an error above.
         if (updateCount === 0 && decisionState !== "OVERRIDDEN_PASS") {
-          console.log(`[GitHubReporter] No checks were updated. Creating new check run as fallback.`);
+          logger.log(`[GitHubReporter] No checks were updated. Creating new check run as fallback.`);
           const createParams = {
             owner,
             repo,
@@ -242,7 +244,7 @@ export class GitHubReporterService {
         }
       } else {
         // No existing checks found for this SHA, create a new one
-        console.log(`[GitHubReporter] No existing check runs found for SHA ${headSha.substring(0, 7)}. Creating new check run...`);
+        logger.log(`[GitHubReporter] No existing check runs found for SHA ${headSha.substring(0, 7)}. Creating new check run...`);
         const createParams = {
           owner,
           repo,
@@ -259,10 +261,10 @@ export class GitHubReporterService {
         
         const { data: createdCheck } = await this.octokit.rest.checks.create(createParams);
         checkRunId = createdCheck.id;
-        console.log(`[GitHubReporter] Created fresh check run ${checkRunId} for ${headSha}`);
+        logger.log(`[GitHubReporter] Created fresh check run ${checkRunId} for ${headSha}`);
       }
     } catch (checkErr) {
-      console.error("[GitHubReporter] Check Runs API failed:", checkErr.response?.data || checkErr.message);
+      logger.error("[GitHubReporter] Check Runs API failed:", checkErr.response?.data || checkErr.message);
       // Re-throw so the controller knows it failed
       throw checkErr;
     }
