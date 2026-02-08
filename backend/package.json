@@ -11,8 +11,8 @@
     "db:create-raw": "node scripts/create-database.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "lint": "eslint .",
-    "security:check-logs": "grep -rnE \"console\\.(log|dir|table|trace)\" src/ --exclude-dir=dtos --exclude-dir=utils",
-    "security:check-secrets": "grep -rnE \"(access_token|client_secret|private_key|password|jwt_secret)\" src/ --exclude=env.js"
+    "security:check-logs": "grep -rnE \"console\\.(log|dir|table|trace)\" src/ --exclude-dir=dtos --exclude-dir=utils ; [ $? -eq 1 ]",
+    "security:check-secrets": "grep -rnE \"(access_token|client_secret|private_key|password|jwt_secret)\" src/ --exclude=env.js ; [ $? -eq 1 ]"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
