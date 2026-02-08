@@ -18,12 +18,16 @@ export const redact = (data) => {
     return data.map(redact);
   }
   
-  const redacted = { ...data };
-  for (const key in redacted) {
-    if (SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
-      redacted[key] = '[REDACTED]';
-    } else if (typeof redacted[key] === 'object') {
-      redacted[key] = redact(redacted[key]);
+  const redacted = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (key === '__proto__' || key === 'constructor') continue;
+    
+    if (typeof key === 'string' && SENSITIVE_KEYS.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+      Reflect.set(redacted, key, '[REDACTED]');
+    } else if (value && typeof value === 'object') {
+      Reflect.set(redacted, key, redact(value));
+    } else {
+      Reflect.set(redacted, key, value);
     }
   }
   return redacted;
