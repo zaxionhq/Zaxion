@@ -89,6 +89,7 @@ if (!parsed.success) {
 
 // 2. Extract Data (No partial recovery with error objects)
 const data = parsed.success ? parsed.data : process.env;
+const dataMap = new Map(Object.entries(data));
 
 /**
  * Enterprise Config Export
@@ -100,7 +101,9 @@ const env = {
   /**
    * Getter for individual keys (legacy support)
    */
-  get: (k) => data[k],
+  get: (k) => {
+    return dataMap.get(k);
+  },
 };
 
 export default env;
