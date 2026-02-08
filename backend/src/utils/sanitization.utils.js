@@ -59,7 +59,7 @@ export function sanitizeCodeString(code) {
   sanitized = sanitized.replace(/fs\.(rm|unlink|rmSync|unlinkSync)/g, '/* file deletion removed */');
 
   // Prevent common script injection attempts (if code is ever rendered as HTML/JS)
-  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '/* script removed */');
+  sanitized = sanitized.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, '/* script removed */');
   sanitized = sanitized.replace(/on[a-zA-Z]+\s*=/g, ' '); // Remove event handlers
 
   // Limit file system access attempts (Node.js specific)
