@@ -679,7 +679,7 @@ export default function githubControllerFactory(db) {
               .filter(s => s.state === 'failure' || s.state === 'error')
               .map(s => s.context);
 
-            const instancesMap = {};
+            const instancesMap = new Map();
             [
               ...checkRuns.check_runs.map(cr => ({ 
                 name: cr.name, 
@@ -695,8 +695,8 @@ export default function githubControllerFactory(db) {
                 creator: s.creator?.login || 'unknown' 
               }))
             ].forEach(inst => {
-              if (!instancesMap[inst.name]) instancesMap[inst.name] = [];
-              instancesMap[inst.name].push(inst);
+              if (!instancesMap.has(inst.name)) instancesMap.set(inst.name, []);
+              instancesMap.get(inst.name).push(inst);
             });
 
             const allFailingNames = [...new Set([...failingCheckNames, ...failingStatusContexts])];
@@ -704,7 +704,7 @@ export default function githubControllerFactory(db) {
             // DETECT GHOST CHECKS / IDENTITY CONFLICTS
             // Check if there's a required name that has BOTH a success and a failure
             const duplicateFailingCheck = allFailingNames.find(name => {
-              const instances = instancesMap[name] || [];
+              const instances = instancesMap.get(name) || [];
               const hasSuccess = instances.some(i => i.conclusion === 'success');
               return instances.length > 1 && hasSuccess;
             });
@@ -712,11 +712,11 @@ export default function githubControllerFactory(db) {
             let detailedMessage = "PR analysis complete. One or more mandatory policies are blocking this merge.";
 
             if (duplicateFailingCheck) {
-              const identities = (instancesMap[duplicateFailingCheck] || [])
+              const identities = (instancesMap.get(duplicateFailingCheck) || [])
                 .map(i => `${i.type} by ${i.app || i.creator} (${i.conclusion})`)
                 .join(', ');
               
-              detailedMessage = `Merge blocked by an Identity Conflict. GitHub sees ${instancesMap[duplicateFailingCheck].length} different items named "${duplicateFailingCheck}": [${identities}]. Zaxion has passed, but another identity with the same name is failing. GitHub requires ALL items with this name to pass.`;
+              detailedMessage = `Merge blocked by an Identity Conflict. GitHub sees ${instancesMap.get(duplicateFailingCheck).length} different items named "${duplicateFailingCheck}": [${identities}]. Zaxion has passed, but another identity with the same name is failing. GitHub requires ALL items with this name to pass.`;
             } else if (prDetails.mergeable_state === 'blocked') {
               detailedMessage = "PR is blocked by GitHub branch protection rules. This could be due to missing reviews, failing status checks, or other requirements. Check the GitHub PR page for details.";
             }
@@ -730,7 +730,7 @@ export default function githubControllerFactory(db) {
                 head_sha: prDetails.head.sha.substring(0, 7),
                 failing_checks: allFailingNames,
                 has_ghost_checks: !!duplicateFailingCheck,
-                identities: duplicateFailingCheck ? instancesMap[duplicateFailingCheck] : undefined
+                identities: duplicateFailingCheck ? instancesMap.get(duplicateFailingCheck) : undefined
               }
             });
           }
