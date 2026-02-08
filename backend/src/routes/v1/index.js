@@ -12,7 +12,6 @@ import webhookRoutesFactory from "../webhook.routes.js";
 
 export default function v1ApiRoutesFactory(db) {
   const router = Router();
-  // console.log('v1ApiRoutesFactory called. db.User:', db.User ? 'defined' : 'undefined', 'db.RefreshToken:', db.RefreshToken ? 'defined' : 'undefined');
 
   router.use("/auth", authRoutesFactory(db));
   router.use("/github", githubRoutesFactory(db)); // Use githubRoutesFactory
