@@ -2,6 +2,7 @@ import crypto from "crypto";
 import env from "../config/env.js";
 import { addPrAnalysisJob } from "../queues/prAnalysis.queue.js";
 import { PrAnalysisService } from "../services/prAnalysis.service.js";
+import * as logger from "../utils/logger.js";
 
 const prAnalysisService = new PrAnalysisService();
 
@@ -21,18 +22,18 @@ export async function handleGitHubWebhook(req, res, next) {
       const digest = "sha256=" + hmac.update(JSON.stringify(req.body)).digest("hex");
       
       if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
-        console.warn("[webhook] Invalid signature");
+        logger.warn("[webhook] Invalid signature");
         return res.status(401).json({ error: "Invalid signature" });
       }
     } else if (!secret) {
       // In production, this should ideally be an error, but for dev we warn
-      console.warn("[webhook] GITHUB_WEBHOOK_SECRET not set, skipping signature verification");
+      logger.warn("[webhook] GITHUB_WEBHOOK_SECRET not set, skipping signature verification");
     }
 
     const event = req.headers["x-github-event"];
     const payload = req.body;
 
-    console.log(`[webhook] Received event: ${event}`);
+    logger.log(`[webhook] Received event: ${event}`);
 
     // 2. Filter relevant events (pull_request)
     if (event === "pull_request") {
@@ -51,20 +52,20 @@ export async function handleGitHubWebhook(req, res, next) {
         };
 
         const traceId = `${prData.installationId || 'PAT'}:${prData.headSha}`;
-        console.log(`[webhook] [trace:${traceId}] event: ${event}.${action} pr: #${prData.prNumber}`);
+        logger.log(`[webhook] [trace:${traceId}] event: ${event}.${action} pr: #${prData.prNumber}`);
 
         // 3. Queue the job (Immediate ACK - Fire & Forget)
         // CRITICAL: Do NOT connect to Postgres here. Do NOT call GitHub API here.
         try {
           await addPrAnalysisJob(prData);
-          console.log(`[webhook] Queued PR analysis for ${prData.owner}/${prData.repo} PR #${prData.prNumber} SHA:${prData.headSha}`);
+          logger.log(`[webhook] Queued PR analysis for ${prData.owner}/${prData.repo} PR #${prData.prNumber} SHA:${prData.headSha}`);
         } catch (queueErr) {
-          console.warn(`[webhook] Queue failed (${queueErr.message}), falling back to Direct Execution (Dev Mode).`);
+          logger.warn(`[webhook] Queue failed (${queueErr.message}), falling back to Direct Execution (Dev Mode).`);
           
           // Fallback: Execute directly (async, don't await result to keep webhook fast)
           // This ensures Phase 1 logic works even without Redis
           prAnalysisService.execute(prData).catch(err => {
-            console.error(`[DirectMode] Analysis failed: ${err.message}`);
+            logger.error(`[DirectMode] Analysis failed: ${err.message}`);
           });
         }
       }
@@ -73,7 +74,7 @@ export async function handleGitHubWebhook(req, res, next) {
     // 4. Immediately ACK GitHub (Respond fast < 5s)
     res.status(200).json({ received: true });
   } catch (err) {
-    console.error("[webhook] Error handling webhook:", err);
+    logger.error("[webhook] Error handling webhook:", err);
     // Even on error, we might want to return 200 to GitHub to prevent retries if it's a logic error,
     // but 500 is safer to signal something went wrong in our ingest layer.
     next(err);
