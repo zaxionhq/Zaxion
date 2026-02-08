@@ -6,6 +6,7 @@ import { AdvisorService } from "./advisor.service.js";
 import { GitHubReporterService } from "./githubReporter.service.js";
 import githubAppService from "./githubApp.service.js";
 import env from "../config/env.js";
+import * as logger from "../utils/logger.js";
 
 export class PrAnalysisService {
   /**
@@ -15,7 +16,7 @@ export class PrAnalysisService {
   async execute(data) {
     const { owner, repo, prNumber, headSha, baseRef, installationId } = data;
     const traceId = `${installationId || 'PAT'}:${headSha}`;
-    console.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: START_ANALYSIS`);
+    logger.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: START_ANALYSIS`);
 
     // 0. Step 0: Authentication (GitHub App or PAT)
     const token = await githubAppService.getInstallationAccessToken(installationId);
@@ -46,7 +47,7 @@ export class PrAnalysisService {
         // Hard Lock: If we already have a FINAL decision, never allow a re-evaluation
         // This prevents "policy drift" if the engine version changed since the first analysis.
         if (existingDecision.decision !== 'PENDING') {
-          console.log(`[PrAnalysisService] [trace:${traceId}] action: IDEMPOTENT_HIT status: FINAL version: ${existingDecision.policy_version}`);
+          logger.log(`[PrAnalysisService] [trace:${traceId}] action: IDEMPOTENT_HIT status: FINAL version: ${existingDecision.policy_version}`);
           
           // Re-report the existing decision from DB
           let decisionObj = existingDecision;
@@ -56,7 +57,7 @@ export class PrAnalysisService {
                 ? JSON.parse(existingDecision.raw_data) 
                 : existingDecision.raw_data;
             } catch (e) {
-              console.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for IDEMPOTENT_HIT:`, e.message);
+              logger.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for IDEMPOTENT_HIT:`, e.message);
             }
           }
           
@@ -66,7 +67,7 @@ export class PrAnalysisService {
         }
         
         // If it was stuck in PENDING, we can continue to re-evaluate it once.
-        console.log(`[PrAnalysisService] [trace:${traceId}] action: RECOVERING_STUCK_PENDING`);
+        logger.log(`[PrAnalysisService] [trace:${traceId}] action: RECOVERING_STUCK_PENDING`);
       }
 
       // 2. Step 2: Initialize State (PENDING)
@@ -90,7 +91,7 @@ export class PrAnalysisService {
         } catch (insertError) {
           // If a race condition occurred and another worker inserted the row, catch the unique constraint violation
           if (insertError.name === 'SequelizeUniqueConstraintError' || insertError.parent?.code === '23505') {
-            console.log(`[PrAnalysisService] [trace:${traceId}] action: INSERT_RACE_DETECTED recovering...`);
+            logger.log(`[PrAnalysisService] [trace:${traceId}] action: INSERT_RACE_DETECTED recovering...`);
             // The row now exists, so we re-fetch it outside the catch block by letting the code proceed
           } else {
             throw insertError;
@@ -109,7 +110,7 @@ export class PrAnalysisService {
       );
 
       if (finalExistingDecision && finalExistingDecision.decision !== 'PENDING') {
-        console.log(`[PrAnalysisService] [trace:${traceId}] action: POST_RACE_IDEMPOTENT_HIT status: FINAL version: ${finalExistingDecision.policy_version}`);
+        logger.log(`[PrAnalysisService] [trace:${traceId}] action: POST_RACE_IDEMPOTENT_HIT status: FINAL version: ${finalExistingDecision.policy_version}`);
         
         let decisionObj = finalExistingDecision;
         if (finalExistingDecision.raw_data) {
@@ -118,7 +119,7 @@ export class PrAnalysisService {
               ? JSON.parse(finalExistingDecision.raw_data) 
               : finalExistingDecision.raw_data;
           } catch (e) {
-            console.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for POST_RACE_IDEMPOTENT_HIT:`, e.message);
+            logger.error(`[PrAnalysisService] [trace:${traceId}] Failed to parse raw_data for POST_RACE_IDEMPOTENT_HIT:`, e.message);
           }
         }
 
@@ -159,7 +160,7 @@ export class PrAnalysisService {
           non_authoritative: true // Explicitly marked as non-authoritative
         };
       } catch (advisorErr) {
-        console.warn(`[PrAnalysisService] [trace:${traceId}] Advisor enrichment failed: ${advisorErr.message}`);
+        logger.warn(`[PrAnalysisService] [trace:${traceId}] Advisor enrichment failed: ${advisorErr.message}`);
         decisionObject.advisor = { 
           status: "ERROR", 
           rationale: "Advisor enrichment failed.",
@@ -205,19 +206,19 @@ export class PrAnalysisService {
           `SELECT policy_version FROM pr_decisions WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber AND commit_sha = :headSha LIMIT 1`,
           { replacements: { owner, repo, prNumber, headSha }, type: sequelize.QueryTypes.SELECT }
         );
-
+  
         const errorMsg = `POLICY_VERSION_RACE_DETECTED: Decision for SHA ${headSha} rejected. Expected version: ${decisionObject.policy_version}. Actual DB version: ${currentRecord?.policy_version || 'NOT_FOUND'}.`;
-        console.error(`[PrAnalysisService] [trace:${traceId}] ${errorMsg}`);
+        logger.error(`[PrAnalysisService] [trace:${traceId}] ${errorMsg}`);
         
         const raceError = new Error(errorMsg);
         raceError.code = 'POLICY_VERSION_RACE';
         throw raceError;
       }
       
-      console.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
-
+      logger.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
+  
     } catch (error) {
-      console.error(`[PrAnalysisService] Failed: ${error.message}`);
+      logger.error(`[PrAnalysisService] Failed: ${error.message}`);
       
       // Fail-Closed Logic
       try {
@@ -232,7 +233,7 @@ export class PrAnalysisService {
           }
         }
       } catch (e) {
-        console.error("Failed to report error status:", e.message);
+        logger.error("Failed to report error status:", e.message);
       }
       
       // Rollback transaction if still active
