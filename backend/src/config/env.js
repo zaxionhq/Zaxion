@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { z } from "zod";
+import * as logger from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,10 +82,10 @@ const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
   const errs = parsed.error.format();
   if ((process.env.NODE_ENV || "development") === "production") {
-    console.error("❌ Critical: Env validation failed in production:", JSON.stringify(errs, null, 2));
+    logger.error("Critical: Env validation failed in production:", JSON.stringify(errs, null, 2));
     throw new Error("Missing or invalid environment variables");
   }
-  console.warn("⚠️ [config/env] Warning: Env validation issues found (Development):", JSON.stringify(errs, null, 2));
+  logger.warn("Env validation issues found (Development):", JSON.stringify(errs, null, 2));
 }
 
 // 2. Extract Data (No partial recovery with error objects)
