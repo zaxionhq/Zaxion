@@ -35,9 +35,9 @@ export async function initDb() {
   }
 
   // ✅ Set up associations
-  Object.keys(db).forEach((modelName) => {
-    if (db[modelName].associate) {
-      db[modelName].associate(db);
+  Object.values(db).forEach((model) => {
+    if (model && typeof model.associate === 'function') {
+      model.associate(db);
     }
   });
 
