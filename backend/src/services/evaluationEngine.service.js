@@ -9,12 +9,12 @@ export class EvaluationEngineService {
   constructor() {
     this.ENGINE_VERSION = '1.0.0';
     // Registry of deterministic checkers
-    this.checkers = {
-      coverage: this._checkCoverage.bind(this),
-      security_path: this._checkSecurityPath.bind(this),
-      file_extension: this._checkFileExtension.bind(this),
-      pr_size: this._checkPRSize.bind(this)
-    };
+    this.checkers = new Map([
+      ['coverage', this._checkCoverage.bind(this)],
+      ['security_path', this._checkSecurityPath.bind(this)],
+      ['file_extension', this._checkFileExtension.bind(this)],
+      ['pr_size', this._checkPRSize.bind(this)]
+    ]);
   }
 
   /**
@@ -42,7 +42,7 @@ export class EvaluationEngineService {
     for (const policy of appliedPolicies) {
       const rules = policy.rules_logic || {};
       const policyType = rules.type || 'unknown';
-      const checker = this.checkers[policyType];
+      const checker = this.checkers.get(policyType);
 
       let result = { verdict: 'PASS', message: 'Policy satisfied.' };
 
