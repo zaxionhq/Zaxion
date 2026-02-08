@@ -38,7 +38,7 @@ const DecisionResolutionConsole = () => {
   const pRepo = repoName || searchParams.get('repo');
   const pPr = prNumStr || searchParams.get('pr');
 
-  const decisionData = React.useMemo<any | null>(() => {
+  const decisionData = React.useMemo<PRDecision | null>(() => {
     if (!latestDecision) return null;
     
     // Phase 6 Structural Requirement:
