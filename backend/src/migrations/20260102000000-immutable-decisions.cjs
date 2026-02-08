@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
@@ -33,9 +35,9 @@ module.exports = {
         FOR EACH ROW EXECUTE FUNCTION protect_final_decisions();
       `);
 
-      console.log('Migration 20260102000000-immutable-decisions successful');
+      logger.log('Migration 20260102000000-immutable-decisions successful');
     } catch (error) {
-      console.error('Migration error:', error);
+      logger.error('Migration error:', error);
       throw error;
     }
   },
@@ -46,7 +48,7 @@ module.exports = {
       await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS protect_final_decisions();');
       await queryInterface.removeColumn('pr_decisions', 'evaluation_status');
     } catch (error) {
-      console.error('Migration rollback error:', error);
+      logger.error('Migration rollback error:', error);
       throw error;
     }
   }
