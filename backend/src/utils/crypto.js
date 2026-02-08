@@ -1,11 +1,12 @@
 // src/utils/crypto.js
 import crypto from "crypto";
+import * as logger from "./logger.js";
 
 const ALGO = "aes-256-gcm";
 const KEY_RAW = process.env.TOKEN_ENCRYPTION_KEY || "";
 
 if (!KEY_RAW || KEY_RAW.length < 32) {
-  console.warn("⚠️ TOKEN_ENCRYPTION_KEY is missing or too short. Encryption will be disabled.");
+  logger.warn("TOKEN_ENCRYPTION_KEY is missing or too short. Encryption will be disabled.");
 }
 
 function keyBuffer() {
