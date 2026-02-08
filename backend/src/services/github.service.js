@@ -130,12 +130,8 @@ const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB limit
 function isBinaryBuffer(buffer) {
   // Check for null bytes in the first 1024 bytes - a very reliable heuristic for binary files
   const checkLen = Math.min(buffer.length, 1024);
-  for (let i = 0; i < checkLen; i++) {
-    if (buffer[i] === 0x00) {
-      return true;
-    }
-  }
-  return false;
+  const checkBuffer = buffer.slice(0, checkLen);
+  return checkBuffer.includes(0x00);
 }
 
 function shouldIncludeFile(path, includeIgnored = false) {
@@ -203,7 +199,8 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
 
     // Convert flat list to tree structure
     const root = { name: "", path: "", type: "folder", children: [] };
-    const map = { "": root };
+    const nodeMap = new Map();
+    nodeMap.set("", root);
 
     filteredFiles.forEach(file => {
       const parts = file.path.split('/');
@@ -214,7 +211,7 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
         const parentPath = currentPath;
         currentPath = currentPath ? `${currentPath}/${part}` : part;
 
-        if (!map[currentPath]) {
+        if (!nodeMap.has(currentPath)) {
           const newNode = {
             name: part,
             path: currentPath,
@@ -223,10 +220,10 @@ export async function getRepoTree(token, owner, repo, branch, includeIgnored = f
             size: isFile ? file.size : undefined,
             children: isFile ? undefined : []
           };
-          map[currentPath] = newNode;
+          nodeMap.set(currentPath, newNode);
           
           // Add to parent
-          const parentNode = map[parentPath];
+          const parentNode = nodeMap.get(parentPath);
           if (parentNode) { // Should always be true as we process in order
             parentNode.children.push(newNode);
           }
@@ -582,9 +579,6 @@ export async function fetchRepoFileContent(token, owner, repo, path) {
       // If all attempts fail, throw the original error
       throw directErr;
     }
-    
-    status = 'failure';
-    throw new Error(`File not found: ${path}. Could not locate the file in the repository.`);
   } catch (error) {
     status = 'failure';
     logger.error({ error }, "Error fetching file content");
