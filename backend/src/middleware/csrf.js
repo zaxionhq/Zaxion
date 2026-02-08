@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import * as logger from '../utils/logger.js';
 
 // CSRF token storage (in production, use Redis or database)
 const csrfTokens = new Map();
@@ -61,9 +62,9 @@ export const verifyCSRFToken = (req, res, next) => {
   const sessionId = req.cookies?.app_session_id;
   
   // For development debugging
-  console.log(`[CSRF] Verifying token for ${req.method} ${req.path}`);
-  console.log(`[CSRF] Session ID: ${sessionId || 'None'}`);
-  console.log(`[CSRF] Token provided: ${token ? 'Yes' : 'No'}`);
+  logger.debug(`[CSRF] Verifying token for ${req.method} ${req.path}`);
+  logger.debug(`[CSRF] Session ID: ${sessionId || 'None'}`);
+  logger.debug(`[CSRF] Token provided: ${token ? 'Yes' : 'No'}`);
   
   if (!sessionId || !token) {
     return res.status(403).json({
