@@ -3,14 +3,22 @@ import { expect } from 'chai';
 import createApp from '../../src/app.js';
 import { initDb } from '../../src/models/index.js';
 import { DecisionDTO } from '../../src/dtos/decision.dto.js';
+import { redactionFormat } from '../../src/utils/logger.js';
+import winston from 'winston';
 
 describe('Trust Boundary & Data Leakage Integration Tests', () => {
   let app;
   let db;
 
-  before(async () => {
+  beforeAll(async () => {
     db = await initDb();
     app = createApp(db);
+  });
+
+  afterAll(async () => {
+    if (db && db.sequelize) {
+      await db.sequelize.close();
+    }
   });
 
   describe('GET /api/v1/github/decisions/:id', () => {
@@ -42,10 +50,6 @@ describe('Trust Boundary & Data Leakage Integration Tests', () => {
 
   describe('Logging Redaction', () => {
     it('should redact sensitive keys in logs', async () => {
-      // This is harder to test via HTTP, but we can verify the logger utility
-      const { redactionFormat } = await import('../../src/utils/logger.js');
-      const winston = await import('winston');
-      
       let loggedData;
       const testTransport = new winston.transports.Console({
         silent: true // don't actually print to console
