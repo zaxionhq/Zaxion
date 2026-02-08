@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExternalLink, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import logger from '@/lib/logger';
 
 interface Decision {
   id: number;
@@ -31,7 +32,7 @@ export const DecisionExplorer: React.FC = () => {
           setDecisions(data);
         }
       } catch (error) {
-        console.error('Failed to fetch decisions:', error);
+        logger.error('Failed to fetch decisions:', error);
       } finally {
         setIsLoading(false);
       }
