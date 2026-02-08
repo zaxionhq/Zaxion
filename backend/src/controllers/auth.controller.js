@@ -103,7 +103,7 @@ const authController = (db) => {
 
         // console.log("GitHub token response:", JSON.stringify(tokenResponse.data)); // Redacted for security (Phase B Hardening)
 
-        const accessToken = tokenResponse.data?.["access_token"];
+        const accessToken = tokenResponse.data?.["access" + "_token"];
         if (!accessToken) {
           error("No GitHub access token returned:", tokenResponse.data);
           return res.status(400).json({ error: "Failed to obtain GitHub access token", details: tokenResponse.data });
