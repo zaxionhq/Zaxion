@@ -17,7 +17,7 @@ import { Registry, Counter, Histogram } from 'prom-client';
 import { register, httpRequestCounter, httpRequestDurationSeconds } from './utils/metrics.js';
 import { generateCSRFToken, verifyCSRFToken } from './middleware/csrf.js';
 
-export default function createApp(db) { // Accepts db as an argument
+export default function createApp(db) {
   const app = express();
 
   // Make db accessible globally via app.locals for middlewares/routes
@@ -168,7 +168,6 @@ export default function createApp(db) { // Accepts db as an argument
   app.use((req, res) => res.status(404).json({ error: "Not Found", path: req.originalUrl }));
 
   // Central error handler with standardized envelope
-  // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {
     logger.error({ err }, "API Error");
     const status = err.status || 500;
