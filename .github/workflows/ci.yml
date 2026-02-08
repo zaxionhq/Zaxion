@@ -49,8 +49,8 @@ jobs:
       REDIS_PORT: 6379
       JWT_SECRET: ci_test_secret
       GITHUB_APP_ID: 12345
-      GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
-      GITHUB_WEBHOOK_SECRET: ${{ secrets.GITHUB_WEBHOOK_SECRET }}
+      GITHUB_PRIVATE_KEY: "${{ secrets.GITHUB_PRIVATE_KEY }}"
+      GITHUB_WEBHOOK_SECRET: "${{ secrets.GITHUB_WEBHOOK_SECRET }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -69,9 +69,34 @@ jobs:
         working-directory: backend
         run: npm run lint
 
-      - name: Security audit (non-blocking)
+      - name: Security audit (blocking)
         working-directory: backend
-        run: npm audit --production --audit-level=critical || true
+        run: npm audit --production --audit-level=critical
+
+      - name: Scan for leaked secrets
+        working-directory: backend
+        run: |
+          if grep -rnE "(access_token|client_secret|private_key|password|jwt_secret)" src/ --exclude=env.js; then
+            echo "❌ CRITICAL: Potential secrets detected in source code!"
+            exit 1
+          fi
+
+      - name: Scan for sensitive logs
+        working-directory: backend
+        run: |
+          if grep -rnE "console\.(log|dir|table|trace)" src/ --exclude-dir=dtos --exclude-dir=utils; then
+            echo "❌ SECURITY: Unredacted console logs detected in protected directories!"
+            exit 1
+          fi
+
+      - name: Prevent security bypass overrides
+        working-directory: backend
+        run: |
+          if grep -rnE "eslint-disable(-next-line)? security/" src/; then
+            echo "❌ BYPASS ATTEMPT: Security rules are being silenced with inline eslint-disable comments!"
+            echo "Security overrides must be approved centrally in backend/eslint.config.js, not inline."
+            exit 1
+          fi
 
       - name: Run migrations
         working-directory: backend
