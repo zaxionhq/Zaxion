@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
@@ -11,9 +13,9 @@ module.exports = {
           comment: 'Link to the GitHub Check Run for precise PATCHing'
         });
       }
-      console.log('Migration 20260204000000-add-github-check-run-id-to-pr-decisions successful');
+      logger.log('Migration 20260204000000-add-github-check-run-id-to-pr-decisions successful');
     } catch (error) {
-      console.error('Migration error:', error);
+      logger.error('Migration error:', error);
       throw error;
     }
   },
@@ -22,7 +24,7 @@ module.exports = {
     try {
       await queryInterface.removeColumn('pr_decisions', 'github_check_run_id');
     } catch (error) {
-      console.error('Migration rollback error:', error);
+      logger.error('Migration rollback error:', error);
       throw error;
     }
   }
