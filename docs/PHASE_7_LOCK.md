@@ -50,6 +50,10 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 - **Purpose**: Define the market story, transparency model, and open-source strategy.
 - **Focus**: Threat modeling and public glossary of terms.
 
+### **Pillar 7.6 — Canonical Governance Policies (The Constitution)**
+- **Purpose**: Define the mandatory set of policies that govern the enterprise ecosystem.
+- **Focus**: Hardening security, coverage, and accountability.
+
 ---
 
 ## **4. Success Metrics**
