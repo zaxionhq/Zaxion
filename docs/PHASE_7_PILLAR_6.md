@@ -7,51 +7,28 @@ This pillar defines the core set of governance policies that transform Zaxion fr
 
 ## **2. Core Governance Policies**
 
-### **1️⃣ Test Coverage Policy (Coverage)**
-*   **Purpose**: Prevent untested code from entering main branches.
-*   **Rule**: Requires a minimum number of test files to be added or modified.
-*   **Default Config**: `min_tests = 1`
-*   **Evaluation Input**: Changed files + test directory diff.
-*   **Status**: `BLOCK` if requirement not met.
-*   **Why Mandatory**: Untested code is the #1 source of regressions.
-
-### **2️⃣ High-Risk File Change Policy**
-*   **Purpose**: Protect sensitive system boundaries.
-*   **Rule**: Any change to critical paths requires extra scrutiny.
-*   **Protected Paths**: `/auth`, `/security`, `/infra`, `/ci`, `/db/migrations`.
-*   **Condition**: Change detected without specific approval.
-*   **Status**: `BLOCK`
-*   **Why Mandatory**: These files can break or compromise the system instantly.
-
-### **3️⃣ CI Status Integrity Policy**
+### **1️⃣ CI Status Integrity Policy**
 *   **Purpose**: Ensure CI truth cannot be bypassed.
 *   **Rule**: All required CI checks must pass.
 *   **Condition**: Missing, skipped, or failed check.
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: Green CI is the minimum bar for trust.
 
-### **4️⃣ Secret Exposure Detection Policy**
+### **2️⃣ Secret Exposure Detection Policy**
 *   **Purpose**: Prevent credential leaks.
 *   **Rule**: Scan diffs for secrets (tokens, keys, certs).
 *   **Signals**: Entropy detection + regex patterns.
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: One leaked key can cause catastrophic damage.
 
-### **5️⃣ Large Diff / Blast Radius Policy**
-*   **Purpose**: Flag dangerous large changes.
-*   **Rule**: PR exceeds line/file change thresholds.
-*   **Default Thresholds**: `>500 LOC` or `>20 files`.
-*   **Status**: `WARN` (upgradeable to `BLOCK`).
-*   **Why Mandatory**: Large PRs hide bugs and bypass review.
-
-### **6️⃣ Dependency Risk Policy**
+### **3️⃣ Dependency Risk Policy**
 *   **Purpose**: Prevent vulnerable dependencies.
 *   **Rule**: New dependency added with known vulnerabilities.
 *   **Signal Source**: Lockfile diff + vulnerability DB.
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: Supply-chain attacks are common.
 
-### **7️⃣ Reviewer Coverage Policy**
+### **4️⃣ Reviewer Coverage Policy**
 *   **Purpose**: Enforce human accountability.
 *   **Rule**: Minimum reviewers required.
 *   **Default**: `min_reviewers = 1`
@@ -59,26 +36,47 @@ This pillar defines the core set of governance policies that transform Zaxion fr
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: No human review = silent failure.
 
-### **8️⃣ Ownership Boundary Policy**
+### **5️⃣ Ownership Boundary Policy**
 *   **Purpose**: Enforce code ownership.
 *   **Rule**: Code owners must review owned files.
 *   **Signal**: `CODEOWNERS` + diff.
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: Prevents unauthorized changes.
 
-### **9️⃣ Risk Escalation Policy**
+### **6️⃣ Risk Escalation Policy**
 *   **Purpose**: Escalate combined risks.
 *   **Rule**: Multiple `WARNs` → `BLOCK`.
 *   **Default**: `>=2 WARN → BLOCK`.
 *   **Status**: `BLOCK`
 *   **Why Mandatory**: Death by a thousand cuts prevention.
 
-### **🔟 Override Accountability Policy**
+### **7️⃣ Override Accountability Policy**
 *   **Purpose**: Prevent silent overrides.
 *   **Rule**: Overrides require justification.
 *   **Audit Trail**: User, reason, timestamp.
 *   **Status**: `BLOCK` override without reason.
 *   **Why Mandatory**: Overrides are dangerous without traceability.
+
+### **8️⃣ License Compliance Policy**
+*   **Purpose**: Protect intellectual property.
+*   **Rule**: Block forbidden or restrictive open-source licenses.
+*   **Signal**: `package.json` / `requirements.txt` / `Gemfile` scan.
+*   **Status**: `BLOCK`
+*   **Why Mandatory**: Legal risk from incompatible licenses is an enterprise showstopper.
+
+### **9️⃣ Branch Protection Alignment Policy**
+*   **Purpose**: Enforce release hygiene.
+*   **Rule**: PR target branch must align with the environment strategy.
+*   **Condition**: PR directly to `main` from an unauthorized fork or feature branch.
+*   **Status**: `BLOCK`
+*   **Why Mandatory**: Prevents accidental deployments and "cowboy coding" on stable branches.
+
+### **🔟 Commit Message Standard Policy**
+*   **Purpose**: Ensure audit trail readability.
+*   **Rule**: Commits must follow the Conventional Commits specification.
+*   **Pattern**: `type(scope): description`
+*   **Status**: `WARN` (upgradeable to `BLOCK`).
+*   **Why Mandatory**: Semantic commit messages are essential for automated changelog generation and root-cause analysis.
 
 ---
 
