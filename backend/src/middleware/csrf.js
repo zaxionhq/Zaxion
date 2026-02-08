@@ -107,9 +107,13 @@ export const verifyCSRFToken = (req, res, next) => {
     });
   }
   
-  // Verify token
-  if (token !== storedToken.token) {
-    console.log(`[CSRF] Token mismatch. Provided: ${token}, Stored: ${storedToken.token}`);
+  // Verify token using timing-safe comparison
+  const providedTokenBuffer = Buffer.from(token);
+  const storedTokenBuffer = Buffer.from(storedToken.token);
+  
+  if (providedTokenBuffer.length !== storedTokenBuffer.length || 
+      !crypto.timingSafeEqual(providedTokenBuffer, storedTokenBuffer)) {
+    console.log(`[CSRF] Token mismatch.`);
     
     return res.status(403).json({
       code: 'CSRF_TOKEN_INVALID',
