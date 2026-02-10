@@ -38,7 +38,8 @@ const schema = z.object({
   TOKEN_ENCRYPTION_KEY: z.string().optional(),
 
   // --- External Integrations ---
-  FRONTEND_URL: z.string().optional(),
+  FRONTEND_URL: z.string().default("http://localhost:8080"),
+  FRONTEND_ORIGIN: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   REDIS_URL: z.string().default("redis://localhost:6379"),
 

@@ -23,7 +23,7 @@ export default function createApp(db) {
   // Make db accessible globally via app.locals for middlewares/routes
   app.locals.db = db;
 
-  const FRONTEND_ORIGIN = env.get("FRONTEND_ORIGIN") || env.get("FRONTEND_URL") || "http://localhost:5173";
+  const FRONTEND_ORIGIN = env.FRONTEND_ORIGIN || env.FRONTEND_URL;
   const NODE_ENV = env.NODE_ENV || "development";
   const isProd = NODE_ENV === "production";
 
@@ -37,7 +37,7 @@ export default function createApp(db) {
       if(!origin) return callback(null, true);
       
       // Check if the origin is allowed
-      const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:5000', 'http://localhost:5173', 'http://localhost:8080'];
+      const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:5000', 'http://localhost:8080'];
       if(allowedOrigins.indexOf(origin) !== -1 || !isProd) {
         callback(null, true);
       } else {

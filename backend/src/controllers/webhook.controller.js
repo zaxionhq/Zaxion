@@ -17,7 +17,12 @@ export async function handleGitHubWebhook(req, res, next) {
 
     // 1. Verify Signature (Enterprise-ready requirement)
     // Fail Closed: If signature verification fails, block the request.
-    if (secret && signature) {
+    if (secret) {
+      if (!signature) {
+        logger.warn("[webhook] Missing signature while secret is configured");
+        return res.status(401).json({ error: "Missing signature" });
+      }
+
       const hmac = crypto.createHmac("sha256", secret);
       const digest = "sha256=" + hmac.update(JSON.stringify(req.body)).digest("hex");
       
@@ -25,9 +30,14 @@ export async function handleGitHubWebhook(req, res, next) {
         logger.warn("[webhook] Invalid signature");
         return res.status(401).json({ error: "Invalid signature" });
       }
-    } else if (!secret) {
-      // In production, this should ideally be an error, but for dev we warn
-      logger.warn("[webhook] GITHUB_WEBHOOK_SECRET not set, skipping signature verification");
+    } else {
+      // Step 1: Strict Webhook Enforcement (Fail Closed)
+      // In production, we MUST have a secret.
+      if (process.env.NODE_ENV === 'production') {
+        logger.error("[webhook] GITHUB_WEBHOOK_SECRET is missing in production! Rejecting all requests.");
+        return res.status(500).json({ error: "Internal Server Error: Webhook configuration missing" });
+      }
+      logger.warn("[webhook] GITHUB_WEBHOOK_SECRET not set, skipping signature verification (DEV ONLY)");
     }
 
     const event = req.headers["x-github-event"];

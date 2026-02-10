@@ -1,5 +1,6 @@
 // src/controllers/auth.controller.js
 import axios from "axios";
+import env from "../config/env.js";
 import { log, error, warn } from "../utils/logger.js";
 import { generateToken, verifyToken } from "../utils/jwt.js";
 import { parseDuration } from "../utils/time.utils.js"; // Correct import for parseDuration
@@ -156,7 +157,7 @@ const authController = (db) => {
       res.clearCookie("oauth_redirect");
 
       // redirect to frontend
-      const frontend = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || "http://localhost:8080";
+      const frontend = env.FRONTEND_ORIGIN || env.FRONTEND_URL || "http://localhost:8080";
       const targetUrl = oauthRedirect || `${frontend}/?auth=success`;
       
       // Ensure targetUrl is absolute if it's from oauthRedirect

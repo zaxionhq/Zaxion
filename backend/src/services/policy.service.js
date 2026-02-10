@@ -42,24 +42,54 @@ export async function listPolicies(db, scope, target_id) {
  * Creates a new immutable version of a policy.
  * @param {object} db - Database instance
  * @param {string} policyId - UUID of the policy
- * @param {object} payload - { enforcement_level, rules_logic }
+ * @param {object} payload - { enforcement_level, rules_logic, parent_org_id }
  * @param {string} userId - UUID of the creator
+ * @param {string} orgId - Optional organization ID for narrowing check
  */
-export async function createPolicyVersion(db, policyId, payload, userId) {
+export async function createPolicyVersion(db, policyId, payload, userId, orgId) {
   // 1. Check if policy exists
   const policy = await db.Policy.findByPk(policyId);
   if (!policy) {
     throw new Error('Policy not found');
   }
 
-  // 2. Determine next version number
+  // 2. Policy Hierarchy Validation (Narrowing Principle)
+  // If this is a REPO policy, it must be stricter than the ORG policy
+  if (policy.scope === 'REPO' && (orgId || payload.parent_org_id)) {
+    const targetOrgId = orgId || payload.parent_org_id;
+    const orgPolicy = await db.Policy.findOne({
+      where: {
+        name: policy.name,
+        scope: 'ORG',
+        target_id: targetOrgId
+      },
+      include: [{
+        model: db.PolicyVersion,
+        as: 'versions',
+        order: [['version_number', 'DESC']],
+        limit: 1
+      }]
+    });
+
+    if (orgPolicy && orgPolicy.versions && orgPolicy.versions.length > 0) {
+      const orgRules = orgPolicy.versions[0].rules_logic;
+      const repoRules = payload.rules_logic;
+      
+      const narrowingError = validateNarrowing(orgRules, repoRules);
+      if (narrowingError) {
+        throw new Error(`Policy Narrowing Violation: ${narrowingError}`);
+      }
+    }
+  }
+
+  // 3. Determine next version number
   const lastVersion = await db.PolicyVersion.findOne({
     where: { policy_id: policyId },
     order: [['version_number', 'DESC']],
   });
   const nextVersionNumber = lastVersion ? lastVersion.version_number + 1 : 1;
 
-  // 3. Create immutable version
+  // 4. Create immutable version
   const version = await db.PolicyVersion.create({
     policy_id: policyId,
     version_number: nextVersionNumber,
@@ -69,6 +99,33 @@ export async function createPolicyVersion(db, policyId, payload, userId) {
   });
 
   return version.toJSON();
+}
+
+/**
+ * Ensures repo rules are stricter than org rules
+ */
+function validateNarrowing(orgRules, repoRules) {
+  if (!orgRules || !repoRules) return null;
+
+  // 1. Coverage Narrowing (min_tests must be >= parent)
+  if (orgRules.type === 'coverage' && repoRules.type === 'coverage') {
+    const orgMin = orgRules.min_tests || 1;
+    const repoMin = repoRules.min_tests || 1;
+    if (repoMin < orgMin) {
+      return `Repo 'min_tests' (${repoMin}) cannot be weaker than Org 'min_tests' (${orgMin})`;
+    }
+  }
+
+  // 2. PR Size Narrowing (max_files must be <= parent)
+  if (orgRules.type === 'pr_size' && repoRules.type === 'pr_size') {
+    const orgMax = orgRules.max_files || 20;
+    const repoMax = repoRules.max_files || 20;
+    if (repoMax > orgMax) {
+      return `Repo 'max_files' (${repoMax}) cannot be weaker than Org 'max_files' (${orgMax})`;
+    }
+  }
+
+  return null;
 }
 
 export async function getPolicyVersion(db, policyId, versionNumber) {

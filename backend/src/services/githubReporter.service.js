@@ -2,6 +2,7 @@
  * GitHub Check Run Reporter
  * Updates the PR UI on GitHub using the Checks API.
  */
+import env from "../config/env.js";
 import * as logger from "../utils/logger.js";
 
 export class GitHubReporterService {
@@ -71,7 +72,7 @@ export class GitHubReporterService {
     }
 
     // 0. Build Rich Markdown Output
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
+    const frontendUrl = env.FRONTEND_URL || "http://localhost:8080";
     const deepLink = `${frontendUrl}/pr/${owner}/${repo}/${prNumber}`;
     
     let summary = description;

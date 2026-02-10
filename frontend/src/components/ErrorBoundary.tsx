@@ -49,6 +49,8 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    const isProd = import.meta.env.PROD || process.env.NODE_ENV === 'production';
+
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -67,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!import.meta.env.PROD && this.state.error && (
+              {!isProd && this.state.error && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="font-mono text-xs">
