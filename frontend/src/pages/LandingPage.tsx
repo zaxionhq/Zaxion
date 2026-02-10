@@ -55,17 +55,9 @@ const LandingPage = () => {
           
           <div className="hidden md:flex items-center gap-8">
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
-            <button 
-              onClick={() => navigate('/governance')}
-              className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors"
-            >
-              Governance
-            </button>
-            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" asChild>
-              <a href="https://github.com/apps/zaxion-guard" target="_blank" rel="noopener noreferrer">
-                <Github className="h-4 w-4 mr-2 inline" />
-                Install
-              </a>
+            <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
+            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/waitlist')}>
+              Join Waitlist
             </NeonButton>
           </div>
         </div>
@@ -119,19 +111,15 @@ const LandingPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-6"
+              className="flex flex-col items-center gap-4"
             >
-              <NeonButton color="cyan" onClick={() => navigate('/workspace')}>
-                Open Resolution Console
+              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/waitlist')}>
+                Join the Private Waitlist
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
-              <NeonButton 
-                variant="glass" 
-                color="purple"
-                onClick={() => navigate('/governance')}
-              >
-                Governance Dashboard
-              </NeonButton>
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/30">
+                Invite-only • No spam • Early design partners
+              </p>
             </motion.div>
 
             {/* Floating Hero Image/Panel */}
@@ -367,23 +355,38 @@ const LandingPage = () => {
 
         {/* SECTION 9 — Final CTA */}
         <section className="container mx-auto px-6 py-32">
-          <div className="relative bg-[#020617] rounded-[2.5rem] p-12 md:p-24 flex flex-col items-center text-center border border-white/5 shadow-2xl">
+          <div className="relative bg-[#020617] rounded-[2.5rem] p-12 md:p-24 flex flex-col items-center text-center border border-white/5 shadow-2xl overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-neon-cyan/5 to-transparent rounded-[2.5rem]" />
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-8 relative z-10">
-              Ready to explore the <br />
-              <span className="gradient-text">governance model?</span>
-            </h2>
-            <div className="flex flex-col sm:flex-row gap-6 relative z-10">
-              <NeonButton color="cyan" onClick={() => navigate('/architecture')}>
-                Read the Architecture
-              </NeonButton>
-              <NeonButton variant="glass" color="purple" onClick={() => navigate('/login')}>
-                Explore the Model
-              </NeonButton>
-              <NeonButton variant="glass" color="pink">
-                Request Early Access
-              </NeonButton>
-            </div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="relative z-10"
+            >
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-8">
+                Ready to evaluate Zaxion <br />
+                <span className="gradient-text">in your workflow?</span>
+              </h2>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+                <NeonButton color="cyan" size="lg" className="px-10" onClick={() => navigate('/waitlist')}>
+                  Join the Private Waitlist
+                </NeonButton>
+                
+                <a 
+                  href="#architecture" 
+                  className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
+                >
+                  Read the Governance Model
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
+
+              <p className="mt-12 text-sm text-white/20 font-medium">
+                Private beta launching soon. Early teams get priority.
+              </p>
+            </motion.div>
           </div>
         </section>
       </main>

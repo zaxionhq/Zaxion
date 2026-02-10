@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "./pages/LandingPage";
+import Waitlist from "./pages/Waitlist";
 import DecisionResolutionConsole from "./pages/DecisionResolutionConsole";
 import GovernanceDashboard from "./pages/GovernanceDashboard";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/waitlist" element={<Waitlist />} />
               <Route path="/pr/:owner/:repo/:prNumber" element={<DecisionResolutionConsole />} />
               <Route path="/workspace" element={<WorkspaceRedirect />} />
               <Route path="/governance" element={<GovernanceDashboard />} />
