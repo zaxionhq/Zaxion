@@ -10,6 +10,7 @@
     "db:migrate": "dotenv -e ./.env -- node scripts/run-migrate.js",
     "db:create-raw": "node scripts/create-database.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint ."
   },
   "dependencies": {
