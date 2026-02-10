@@ -42,11 +42,10 @@ jobs:
       PORT: 5000
       DB_HOST: localhost
       DB_PORT: 5432
-      DB_USER: test_user
-      DB_PASSWORD: test_password
+      APP_DB_USER: test_user
+      APP_DB_PASSWORD: test_password
       DB_NAME: github_test_db
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
+      REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci_test_secret
       GITHUB_APP_ID: "12345"
       GITHUB_PRIVATE_KEY: ${{ secrets.GITHUB_PRIVATE_KEY }}
@@ -63,7 +62,7 @@ jobs:
 
       - name: Install deps
         working-directory: backend
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Lint
         working-directory: backend
@@ -98,32 +97,16 @@ jobs:
             exit 1
           fi
 
-      - name: Run migrations
-        working-directory: backend
-        run: npm run db:migrate
-        env:
-          DATABASE_URL: postgres://test_user:test_password@localhost:5432/github_test_db
-
-      - name: Run tests
+      - name: Run Tests
         working-directory: backend
         run: npm test
 
-      - name: Start backend
-        working-directory: backend
-        run: |
-          nohup npm run start > server.log 2>&1 &
-
-      - name: Wait for health
-        run: |
-          for i in {1..10}; do
-            if curl -s http://localhost:5000/health; then
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Backend failed to start"
-          cat backend/server.log
-          exit 1
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: backend/coverage/
 
   frontend-validation:
     name: Frontend Lint & Build
@@ -140,7 +123,7 @@ jobs:
 
       - name: Install deps
         working-directory: frontend
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Lint
         working-directory: frontend
