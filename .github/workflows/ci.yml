@@ -70,7 +70,7 @@ jobs:
 
       - name: Security audit (blocking)
         working-directory: backend
-        run: npm audit --production --audit-level=critical
+        run: npm audit --omit=dev --audit-level=critical
 
       - name: Scan for leaked secrets
         working-directory: backend
