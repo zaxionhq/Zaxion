@@ -19,6 +19,7 @@ import {
   FileText
 } from 'lucide-react';
 import { GovernanceRecordCard } from '@/components/governance/GovernanceRecordCard';
+import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTrail';
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
@@ -95,7 +96,7 @@ const LandingPage = () => {
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/30">
-                Early design partners • No spam
+                Design Partner Cohort: 04/10 Slots Remaining
               </p>
             </div>
 
@@ -168,6 +169,44 @@ const LandingPage = () => {
                     <p className="text-white/40 leading-relaxed font-medium">{pillar.desc}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Live Audit Trail Integration */}
+              <div className="mt-32 p-8 md:p-12 rounded-2xl border border-white/5 bg-white/[0.01] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <Scale className="h-64 w-64" />
+                </div>
+                
+                <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
+                  <div className="space-y-8">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-mono text-neon-cyan uppercase tracking-widest">
+                      Protocol Evidence
+                    </div>
+                    <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                      The Deterministic <br />
+                      <span className="gradient-text">Audit Trail.</span>
+                    </h3>
+                    <p className="text-white/40 leading-relaxed font-medium">
+                      Zaxion doesn't just block; it provides a longitudinal record of architectural intent. Every PR is a technical trial, resulting in a verifiable rationale anchored to your constitution.
+                    </p>
+                    <div className="space-y-4">
+                      {[
+                        "Stateless Evaluation",
+                        "Cryptographic Intent Verification",
+                        "Immutable Ledger Entry"
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
+                          <span className="text-sm font-bold text-white/60">{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-black/40 rounded-xl border border-white/5 p-6 backdrop-blur-sm shadow-2xl">
+                    <GovernanceAuditTrail />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
