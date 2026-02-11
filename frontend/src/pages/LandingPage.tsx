@@ -18,8 +18,9 @@ import {
   Ban,
   FileText
 } from 'lucide-react';
-import { GlassCard } from '@/components/ui/glass-card';
+import { GovernanceRecordCard } from '@/components/governance/GovernanceRecordCard';
 import { NeonButton } from '@/components/ui/neon-button';
+import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
 
 const LandingPage = () => {
@@ -67,107 +68,41 @@ const LandingPage = () => {
         {/* SECTION 1 — Hero */}
         <section className="container mx-auto px-6 mb-32">
           <div className="flex flex-col items-center text-center">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-black tracking-[0.2em] uppercase mb-8 border-neon-cyan/30 text-neon-cyan shadow-neon-cyan/10 shadow-lg"
-            >
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-black tracking-[0.2em] uppercase mb-8 border-neon-cyan/30 text-neon-cyan shadow-neon-cyan/10 shadow-lg">
               <Lock className="h-3 w-3" />
               Constitutional Governance Layer
-            </motion.div>
+            </div>
             
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-6xl md:text-8xl font-black tracking-tight mb-8 leading-[0.9]"
-            >
-              Stop shipping <br />
-              <span className="gradient-text">high-risk code.</span>
-            </motion.h1>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tight mb-8 leading-[0.9]">
+              Deterministic <br />
+              <span className="gradient-text">Governance.</span>
+            </h1>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="mb-8"
-            >
+            <div className="mb-8">
               <p className="text-xl md:text-2xl font-bold text-white/80">
-                Zaxion is not an AI reviewer. 
-                <span className="text-neon-cyan ml-2">It is a governance system for engineering decisions.</span>
+                Every PR becomes a verifiable 
+                <span className="text-neon-cyan ml-2">governance record.</span>
               </p>
-            </motion.div>
+            </div>
     
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-lg text-white/40 max-w-2xl mb-12 leading-relaxed font-medium"
-            >
-              Moving beyond static analysis and black-box AI feedback. Zaxion provides a deterministic, auditable framework for enforcing organizational standards and recording immutable intent.
-            </motion.p>
+            <p className="text-lg text-white/40 max-w-2xl mb-12 leading-relaxed font-medium">
+              Zaxion provides a deterministic, auditable framework for enforcing organizational standards and recording immutable intent. Designed for senior engineering and security teams.
+            </p>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex flex-col items-center gap-4"
-            >
+            <div className="flex flex-col items-center gap-4">
               <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/waitlist')}>
-                Join the Private Waitlist
+                Join Waitlist
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/30">
-                Invite-only • No spam • Early design partners
+                Early design partners • No spam
               </p>
-            </motion.div>
+            </div>
 
-            {/* Floating Hero Image/Panel */}
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              className="mt-24 w-full max-w-5xl mx-auto"
-            >
-              <GlassCard className="p-1 bg-gradient-to-br from-neon-cyan/20 to-neon-purple/20 rounded-[2rem]" hoverEffect={false}>
-                <div className="bg-[#020617] rounded-[1.9rem] overflow-hidden aspect-video relative group">
-                  <div className="absolute inset-0 bg-gradient-to-t from-neon-purple/10 to-transparent" />
-                  <div className="absolute top-0 left-0 right-0 h-12 bg-white/5 border-b border-white/5 flex items-center px-6 gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                    <div className="ml-4 px-3 py-1 rounded-md bg-white/5 text-[10px] text-white/40 font-mono">
-                      zaxion-guard / governance-registry
-                    </div>
-                  </div>
-                  <div className="p-12 flex flex-col items-center justify-center h-full space-y-8">
-                    <div className="flex gap-4">
-                      <div className="w-16 h-16 rounded-2xl glass-panel flex items-center justify-center">
-                        <Github className="h-8 w-8 text-white/40" />
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 h-[2px] bg-gradient-to-r from-white/10 to-neon-cyan" />
-                        <div className="w-4 h-4 rounded-full bg-neon-cyan shadow-neon-cyan shadow-lg" />
-                      </div>
-                      <div className="w-20 h-20 rounded-3xl bg-white/5 border-2 border-white/10 flex items-center justify-center shadow-2xl group-hover:border-neon-cyan/50 transition-all overflow-hidden">
-                        <img src="/zaxion-logo.png" alt="Zaxion Logo" className="h-full w-full object-cover scale-150" />
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 rounded-full bg-neon-purple shadow-neon-purple shadow-lg" />
-                        <div className="w-12 h-[2px] bg-gradient-to-l from-white/10 to-neon-purple" />
-                      </div>
-                      <div className="w-16 h-16 rounded-2xl glass-panel flex items-center justify-center">
-                        <Cpu className="h-8 w-8 text-white/40" />
-                      </div>
-                    </div>
-                    <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold tracking-tight text-white">Binding Decision Matrix...</div>
-                      <div className="text-white/40 text-sm font-mono">Immutable policy link: 0x4f...a92</div>
-                    </div>
-                  </div>
-                </div>
-              </GlassCard>
-            </motion.div>
+            {/* Hero Artifact */}
+            <div className="mt-24 w-full flex justify-center opacity-100">
+              <GovernanceRecordCard />
+            </div>
           </div>
         </section>
 
@@ -175,27 +110,20 @@ const LandingPage = () => {
         <section id="problem" className="py-32 bg-white/[0.01] border-y border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">Why PR Quality Gates Fail at Scale</h2>
+              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">Why PR Quality Gates Fail</h2>
               <div className="space-y-12">
                 {[
-                  { title: "Static rules don’t understand context", desc: "Linters and legacy tools block everything or nothing, ignoring the risk profile of the specific change." },
-                  { title: "AI reviewers lack accountability", desc: "LLM-generated comments provide noise without responsibility. Who owns the decision when the AI is wrong?" },
-                  { title: "Overrides erase history", desc: "Emergency 'skip' buttons are common. But where is the record of why it was skipped and who signed off?" },
-                  { title: "Managers lack causal visibility", desc: "Dashboard charts show 'velocity' but hide the causal chain of why specific high-risk debt was allowed." }
+                  { title: "Rules lack context", desc: "Static analysis blocks everything or nothing, ignoring the risk profile of specific architectural changes." },
+                  { title: "Overrides erase history", desc: "Emergency bypasses are common, but they often leave no record of who signed off or why." },
+                  { title: "Decisions lack memory", desc: "Pipelines treat every PR as an isolated event, losing the institutional knowledge of past debt." }
                 ].map((item, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    className="flex gap-6 items-start group"
-                  >
+                  <div key={i} className="flex gap-6 items-start group">
                     <div className="w-1 h-12 bg-white/10 group-hover:bg-neon-cyan transition-colors shrink-0 mt-1" />
                     <div>
                       <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
                       <p className="text-white/40 text-lg leading-relaxed">{item.desc}</p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -214,38 +142,30 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 4 — Zaxion’s Constitutional Architecture */}
+        {/* SECTION 4 — The Governance Model (Institutional Pillars) */}
         <section id="architecture" className="py-32 bg-white/[0.01]">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 text-center">The Architecture of Authority</h2>
-              <div className="grid md:grid-cols-3 gap-16">
+              <h2 className="text-4xl md:text-5xl font-black mb-24 text-center tracking-tight">Constitutional Pillars</h2>
+              <div className="grid md:grid-cols-3 gap-24">
                 {[
                   {
-                    title: "Law (Policies)",
-                    icon: Scale,
-                    color: "cyan",
-                    desc: "Deterministic, versioned rules that define what is acceptable. Policies are declarative contracts that remove the 'guessing' from quality gating."
+                    title: "LAW",
+                    desc: "Policies are versioned, declarative, and immutable. They define the legal boundaries of your architecture."
                   },
                   {
-                    title: "Exception (Overrides)",
-                    icon: Lock,
-                    color: "purple",
-                    desc: "When a gate must be bypassed, Zaxion requires an immutable human signature. Responsibility is assigned to a specific actor with a logged justification."
+                    title: "JUDGMENT",
+                    desc: "Deterministic evaluation of every PR. Logic is history-blind and context-aware, ensuring absolute consistency."
                   },
                   {
-                    title: "Memory (Decisions)",
-                    icon: History,
-                    color: "pink",
-                    desc: "Every signal, gate outcome, and override is bound into a longitudinal ledger. The system remembers why debt was allowed, forever."
+                    title: "MEMORY",
+                    desc: "Every decision, signal, and override is recorded in a permanent ledger. The system never forgets debt."
                   }
                 ].map((pillar, i) => (
-                  <div key={i} className="space-y-6">
-                    <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center glass-panel", `text-neon-${pillar.color}`)}>
-                      <pillar.icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-2xl font-bold">{pillar.title}</h3>
-                    <p className="text-white/40 leading-relaxed">{pillar.desc}</p>
+                  <div key={i} className="space-y-8 text-center md:text-left">
+                    <div className="text-[10px] font-mono tracking-[0.4em] text-neon-cyan/60 uppercase">Pillar 0{i+1}</div>
+                    <h3 className="text-4xl font-black tracking-tighter">{pillar.title}</h3>
+                    <p className="text-white/40 leading-relaxed font-medium">{pillar.desc}</p>
                   </div>
                 ))}
               </div>
@@ -253,46 +173,42 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 5 — Narrative Flow */}
-        <section className="py-32 container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-black mb-16 text-center">What Actually Happens When a PR Is Evaluated</h2>
-            <div className="relative space-y-12">
-              <div className="absolute left-6 top-0 bottom-0 w-px bg-white/5" />
-              {[
-                "PR evaluation is triggered by an external engine (Zaxion Worker).",
-                "A deterministic decision is produced based on the risk surface.",
-                "A specific Policy Version is bound to the PR state.",
-                "If blocked, a human Override must be cryptographically signed.",
-                "The entire causal chain is recorded immutably in the Governance Ledger."
-              ].map((step, i) => (
-                <div key={i} className="flex gap-12 items-center relative">
-                  <div className="w-12 h-12 rounded-full glass-panel flex items-center justify-center font-mono font-bold text-neon-cyan shrink-0 z-10">
-                    {i + 1}
+        {/* SECTION 5 — Adoption Modes */}
+        <section className="py-32 border-t border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-black mb-16 text-center tracking-tight">Adoption Safety Modes</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  { mode: "OBSERVE_ONLY", desc: "Zaxion records decisions in the background without affecting PR status. Used for baseline audit." },
+                  { mode: "WARN_ONLY", desc: "Signals are visible to developers as non-blocking advisories. Used for policy socialization." },
+                  { mode: "ENFORCE", desc: "Governance records are binding. PRs cannot be merged without meeting constitutional standards." }
+                ].map((item, i) => (
+                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
+                    <div className="text-[10px] font-mono text-neon-cyan font-bold tracking-widest">{item.mode}</div>
+                    <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
                   </div>
-                  <p className="text-xl text-white/60">{step}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         {/* SECTION 6 — What Zaxion Is NOT */}
-        <section className="py-32 bg-red-500/[0.02] border-y border-white/5">
+        <section className="py-32 bg-white/[0.01] border-y border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight text-red-400">What Zaxion is NOT</h2>
+              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">What Zaxion Is Not</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  { title: "Not a Linter", desc: "We don't care about your semicolons." },
-                  { title: "Not an AI Judge", desc: "AI assists; it does not decide." },
-                  { title: "Not an Auto-Enforcer", desc: "Human authority is always absolute." },
-                  { title: "Not a Scoring System", desc: "We provide signals, not gamified points." }
+                  { title: "Not a CI Plugin", desc: "Zaxion is an independent governance layer, not a script in your YAML." },
+                  { title: "Not a Linter", desc: "We don't care about semicolons. We care about architectural intent." },
+                  { title: "Not Heuristics", desc: "No 'scoring' or fuzzy logic. Decisions are binary and deterministic." },
+                  { title: "Not Override-by-Comment", desc: "Bypassing a gate requires a signed record, not a keyword in a comment." }
                 ].map((item, i) => (
-                  <div key={i} className="p-6 rounded-2xl glass-panel border-red-500/10">
-                    <Ban className="h-6 w-6 text-red-500/50 mx-auto mb-4" />
-                    <h4 className="font-bold mb-2">{item.title}</h4>
-                    <p className="text-xs text-white/30">{item.desc}</p>
+                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01]">
+                    <h4 className="font-bold mb-3 text-sm uppercase tracking-widest text-white/40">{item.title}</h4>
+                    <p className="text-xs text-white/30 leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -337,69 +253,74 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 8 — Readiness & Maturity Statement */}
+        {/* SECTION 8 — Maturity Statement */}
         <section className="py-32 bg-white/[0.01] border-t border-white/5">
           <div className="container mx-auto px-6 text-center">
-            <div className="max-w-2xl mx-auto p-12 rounded-3xl glass-panel border-white/10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-neon-cyan mb-6">
-                <AlertTriangle className="h-3 w-3" />
-                PHASE 4: ARCHITECTURAL MATURITY
+            <div className="max-w-2xl mx-auto p-12 rounded-xl border border-white/5 bg-white/[0.01]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-neon-cyan mb-8 uppercase tracking-widest">
+                <Shield className="h-3 w-3" />
+                Maturity Statement
               </div>
-              <h2 className="text-2xl font-bold mb-6">Maturity Statement</h2>
-              <p className="text-white/40 leading-relaxed italic">
-                "Zaxion is currently in architectural maturity phase. Enforcement and dashboards follow locked contracts to ensure long-term stability and auditability."
+              <p className="text-white/40 leading-relaxed font-medium text-sm">
+                Zaxion is in a locked architectural state. All governance contracts and decision logic are versioned to ensure longitudinal auditability and institutional stability.
               </p>
             </div>
           </div>
         </section>
 
         {/* SECTION 9 — Final CTA */}
-        <section className="container mx-auto px-6 py-32">
-          <div className="relative bg-[#020617] rounded-[2.5rem] p-12 md:p-24 flex flex-col items-center text-center border border-white/5 shadow-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-neon-cyan/5 to-transparent rounded-[2.5rem]" />
+        <section className="container mx-auto px-6 py-32 border-t border-white/5">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-12">
+              Ready to evaluate Zaxion <br />
+              <span className="gradient-text">in your workflow?</span>
+            </h2>
             
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="relative z-10"
-            >
-              <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-8">
-                Ready to evaluate Zaxion <br />
-                <span className="gradient-text">in your workflow?</span>
-              </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-12">
+              <NeonButton color="cyan" size="lg" className="px-12 h-14" onClick={() => navigate('/waitlist')}>
+                Join Waitlist
+              </NeonButton>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
-                <NeonButton color="cyan" size="lg" className="px-10" onClick={() => navigate('/waitlist')}>
-                  Join the Private Waitlist
-                </NeonButton>
-                
-                <a 
-                  href="#architecture" 
-                  className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
-                >
-                  Read the Governance Model
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </a>
-              </div>
+              <a 
+                href="#architecture" 
+                className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
+              >
+                Read the Governance Model
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+            </div>
 
-              <p className="mt-12 text-sm text-white/20 font-medium">
-                Private beta launching soon. Early teams get priority.
-              </p>
-            </motion.div>
+            <p className="mt-16 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
+              Early teams get priority • Enterprise support available
+            </p>
           </div>
         </section>
       </main>
 
-      <footer className="container mx-auto px-6 py-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="text-white/20 text-sm font-medium">
-          © 2026 Zaxion Guard. All rights reserved.
-        </div>
-        <div className="flex gap-8">
-          <a href="#" className="text-white/20 hover:text-white transition-colors text-sm">Privacy</a>
-          <a href="#" className="text-white/20 hover:text-white transition-colors text-sm">Terms</a>
-          <a href="#" className="text-white/20 hover:text-white transition-colors text-sm">Twitter</a>
-          <a href="#" className="text-white/20 hover:text-white transition-colors text-sm">GitHub</a>
+      {/* Institutional Footer */}
+      <footer className="py-20 bg-black border-t border-white/5">
+        <div className="container mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-end">
+            <div className="space-y-6">
+              <img src="/zaxion-full.png" alt="Zaxion" className="h-12 w-auto brightness-0 invert opacity-40" />
+              <p className="text-xs text-white/20 max-w-sm leading-relaxed">
+                Zaxion is the deterministic governance layer for institutional engineering. 
+                Built for teams where every decision must be verifiable and every override must be signed.
+              </p>
+            </div>
+            <div className="text-right space-y-2">
+              <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Zaxion Governance Constitution v7.0.0</div>
+              <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Public Registry Interface • Data Retention: 7 Years</div>
+              <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest mt-4">Contact: design-partners@zaxion.gov</div>
+            </div>
+          </div>
+          <div className="mt-20 pt-8 border-t border-white/5 flex justify-between items-center">
+            <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.4em]">© 2026 Zaxion Governance Protocol</span>
+            <div className="flex gap-8">
+              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] cursor-help">Status: Operational</span>
+              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] cursor-help">Latency: 12ms</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
