@@ -9,6 +9,7 @@ import governanceMemoryRoutesFactory from "../governanceMemory.routes.js";
 import analyticsRoutesFactory from "../governanceAnalytics.routes.js";
 import chatbotRoutes from "../chatbot.routes.js";
 import webhookRoutesFactory from "../webhook.routes.js";
+import waitlistRoutesFactory from "../waitlist.routes.js";
 
 export default function v1ApiRoutesFactory(db) {
   const router = Router();
@@ -22,6 +23,7 @@ export default function v1ApiRoutesFactory(db) {
   router.use("/analytics/governance", analyticsRoutesFactory(db));
   router.use("/chatbot", chatbotRoutes);
   router.use("/webhooks", webhookRoutesFactory());
+  router.use("/waitlist", waitlistRoutesFactory(db));
 
   return router;
 }

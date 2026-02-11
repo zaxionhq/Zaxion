@@ -52,6 +52,13 @@ const schema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
+
+  // --- SMTP Configuration ---
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(465),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default("Zaxion Protocol <governance@zaxion.ai>"),
 })
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments

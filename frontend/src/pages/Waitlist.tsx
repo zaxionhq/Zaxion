@@ -3,22 +3,34 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
   Mail,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
 import { NeonButton } from '@/components/ui/neon-button';
 import { Input } from '@/components/ui/input';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 const Waitlist = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      // Here you would typically send the email to your backend/service
+    if (!email) return;
+
+    setIsLoading(true);
+    try {
+      await api.post('/v1/waitlist', { email });
       setSubmitted(true);
+      toast.success('Registration verified. Welcome to the protocol.');
+    } catch (error: any) {
+      console.error('Waitlist Error:', error);
+      toast.error(error.message || 'Protocol failure. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -66,8 +78,20 @@ const Waitlist = () => {
                 />
               </div>
               
-              <NeonButton color="cyan" size="lg" className="w-full h-14 rounded-xl text-sm font-black tracking-widest uppercase">
-                Join Waitlist
+              <NeonButton 
+                color="cyan" 
+                size="lg" 
+                className="w-full h-14 rounded-xl text-sm font-black tracking-widest uppercase"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Join Waitlist'
+                )}
               </NeonButton>
               
               <div className="pt-6 grid grid-cols-2 gap-4 border-t border-white/5">
