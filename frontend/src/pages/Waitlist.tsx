@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
-  ArrowRight, 
-  Lock, 
-  CheckCircle2, 
   Mail,
   ArrowLeft
 } from 'lucide-react';
@@ -15,6 +11,7 @@ import { Input } from '@/components/ui/input';
 const Waitlist = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,43 +31,24 @@ const Waitlist = () => {
         <div className="absolute inset-0 radial-bg opacity-50" />
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md text-center"
-      >
+      <div className="relative z-10 w-full max-w-md text-center">
         <div 
           className="inline-flex items-center gap-2 mb-12 cursor-pointer group"
           onClick={() => navigate('/')}
         >
-          <img src="/zaxion-full.png" alt="Zaxion" className="h-12 w-auto object-contain brightness-0 invert group-hover:opacity-80 transition-opacity" />
+          <img src="/zaxion-full.png" alt="Zaxion" className="h-16 md:h-20 w-auto object-contain brightness-0 invert group-hover:opacity-80 transition-opacity" />
         </div>
 
         {!submitted ? (
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-                Early access to <br />
-                <span className="gradient-text">deterministic PR governance.</span>
+                Join the <br />
+                <span className="gradient-text">Zaxion Waitlist.</span>
               </h1>
               <p className="text-white/40 text-sm font-medium">
-                Zaxion is currently in a restricted, invite-only phase for senior engineering teams.
+                Designed for security and platform teams implementing deterministic PR governance.
               </p>
-            </div>
-
-            <div className="space-y-4 py-8 border-y border-white/5">
-              {[
-                "Invite-only beta for design partners",
-                "Built for senior engineering teams",
-                "Deterministic, auditable decisions"
-              ].map((point, i) => (
-                <div key={i} className="flex items-center gap-3 text-left">
-                  <div className="h-5 w-5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="h-3 w-3 text-neon-cyan" />
-                  </div>
-                  <span className="text-sm font-bold text-white/60">{point}</span>
-                </div>
-              ))}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,20 +65,23 @@ const Waitlist = () => {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+              
               <NeonButton color="cyan" size="lg" className="w-full h-14 rounded-xl text-sm font-black tracking-widest uppercase">
-                Request Early Access
+                Join Waitlist
               </NeonButton>
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
-                We’ll reach out personally. No marketing spam.
-              </p>
+              
+              <div className="pt-6 grid grid-cols-2 gap-4 border-t border-white/5">
+                {[
+                  "Enterprise-focused",
+                  "Governance-first"
+                ].map((tag, i) => (
+                  <span key={i} className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">{tag}</span>
+                ))}
+              </div>
             </form>
           </div>
         ) : (
-          <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="p-12 rounded-[2.5rem] glass-panel border-white/10 space-y-6"
-          >
+          <div className="p-12 rounded-xl border border-white/5 bg-white/[0.01] space-y-6">
             <div className="w-16 h-16 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center mx-auto mb-4">
               <Shield className="h-8 w-8 text-neon-cyan" />
             </div>
@@ -112,9 +93,9 @@ const Waitlist = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Landing
             </NeonButton>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
 
       <div className="fixed bottom-12 left-0 right-0 z-10 text-center">
         <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/10">
