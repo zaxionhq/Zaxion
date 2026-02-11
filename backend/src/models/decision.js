@@ -51,6 +51,32 @@ export default (sequelize) => {
         allowNull: true,
         comment: 'Link to the GitHub Check Run for precise PATCHing',
       },
+      author_handle: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      pr_title: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      base_branch: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      risk_score: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0,
+      },
+      is_merged: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      merged_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       sequelize,
