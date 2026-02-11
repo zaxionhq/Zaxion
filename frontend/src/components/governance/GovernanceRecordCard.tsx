@@ -17,12 +17,12 @@ export const GovernanceRecordCard: React.FC<GovernanceRecordCardProps> = ({ clas
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-red-500/80" />
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/40">
-            Governance Record
+            Zaxion Governance Decision
           </span>
         </div>
         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 border border-red-500/20">
           <Lock className="h-3 w-3 text-red-500/80" />
-          <span className="text-[10px] font-mono font-bold text-red-500/80">BLOCKED</span>
+          <span className="text-[10px] font-mono font-bold text-red-500/80">STATUS: BLOCKED · MANDATORY POLICY VIOLATION</span>
         </div>
       </div>
 
@@ -30,25 +30,46 @@ export const GovernanceRecordCard: React.FC<GovernanceRecordCardProps> = ({ clas
       <div className="p-8 space-y-6">
         <div className="grid grid-cols-2 gap-8">
           <div className="space-y-1.5">
-            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Policy Enforcement</span>
-            <p className="text-sm font-bold text-white/80">PROD_TEST_COVERAGE v1.2</p>
+            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Policy Violated</span>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-bold text-red-400/80 bg-red-400/5 px-2 py-1 rounded border border-red-400/10 w-fit">coverage-auth-required</p>
+              <span className="text-[8px] font-mono text-white/20">MANDATORY · HIGH SEVERITY</span>
+            </div>
           </div>
           <div className="space-y-1.5 text-right">
-            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Decision ID</span>
-            <p className="text-sm font-mono text-white/60">ZAX-9F3A21</p>
+            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Violation Reason</span>
+            <p className="text-xs font-medium text-white/60">Authentication-related file modified without test coverage</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-8">
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Observed Change</span>
+            <p className="text-xs text-white/40">File modified · No corresponding test files detected</p>
+          </div>
+          <div className="space-y-1.5 text-right">
+            <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Affected File</span>
+            <p className="text-xs font-bold text-neon-cyan">highRisk</p>
           </div>
         </div>
 
         <div className="space-y-3">
-          <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Evidence Summary</span>
-          <div className="bg-white/[0.02] border border-white/5 rounded-lg p-4 space-y-2">
-            <div className="flex items-start gap-3">
-              <FileText className="h-4 w-4 text-white/20 mt-0.5" />
-              <p className="text-xs text-white/50 leading-relaxed">
-                2 source files missing required integration test coverage.
-              </p>
+          <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Required Action</span>
+          <div className="bg-neon-cyan/5 border border-neon-cyan/10 rounded-lg p-4 flex items-center gap-3">
+            <div className="w-4 h-4 rounded border border-neon-cyan/40 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-neon-cyan rounded-full animate-pulse" />
             </div>
+            <p className="text-xs text-neon-cyan/80 font-medium">
+              Add unit tests covering authentication logic in highRisk
+            </p>
           </div>
+        </div>
+
+        <div className="pt-6 border-t border-white/5 space-y-2">
+          <span className="text-[10px] font-mono uppercase text-white/20 tracking-wider">Operational Impact</span>
+          <p className="text-xs text-white/40 leading-relaxed italic">
+            FAILED: Modified 3 high-risk file(s) (auth/payment/config) without adding tests.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-8 pt-4 border-t border-white/5">
