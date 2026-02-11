@@ -81,8 +81,8 @@ export default {
 			boxShadow: {
 				'elegant': 'var(--shadow-elegant)',
 				'glow': 'var(--shadow-glow)',
-				'neon-cyan': '0 0 20px rgba(0, 255, 255, 0.5)',
-				'neon-purple': '0 0 20px rgba(191, 0, 255, 0.5)',
+				'neon-cyan': '0 0 10px rgba(0, 255, 255, 0.2)',
+				'neon-purple': '0 0 10px rgba(191, 0, 255, 0.2)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'var(--transition-smooth)'
