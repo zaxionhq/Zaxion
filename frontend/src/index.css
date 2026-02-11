@@ -49,8 +49,8 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     
-    --shadow-elegant: 0 10px 40px -15px hsl(263 93% 65% / 0.3);
-    --shadow-glow: 0 0 50px hsl(263 93% 65% / 0.4);
+    --shadow-elegant: 0 4px 20px -10px hsl(263 93% 65% / 0.1);
+    --shadow-glow: 0 0 15px hsl(263 93% 65% / 0.15);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -125,11 +125,11 @@ All colors MUST be HSL.
   }
 
   .neon-text-cyan {
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.2);
   }
 
   .neon-text-purple {
-    text-shadow: 0 0 10px rgba(191, 0, 255, 0.5);
+    text-shadow: 0 0 5px rgba(191, 0, 255, 0.2);
   }
 
   .gradient-text {
