@@ -74,15 +74,15 @@ const LandingPage = () => {
               Constitutional Governance Layer
             </div>
             
-            <h1 className="text-6xl md:text-8xl font-black tracking-tight mb-8 leading-[0.9]">
+            <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[0.9]">
               Deterministic <br />
               <span className="gradient-text">Governance.</span>
             </h1>
 
             <div className="mb-8">
-              <p className="text-xl md:text-2xl font-bold text-white/80">
+              <p className="text-lg md:text-2xl font-bold text-white/80">
                 Every PR becomes a verifiable 
-                <span className="text-neon-cyan ml-2">governance record.</span>
+                <span className="text-neon-cyan block md:inline md:ml-2">governance record.</span>
               </p>
             </div>
     
@@ -114,9 +114,9 @@ const LandingPage = () => {
               <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">Why PR Quality Gates Fail</h2>
               <div className="space-y-12">
                 {[
-                  { title: "Rules lack context", desc: "Static analysis blocks everything or nothing, ignoring the risk profile of specific architectural changes." },
-                  { title: "Overrides erase history", desc: "Emergency bypasses are common, but they often leave no record of who signed off or why." },
-                  { title: "Decisions lack memory", desc: "Pipelines treat every PR as an isolated event, losing the institutional knowledge of past debt." }
+                  { title: "Rules lack risk-proportionality", desc: "Static analysis blocks everything or nothing, ignoring that a change to Auth logic is 100x higher risk than a CSS update." },
+                  { title: "Overrides create 'Dark Debt'", desc: "Emergency bypasses are common, but they often happen via shadow-IT (like [skip ci]) with zero permanent record of ownership." },
+                  { title: "Decisions lack institutional memory", desc: "Pipelines treat every PR as an isolated event, losing the context of why similar risks were accepted or rejected in the past." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-6 items-start group">
                     <div className="w-1 h-12 bg-white/10 group-hover:bg-neon-cyan transition-colors shrink-0 mt-1" />
@@ -137,18 +137,18 @@ const LandingPage = () => {
             <h2 className="text-4xl md:text-6xl font-black mb-12 tracking-tight">Quality Problems Are <br />Governance Problems</h2>
             <div className="space-y-8 text-xl text-white/60 leading-relaxed font-light">
               <p>The issue in modern delivery pipelines isn’t a lack of code quality tools.</p>
-              <p className="text-white font-medium italic">It is the lack of decision ownership, traceability, and institutional memory.</p>
-              <p>Zaxion stops being a tool and becomes a system by anchoring every PR evaluation to a versioned constitutional record.</p>
+              <p className="text-white font-medium italic">It is the lack of decision ownership, traceability, and institutional accountability.</p>
+              <p>Zaxion transforms quality from a "checklist" into a "constitution" by anchoring every evaluation to a verifiable leadership record.</p>
             </div>
           </div>
         </section>
 
         {/* SECTION 4 — The Governance Model (Institutional Pillars) */}
-        <section id="architecture" className="py-32 bg-white/[0.01]">
+        <section id="architecture" className="py-24 md:py-32 bg-white/[0.01]">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-24 text-center tracking-tight">Constitutional Pillars</h2>
-              <div className="grid md:grid-cols-3 gap-24">
+              <h2 className="text-3xl md:text-5xl font-black mb-16 md:mb-24 text-center tracking-tight">Constitutional Pillars</h2>
+              <div className="grid md:grid-cols-3 gap-12 md:gap-24">
                 {[
                   {
                     title: "LAW",
@@ -172,39 +172,41 @@ const LandingPage = () => {
               </div>
 
               {/* Live Audit Trail Integration */}
-              <div className="mt-32 p-8 md:p-12 rounded-2xl border border-white/5 bg-white/[0.01] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
+              <div className="mt-24 md:mt-32 p-6 md:p-12 rounded-2xl border border-white/5 bg-white/[0.01] relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 hidden md:block">
                   <Scale className="h-64 w-64" />
                 </div>
                 
-                <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
-                  <div className="space-y-8">
+                <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center relative z-10">
+                  <div className="space-y-6 md:space-y-8">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-mono text-neon-cyan uppercase tracking-widest">
                       Protocol Evidence
                     </div>
-                    <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                    <h3 className="text-2xl md:text-4xl font-black tracking-tight leading-tight">
                       The Deterministic <br />
                       <span className="gradient-text">Audit Trail.</span>
                     </h3>
-                    <p className="text-white/40 leading-relaxed font-medium">
+                    <p className="text-white/40 text-sm md:text-base leading-relaxed font-medium">
                       Zaxion doesn't just block; it provides a longitudinal record of architectural intent. Every PR is a technical trial, resulting in a verifiable rationale anchored to your constitution.
                     </p>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                       {[
                         "Stateless Evaluation",
                         "Cryptographic Intent Verification",
                         "Immutable Ledger Entry"
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                          <span className="text-sm font-bold text-white/60">{item}</span>
+                          <CheckCircle2 className="h-4 w-4 text-neon-cyan shrink-0" />
+                          <span className="text-xs md:text-sm font-bold text-white/60">{item}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-black/40 rounded-xl border border-white/5 p-6 backdrop-blur-sm shadow-2xl">
-                    <GovernanceAuditTrail />
+                  <div className="bg-black/40 rounded-xl border border-white/5 p-4 md:p-6 backdrop-blur-sm shadow-2xl overflow-x-auto">
+                    <div className="min-w-[300px] md:min-w-0">
+                      <GovernanceAuditTrail />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -216,12 +218,15 @@ const LandingPage = () => {
         <section className="py-32 border-t border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-black mb-16 text-center tracking-tight">Adoption Safety Modes</h2>
+              <h2 className="text-3xl md:text-4xl font-black mb-8 text-center tracking-tight">Adoption Safety Modes</h2>
+              <p className="text-white/40 text-center mb-16 max-w-2xl mx-auto text-sm">
+                Zaxion supports a phased promotion path, allowing teams to socialize policies before they become binding architectural requirements.
+              </p>
               <div className="grid md:grid-cols-3 gap-8">
                 {[
-                  { mode: "OBSERVE_ONLY", desc: "Zaxion records decisions in the background without affecting PR status. Used for baseline audit." },
-                  { mode: "WARN_ONLY", desc: "Signals are visible to developers as non-blocking advisories. Used for policy socialization." },
-                  { mode: "ENFORCE", desc: "Governance records are binding. PRs cannot be merged without meeting constitutional standards." }
+                  { mode: "OBSERVE_ONLY", desc: "Passive monitoring. Zaxion records decisions in the background to baseline current architectural compliance without affecting velocity." },
+                  { mode: "WARN_ONLY", desc: "Policy socialization. Signals are visible to developers as advisories, allowing teams to adjust to new standards before enforcement." },
+                  { mode: "ENFORCE", desc: "Full Governance. Decisions are binding. PRs cannot be merged without meeting constitutional standards or obtaining a signed override." }
                 ].map((item, i) => (
                   <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
                     <div className="text-[10px] font-mono text-neon-cyan font-bold tracking-widest">{item.mode}</div>
@@ -240,10 +245,10 @@ const LandingPage = () => {
               <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">What Zaxion Is Not</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  { title: "Not a CI Plugin", desc: "Zaxion is an independent governance layer, not a script in your YAML." },
-                  { title: "Not a Linter", desc: "We don't care about semicolons. We care about architectural intent." },
-                  { title: "Not Heuristics", desc: "No 'scoring' or fuzzy logic. Decisions are binary and deterministic." },
-                  { title: "Not Override-by-Comment", desc: "Bypassing a gate requires a signed record, not a keyword in a comment." }
+                  { title: "Not a Copilot", desc: "We don't write code. Zaxion is the Referee, not the Player—ensuring rules are followed, not playing the game." },
+                  { title: "Not a Linter", desc: "We don't care about semicolons. We care about architectural intent and high-risk domain violations." },
+                  { title: "Not a Black Box", desc: "No fuzzy AI scoring. Decisions are binary, deterministic, and traceable to your constitutional source code." },
+                  { title: "Not a Suggestion", desc: "Bypassing a gate requires a cryptographically signed record, not a simple comment or a 'merge anyway' click." }
                 ].map((item, i) => (
                   <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01]">
                     <h4 className="font-bold mb-3 text-sm uppercase tracking-widest text-white/40">{item.title}</h4>
@@ -308,15 +313,15 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 9 — Final CTA */}
-        <section className="container mx-auto px-6 py-32 border-t border-white/5">
+        <section className="container mx-auto px-6 py-24 md:py-32 border-t border-white/5">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-12">
+            <h2 className="text-3xl md:text-6xl font-black tracking-tight mb-12 leading-tight">
               Ready to evaluate Zaxion <br />
               <span className="gradient-text">in your workflow?</span>
             </h2>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-12">
-              <NeonButton color="cyan" size="lg" className="px-12 h-14" onClick={() => navigate('/waitlist')}>
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
+              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/waitlist')}>
                 Join Waitlist
               </NeonButton>
               
