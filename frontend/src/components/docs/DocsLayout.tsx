@@ -11,7 +11,8 @@ import {
   Info,
   Scale,
   History,
-  FileText
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,6 +26,9 @@ const DocsLayout = () => {
       items: [
         { title: "Protocol Overview", path: "/docs/overview", icon: Info },
         { title: "Governance Constitution", path: "/docs/constitution", icon: Scale },
+        { title: "Pillar 01: The Law", path: "/docs/constitution/the-law", icon: ShieldCheck, isNested: true },
+        { title: "Pillar 02: The Judgment", path: "/docs/constitution/the-judgment", icon: Scale, isNested: true },
+        { title: "Pillar 03: The Memory", path: "/docs/constitution/the-memory", icon: History, isNested: true },
         { title: "Canonical Policies", path: "/docs/policies", icon: FileText },
         { title: "Security Model", path: "/docs/security", icon: Shield },
       ]
@@ -95,6 +99,7 @@ const DocsLayout = () => {
                       to={item.path}
                       className={cn(
                         "flex items-center gap-3 px-4 py-1.5 text-xs font-medium rounded-md transition-all group",
+                        item.isNested && "ml-4 border-l border-white/5 rounded-none pl-6",
                         location.pathname === item.path 
                           ? "bg-white/5 text-white border border-white/5" 
                           : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.02]"
