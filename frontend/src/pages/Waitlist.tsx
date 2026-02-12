@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { NeonButton } from '@/components/ui/neon-button';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { toast } from 'sonner';
 
 const Waitlist = () => {
@@ -26,7 +26,8 @@ const Waitlist = () => {
       await api.post('/v1/waitlist', { email });
       setSubmitted(true);
       toast.success('Registration verified. Welcome to the protocol.');
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as ApiError;
       console.error('Waitlist Error:', error);
       toast.error(error.message || 'Protocol failure. Please try again.');
     } finally {
