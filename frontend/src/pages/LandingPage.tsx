@@ -18,6 +18,7 @@ import {
   Ban,
   FileText
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { GovernanceRecordCard } from '@/components/governance/GovernanceRecordCard';
 import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTrail';
 import { NeonButton } from '@/components/ui/neon-button';
@@ -325,13 +326,13 @@ const LandingPage = () => {
                 Join Waitlist
               </NeonButton>
               
-              <a 
-                href="#architecture" 
+              <Link 
+                to="/docs/overview" 
                 className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
               >
-                Read the Governance Model
+                Institutional Registry
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
             </div>
 
             <p className="mt-16 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">

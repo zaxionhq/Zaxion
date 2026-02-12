@@ -9,6 +9,11 @@ import LandingPage from "./pages/LandingPage";
 import Waitlist from "./pages/Waitlist";
 import DecisionResolutionConsole from "./pages/DecisionResolutionConsole";
 import GovernanceDashboard from "./pages/GovernanceDashboard";
+import DocsLayout from "./components/docs/DocsLayout";
+import DocsOverview from "./pages/docs/Overview";
+import DocsConstitution from "./pages/docs/Constitution";
+import DocsLogic from "./pages/docs/Logic";
+import DocsSecurity from "./pages/docs/Security";
 import NotFound from "./pages/NotFound";
 
 const WorkspaceRedirect = () => {
@@ -45,6 +50,16 @@ const App = () => (
               <Route path="/pr/:owner/:repo/:prNumber" element={<DecisionResolutionConsole />} />
               <Route path="/workspace" element={<WorkspaceRedirect />} />
               <Route path="/governance" element={<GovernanceDashboard />} />
+              
+              {/* Documentation Ecosystem */}
+              <Route path="/docs" element={<DocsLayout />}>
+                <Route index element={<Navigate to="/docs/overview" replace />} />
+                <Route path="overview" element={<DocsOverview />} />
+                <Route path="constitution" element={<DocsConstitution />} />
+                <Route path="logic" element={<DocsLogic />} />
+                <Route path="security" element={<DocsSecurity />} />
+              </Route>
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
