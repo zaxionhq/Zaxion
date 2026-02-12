@@ -1,6 +1,7 @@
 import React from 'react';
-import { Terminal, ArrowRight, Cpu, Zap } from 'lucide-react';
+import { Terminal, ArrowRight, Cpu, Zap, Code2, Binary } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DocsAccordion from '../../components/docs/DocsAccordion';
 
 const DocsDeterministicEvaluation = () => {
   return (
@@ -17,29 +18,45 @@ const DocsDeterministicEvaluation = () => {
         </p>
       </div>
 
-      <div className="space-y-12">
-        {[
-          {
-            title: "Stateless Pipeline",
-            desc: "The evaluation engine does not maintain internal state between runs. It ingests the current PR state and the active policy version, producing a verdict without side effects.",
-            icon: Zap
-          },
-          {
-            title: "Repeatable Verdicts",
-            desc: "Because the analysis is based on static AST facts, you can replay any historical evaluation and arrive at the exact same rationale and decision.",
-            icon: Cpu
-          }
-        ].map((item, i) => (
-          <div key={i} className="flex gap-6">
-            <div className="mt-1 h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center shrink-0">
-              <item.icon className="h-4 w-4 text-slate-400" />
+      <div className="grid gap-6">
+        <DocsAccordion 
+          title="The Evaluation Pipeline" 
+          subtitle="Stateless Computation"
+          defaultOpen={true}
+        >
+          <p>The evaluation engine does not maintain internal state between runs. It ingests the current PR state and the active policy version, producing a verdict without side effects.</p>
+          <div className="bg-black/40 rounded p-4 border border-white/5 space-y-4">
+            <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase">
+              <Code2 className="h-3 w-3" /> Input Schema
             </div>
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">{item.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
-            </div>
+            <pre className="text-[11px] text-indigo-300 font-mono leading-relaxed">
+{`{
+  "pr_context": {
+    "base_sha": "a1b2c3d...",
+    "head_sha": "f9e8d7c..."
+  },
+  "policy_context": {
+    "id": "pol_7721",
+    "version": "1.0.4"
+  }
+}`}
+            </pre>
           </div>
-        ))}
+        </DocsAccordion>
+
+        <DocsAccordion 
+          title="Repeatable Verdicts" 
+          subtitle="Static Fact Extraction"
+        >
+          <p>Because the analysis is based on static AST facts, you can replay any historical evaluation and arrive at the exact same rationale and decision. This is critical for legal and architectural compliance in regulated industries.</p>
+        </DocsAccordion>
+
+        <DocsAccordion 
+          title="No-Guessing Policy" 
+          subtitle="Binary Logic"
+        >
+          <p>Zaxion does not use probabilistic models or AI to determine if a policy is violated. It uses formal logic gates. If a rule states "No circular dependencies between Layer A and Layer B," the engine either finds a path or it doesn't. There is no middle ground.</p>
+        </DocsAccordion>
       </div>
 
       <section className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-6">

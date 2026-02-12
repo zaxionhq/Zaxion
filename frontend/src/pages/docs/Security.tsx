@@ -1,6 +1,7 @@
 import React from 'react';
-import { Shield, Lock, Eye, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Shield, Lock, Eye, CheckCircle2, ArrowRight, Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DocsAccordion from '../../components/docs/DocsAccordion';
 
 const DocsSecurity = () => {
   return (
@@ -8,7 +9,7 @@ const DocsSecurity = () => {
       {/* Header Section */}
       <div className="space-y-6">
         <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
-          Security
+          Institutional Security
         </div>
         <h1 className="text-4xl font-bold tracking-tight text-white">
           Security Model
@@ -45,6 +46,38 @@ const DocsSecurity = () => {
               <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
             </div>
           ))}
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Security Protocols</h2>
+          <div className="grid gap-4">
+            <DocsAccordion 
+              title="Protocol 01: Stateless Analysis Pipeline" 
+              subtitle="Computation Boundary"
+            >
+              <p>Zaxion's evaluation engine is entirely stateless. No code is stored permanently in our analysis environments. Each PR evaluation occurs in a volatile, ephemeral container that is destroyed immediately after the verdict is issued.</p>
+              <div className="bg-black/40 rounded p-4 border border-white/5 space-y-2">
+                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase">
+                  <Server className="h-3 w-3" /> Runtime Isolation
+                </div>
+                <p className="text-[11px] text-slate-500 italic">"The memory of the machine is wiped between every judgment, ensuring zero cross-contamination of institutional IP."</p>
+              </div>
+            </DocsAccordion>
+
+            <DocsAccordion 
+              title="Protocol 02: Zero-Execution Analysis" 
+              subtitle="AST Extraction vs. Runtime"
+            >
+              <p>Unlike traditional CI tools that run your tests or build scripts, Zaxion never executes your code. It treats code as data, extracting the Abstract Syntax Tree (AST) to verify architectural integrity. This prevents malicious code injection from compromising the analysis engine.</p>
+            </DocsAccordion>
+
+            <DocsAccordion 
+              title="Protocol 03: Cryptographic Decision Logs" 
+              subtitle="Verifiable Audits"
+            >
+              <p>Every decision is signed using an institutional key. This ensures that audit trails cannot be tampered with by developers or administrators. If a decision log is modified, the signature check will fail, alerting governance officers to a breach in institutional integrity.</p>
+            </DocsAccordion>
+          </div>
         </div>
 
         <div className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-6">
