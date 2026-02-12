@@ -12,8 +12,17 @@ import GovernanceDashboard from "./pages/GovernanceDashboard";
 import DocsLayout from "./components/docs/DocsLayout";
 import DocsOverview from "./pages/docs/Overview";
 import DocsConstitution from "./pages/docs/Constitution";
-import DocsLogic from "./pages/docs/Logic";
+import DocsPolicies from "./pages/docs/Policies";
 import DocsSecurity from "./pages/docs/Security";
+import DocsDeterministicEvaluation from "./pages/docs/DeterministicEvaluation";
+import DocsASTAnalysis from "./pages/docs/ASTAnalysis";
+import DocsRiskModel from "./pages/docs/RiskModel";
+import DocsEnforcementLifecycle from "./pages/docs/EnforcementLifecycle";
+import DocsGithubIntegration from "./pages/docs/implementation/GithubIntegration";
+import DocsPolicyConfiguration from "./pages/docs/implementation/PolicyConfiguration";
+import DocsOverrideProtocol from "./pages/docs/implementation/OverrideProtocol";
+import DocsAuditTrail from "./pages/docs/AuditTrail";
+import DocsSignedOverrides from "./pages/docs/SignedOverrides";
 import NotFound from "./pages/NotFound";
 
 const WorkspaceRedirect = () => {
@@ -53,11 +62,20 @@ const App = () => (
               
               {/* Documentation Ecosystem */}
               <Route path="/docs" element={<DocsLayout />}>
-                <Route index element={<Navigate to="/docs/overview" replace />} />
+                <Route index element={<DocsOverview />} />
                 <Route path="overview" element={<DocsOverview />} />
                 <Route path="constitution" element={<DocsConstitution />} />
-                <Route path="logic" element={<DocsLogic />} />
+                <Route path="policies" element={<DocsPolicies />} />
                 <Route path="security" element={<DocsSecurity />} />
+                <Route path="deterministic-evaluation" element={<DocsDeterministicEvaluation />} />
+                <Route path="ast-analysis" element={<DocsASTAnalysis />} />
+                <Route path="risk-model" element={<DocsRiskModel />} />
+                <Route path="enforcement-lifecycle" element={<DocsEnforcementLifecycle />} />
+                <Route path="implementation/github-integration" element={<DocsGithubIntegration />} />
+                <Route path="implementation/policy-configuration" element={<DocsPolicyConfiguration />} />
+                <Route path="implementation/override-protocol" element={<DocsOverrideProtocol />} />
+                <Route path="audit-trail" element={<DocsAuditTrail />} />
+                <Route path="signed-overrides" element={<DocsSignedOverrides />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

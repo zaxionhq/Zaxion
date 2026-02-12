@@ -4,65 +4,62 @@ import { Link } from 'react-router-dom';
 
 const DocsOverview = () => {
   return (
-    <div className="space-y-12">
+    <div className="space-y-16">
       {/* Header Section */}
-      <div className="space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-mono text-neon-cyan uppercase tracking-widest">
-          Institutional Foundation
+      <div className="space-y-6">
+        <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+          Foundational
         </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
-          What is <span className="gradient-text">Zaxion?</span>
+        <h1 className="text-4xl font-bold tracking-tight text-white">
+          Protocol Overview
         </h1>
-        <p className="text-xl text-white/40 leading-relaxed font-medium max-w-2xl">
-          Zaxion is the deterministic governance layer for institutional engineering teams. It transforms quality gates from simple checklists into a verifiable constitution.
+        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+          Zaxion is a deterministic governance layer for institutional engineering. It codifies architectural intent into a verifiable protocol, ensuring every change adheres to established institutional standards.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
-          <div className="h-10 w-10 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center">
-            <Lock className="h-5 w-5 text-neon-cyan" />
+      <div className="grid sm:grid-cols-2 gap-12">
+        <div className="space-y-4">
+          <div className="h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center">
+            <Lock className="h-4 w-4 text-slate-400" />
           </div>
-          <h3 className="text-xl font-bold">The Referee, Not the Player</h3>
-          <p className="text-sm text-white/40 leading-relaxed">
-            Unlike Copilots or AI assistants, Zaxion does not write code. It acts as the impartial Referee, ensuring every Pull Request adheres to versioned architectural standards.
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Institutional Integrity</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Zaxion acts as an impartial referee. It doesn't write code; it validates it against a versioned constitution of architectural rules.
           </p>
         </div>
 
-        <div className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
-          <div className="h-10 w-10 rounded-lg bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center">
-            <Terminal className="h-5 w-5 text-neon-purple" />
+        <div className="space-y-4">
+          <div className="h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center">
+            <Terminal className="h-4 w-4 text-slate-400" />
           </div>
-          <h3 className="text-xl font-bold">Deterministic Logic</h3>
-          <p className="text-sm text-white/40 leading-relaxed">
-            Zaxion avoids fuzzy AI scores. Every evaluation is powered by AST-based fact extraction, providing 100% predictable outcomes for every decision.
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Deterministic Logic</h3>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Outcomes are 100% predictable. By using AST-based fact extraction, Zaxion removes the ambiguity of fuzzy scoring and heuristic analysis.
           </p>
         </div>
       </div>
 
-      <section className="space-y-6">
-        <h2 className="text-2xl font-bold tracking-tight">Core Value Proposition</h2>
-        <div className="space-y-4">
+      <section className="space-y-8">
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Core Principles</h2>
+        <div className="space-y-8">
           {[
             {
-              title: "Decision Ownership",
-              desc: "Every override requires a signed rationale, binding architectural debt to a specific owner."
+              title: "Ownership by Design",
+              desc: "Every architectural deviation requires a signed rationale, linking technical debt to explicit institutional accountability."
             },
             {
-              title: "Institutional Memory",
-              desc: "Fact snapshots record the exact state of code during an evaluation, creating a longitudinal audit trail."
+              title: "Permanent Memory",
+              desc: "Fact snapshots create a longitudinal audit trail of the protocol's state at the moment of every governance decision."
             },
             {
               title: "Risk-Proportionality",
-              desc: "Apply stricter governance to critical domains (e.g., /auth) while maintaining high velocity in lower-risk areas."
+              desc: "Governance strictness scales with the sensitivity of the domain, maintaining velocity without compromising core stability."
             }
           ].map((item, i) => (
-            <div key={i} className="flex gap-4 group">
-              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-neon-cyan shrink-0" />
-              <div>
-                <h4 className="font-bold text-white/80">{item.title}</h4>
-                <p className="text-sm text-white/40">{item.desc}</p>
-              </div>
+            <div key={i} className="group">
+              <h4 className="text-sm font-bold text-slate-300 mb-1">{item.title}</h4>
+              <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -71,10 +68,10 @@ const DocsOverview = () => {
       <div className="pt-12 border-t border-white/5">
         <Link 
           to="/docs/constitution" 
-          className="inline-flex items-center gap-2 group text-neon-cyan font-bold tracking-tight hover:underline"
+          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
         >
-          Next: The Governance Constitution
-          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+          Institutional Constitution
+          <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
     </div>

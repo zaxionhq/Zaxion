@@ -4,58 +4,54 @@ import { Link } from 'react-router-dom';
 
 const DocsConstitution = () => {
   return (
-    <div className="space-y-12">
+    <div className="space-y-16">
       {/* Header Section */}
-      <div className="space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-mono text-neon-cyan uppercase tracking-widest">
-          Governance Architecture
+      <div className="space-y-6">
+        <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+          Architecture
         </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
-          The <span className="gradient-text">Constitution.</span>
+        <h1 className="text-4xl font-bold tracking-tight text-white">
+          Governance Constitution
         </h1>
-        <p className="text-xl text-white/40 leading-relaxed font-medium max-w-2xl">
-          Zaxion transforms architectural intent into a verifiable constitution. Every evaluation is anchored to three institutional pillars: Law, Judgment, and Memory.
+        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+          The Zaxion Constitution is a verifiable set of rules that defines the boundaries of acceptable architectural change. Every evaluation is anchored to three institutional pillars.
         </p>
       </div>
 
-      <section className="space-y-8">
+      <section className="space-y-12">
         {[
           {
             pillar: "Pillar 01",
-            title: "LAW: The Policy Layer",
+            title: "The Law (Policy Layer)",
             icon: ShieldCheck,
-            desc: "Policies are versioned, declarative, and immutable. They define the legal boundaries of your architecture. When a policy is updated, Zaxion maintains a history of versioned rule-sets, ensuring that old decisions remain traceable to the law that existed at the time of evaluation.",
-            features: ["Versioned YAML configuration", "Declarative rule definitions", "Immutable policy records"]
+            desc: "Policies are versioned, declarative, and immutable. They define the legal boundaries of your architecture. Zaxion maintains a history of versioned rule-sets, ensuring that decisions remain traceable to the specific law active at the time of judgment.",
+            features: ["Versioned YAML", "Declarative rules", "Immutable records"]
           },
           {
             pillar: "Pillar 02",
-            title: "JUDGMENT: Deterministic Evaluation",
+            title: "The Judgment (Evaluation)",
             icon: Scale,
-            desc: "Zaxion performs a technical trial of every Pull Request. Using AST-based analysis, the system extracts code facts (functions, imports, classes) and evaluates them against the active policy. The result is a binary PASS or BLOCK, backed by a verifiable rationale.",
-            features: ["Stateless analysis", "AST fact extraction", "Context-aware gating"]
+            desc: "Judgment is the deterministic trial of a code change. Using AST analysis, the system extracts structural facts and evaluates them against the constitution. The result is a binary verdict—PASS or BLOCK—backed by a verifiable technical rationale.",
+            features: ["Stateless analysis", "AST extraction", "Context-aware gating"]
           },
           {
             pillar: "Pillar 03",
-            title: "MEMORY: The Institutional Ledger",
+            title: "The Memory (Ledger)",
             icon: History,
-            desc: "The system never forgets. Every decision, rationale, and override is recorded in a permanent ledger. By capturing 'Fact Snapshots' of the code during evaluation, Zaxion builds a longitudinal record of architectural intent and technical debt.",
-            features: ["Permanent decision logs", "Fact snapshot persistence", "Bypass velocity tracking"]
+            desc: "Institutional memory is the permanent record of all governance events. By capturing Fact Snapshots of the codebase during evaluation, Zaxion builds a longitudinal ledger of architectural intent and technical debt evolution.",
+            features: ["Permanent logs", "Fact snapshots", "Override tracking"]
           }
         ].map((item, i) => (
-          <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
-              <item.icon className="h-32 w-32" />
-            </div>
-            
-            <div className="space-y-4 relative z-10">
-              <div className="text-[10px] font-mono tracking-[0.4em] text-neon-cyan/60 uppercase">{item.pillar}</div>
-              <h3 className="text-2xl font-black tracking-tight">{item.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed max-w-2xl">{item.desc}</p>
+          <div key={i} className="space-y-6 relative group">
+            <div className="space-y-3 relative z-10">
+              <div className="text-[10px] font-mono tracking-widest text-slate-600 uppercase">{item.pillar}</div>
+              <h3 className="text-lg font-bold text-slate-200">{item.title}</h3>
+              <p className="text-sm text-slate-500 leading-relaxed max-w-2xl">{item.desc}</p>
               
-              <div className="flex flex-wrap gap-4 pt-4">
+              <div className="flex flex-wrap gap-4 pt-2">
                 {item.features.map((feature, j) => (
-                  <div key={j} className="flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/5 text-[10px] font-bold text-white/60">
-                    <div className="h-1 w-1 rounded-full bg-neon-cyan" />
+                  <div key={j} className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                    <div className="h-1 w-1 rounded-full bg-slate-800" />
                     {feature}
                   </div>
                 ))}
@@ -67,11 +63,11 @@ const DocsConstitution = () => {
 
       <div className="pt-12 border-t border-white/5">
         <Link 
-          to="/docs/logic" 
-          className="inline-flex items-center gap-2 group text-neon-cyan font-bold tracking-tight hover:underline"
+          to="/docs/policies" 
+          className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
         >
-          Next: Technical Logic & AST Analysis
-          <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+          Canonical Policies
+          <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
     </div>
