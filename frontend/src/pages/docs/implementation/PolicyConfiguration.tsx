@@ -18,23 +18,21 @@ const DocsPolicyConfiguration = () => {
       </div>
 
       <section className="space-y-6">
-        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">The .zaxion Schema</h2>
-        <div className="bg-[#0a0a0a] rounded border border-white/5 p-6 font-mono text-xs text-slate-400 overflow-x-auto">
-          <pre>{`# .zaxion/policy.yaml
-metadata:
-  id: "canonical-security-v1"
-  owner: "institutional-security-team"
-
-rules:
-  - id: "prevent-hardcoded-secrets"
-    type: "ast_pattern"
-    match: "Symbol(api_key).value != null"
-    severity: "BLOCK"
-
-  - id: "require-internal-pkg"
-    type: "import_gate"
-    disallow: ["axios", "request"]
-    recommend: "@institutional/http-client"`}</pre>
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Centralized Governance</h2>
+        <div className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-6">
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Zaxion policies are managed through the **Institutional Registry**. Instead of local configuration files, policies are distributed via a cryptographically signed control plane. This ensures that architectural standards are consistent across thousands of repositories without manual intervention.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-200 uppercase">Policy Versioning</h4>
+              <p className="text-[11px] text-slate-500">Every policy update creates a new immutable version in the registry, allowing for graceful rollbacks and historical audits.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-200 uppercase">Registry Scope</h4>
+              <p className="text-[11px] text-slate-500">Apply policies globally across the organization or target specific sensitive domains with surgical precision.</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -45,7 +43,7 @@ rules:
           </div>
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Version Pinning</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Always pin your policies to a specific version. This prevents upstream policy changes from breaking your local development velocity.
+            Always pin your repositories to a specific institutional policy version. This prevents upstream changes from disrupting local development velocity.
           </p>
         </div>
 
@@ -53,9 +51,9 @@ rules:
           <div className="h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center">
             <FileCode className="h-4 w-4 text-slate-400" />
           </div>
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Dry Run Mode</h3>
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Simulation Testing</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Test new policies using <code className="text-xs text-indigo-400 bg-white/5 px-1 rounded">severity: ADVISE</code> before promoting them to <code className="text-xs text-indigo-400 bg-white/5 px-1 rounded">BLOCK</code>.
+            Before promoting a policy to **BLOCK**, use the Policy Simulator to calculate the blast radius and ensure institutional readiness.
           </p>
         </div>
       </div>

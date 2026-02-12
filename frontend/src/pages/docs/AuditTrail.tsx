@@ -41,11 +41,16 @@ const DocsAuditTrail = () => {
 
       <section className="space-y-6">
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Audit Entry Anatomy</h2>
-        <div className="bg-[#0a0a0a] rounded border border-white/5 p-6 font-mono text-[10px] text-slate-500">
+        <div className="bg-[#0a0a0a] rounded border border-white/5 p-6 font-mono text-[10px] text-slate-500 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/20 group-hover:bg-indigo-500/40 transition-colors" />
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="text-indigo-400">event_id:</span>
               <span>"evt_2026_0212_001"</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-indigo-400">repo_name:</span>
+              <span>"institutional-core-api"</span>
             </div>
             <div className="flex justify-between">
               <span className="text-indigo-400">commit_hash:</span>
@@ -62,6 +67,10 @@ const DocsAuditTrail = () => {
             <div className="pt-2 border-t border-white/5">
               <p className="text-indigo-400 mb-1">rationale:</p>
               <p className="italic">"Legacy dependency required for internal SDK compatibility."</p>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-white/5">
+              <span className="text-indigo-400">blast_radius:</span>
+              <span>"2.4%"</span>
             </div>
           </div>
         </div>

@@ -55,12 +55,19 @@ const DocsSecurity = () => {
               title="Protocol 01: Stateless Analysis Pipeline" 
               subtitle="Computation Boundary"
             >
-              <p>Zaxion's evaluation engine is entirely stateless. No code is stored permanently in our analysis environments. Each PR evaluation occurs in a volatile, ephemeral container that is destroyed immediately after the verdict is issued.</p>
-              <div className="bg-black/40 rounded p-4 border border-white/5 space-y-2">
-                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase">
-                  <Server className="h-3 w-3" /> Runtime Isolation
+              <div id="stateless-pipeline" className="scroll-mt-20">
+                <p className="text-sm text-slate-400 leading-relaxed mb-4">
+                  The analysis pipeline is built on a zero-persistence architecture. Every evaluation event is treated as an isolated transaction with no temporal coupling to previous or future runs.
+                </p>
+                <div className="bg-black/40 rounded p-4 border border-white/5 space-y-4">
+                  <p className="text-sm">Zaxion's evaluation engine is entirely stateless. No code is stored permanently in our analysis environments. Each PR evaluation occurs in a volatile, ephemeral container that is destroyed immediately after the verdict is issued.</p>
+                  <div className="bg-black/40 rounded p-4 border border-white/5 space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase">
+                      <Server className="h-3 w-3" /> Runtime Isolation
+                    </div>
+                    <p className="text-[11px] text-slate-500 italic">"The memory of the machine is wiped between every judgment, ensuring zero cross-contamination of institutional IP."</p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 italic">"The memory of the machine is wiped between every judgment, ensuring zero cross-contamination of institutional IP."</p>
               </div>
             </DocsAccordion>
 
@@ -68,14 +75,28 @@ const DocsSecurity = () => {
               title="Protocol 02: Zero-Execution Analysis" 
               subtitle="AST Extraction vs. Runtime"
             >
-              <p>Unlike traditional CI tools that run your tests or build scripts, Zaxion never executes your code. It treats code as data, extracting the Abstract Syntax Tree (AST) to verify architectural integrity. This prevents malicious code injection from compromising the analysis engine.</p>
+              <div id="zero-execution" className="scroll-mt-20">
+                <p className="text-sm text-slate-400 leading-relaxed mb-4">
+                  Zaxion eliminates the primary attack vector of modern CI/CD by decoupling structural analysis from code execution. We verify integrity without ever "running" the source.
+                </p>
+                <div className="bg-black/40 rounded p-4 border border-white/5 space-y-4">
+                  <p className="text-sm">Unlike traditional CI tools that run your tests or build scripts, Zaxion never executes your code. It treats code as data, extracting the Abstract Syntax Tree (AST) to verify architectural integrity. This prevents malicious code injection from compromising the analysis engine.</p>
+                </div>
+              </div>
             </DocsAccordion>
 
             <DocsAccordion 
               title="Protocol 03: Cryptographic Decision Logs" 
               subtitle="Verifiable Audits"
             >
-              <p>Every decision is signed using an institutional key. This ensures that audit trails cannot be tampered with by developers or administrators. If a decision log is modified, the signature check will fail, alerting governance officers to a breach in institutional integrity.</p>
+              <div id="audit-integrity" className="scroll-mt-20">
+                <p className="text-sm text-slate-400 leading-relaxed mb-4">
+                  Decision integrity is enforced through cryptographic signatures, creating an immutable chain of custody for every architectural verdict issued by the protocol.
+                </p>
+                <div className="bg-black/40 rounded p-4 border border-white/5 space-y-4">
+                  <p className="text-sm">Every decision is signed using an institutional key. This ensures that audit trails cannot be tampered with by developers or administrators. If a decision log is modified, the signature check will fail, alerting governance officers to a breach in institutional integrity.</p>
+                </div>
+              </div>
             </DocsAccordion>
           </div>
         </div>

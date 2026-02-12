@@ -18,46 +18,77 @@ const DocsSignedOverrides = () => {
       </div>
 
       <div className="space-y-12">
-        <div className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-6">
-          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">The Signature Process</h2>
-          <div className="grid sm:grid-cols-2 gap-12">
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">1. Rationale Submission</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                The developer provides a technical justification for the override within the Resolution Console.
-              </p>
+        <div className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-8">
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">The Signature Protocol</h2>
+          
+          <div className="grid gap-8">
+            <div className="flex gap-6 relative group">
+              <div className="absolute left-[15px] top-8 bottom-0 w-[1px] bg-white/5 group-hover:bg-indigo-500/20 transition-colors" />
+              <div className="h-8 w-8 rounded-full border border-indigo-500/20 bg-[#050505] flex items-center justify-center shrink-0 z-10">
+                <span className="text-[10px] font-mono text-indigo-400">01</span>
+              </div>
+              <div className="space-y-2 pb-8">
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Rationale Submission</h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  The developer must provide a structured justification within the Resolution Console. This rationale is the "why" behind the architectural deviation.
+                </p>
+                <div className="bg-black/40 rounded p-3 font-mono text-[10px] text-slate-400 border border-white/5 mt-2">
+                  <span className="text-indigo-400">RATIONALE:</span> "Bypassing layer isolation for legacy auth migration. Verified by @arch_lead."
+                </div>
+              </div>
             </div>
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">2. Cryptographic Binding</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                The rationale is bound to the specific commit hash and policy version, creating an immutable audit entry.
-              </p>
+
+            <div className="flex gap-6 relative group">
+              <div className="absolute left-[15px] top-8 bottom-0 w-[1px] bg-white/5 group-hover:bg-indigo-500/20 transition-colors" />
+              <div className="h-8 w-8 rounded-full border border-indigo-500/20 bg-[#050505] flex items-center justify-center shrink-0 z-10">
+                <span className="text-[10px] font-mono text-indigo-400">02</span>
+              </div>
+              <div className="space-y-2 pb-8">
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Cryptographic Binding</h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  The signature is bound to a specific triplet: <code className="text-[10px] text-indigo-300">Commit Hash</code> + <code className="text-[10px] text-indigo-300">Policy Version</code> + <code className="text-[10px] text-indigo-300">Developer Identity</code>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-6 group">
+              <div className="h-8 w-8 rounded-full border border-indigo-500/20 bg-[#050505] flex items-center justify-center shrink-0 z-10">
+                <span className="text-[10px] font-mono text-indigo-400">03</span>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Ledger Commitment</h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Once signed, the override is committed to the immutable audit trail. It cannot be deleted or modified, even if the PR is later closed or the policy is updated.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-12">
-        <div className="space-y-4">
-          <div className="h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center">
-            <UserCheck className="h-4 w-4 text-slate-400" />
+      <section className="space-y-8">
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Override Governance</h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div className="p-6 rounded border border-white/5 bg-white/[0.01] space-y-4">
+            <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center">
+              <ShieldCheck className="h-4 w-4 text-indigo-400" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Expiration Policies</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Overrides can be time-bound. A "Temporary Bypass" will automatically expire after a set duration, re-triggering the BLOCK verdict until a permanent fix is merged.
+            </p>
           </div>
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Accountability</h3>
-          <p className="text-sm text-slate-500 leading-relaxed">
-            By requiring a signature, Zaxion ensures that technical debt is never "accidental." It is always a conscious choice by an authorized institutional actor.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="h-8 w-8 rounded border border-white/10 bg-white/[0.02] flex items-center justify-center">
-            <ShieldCheck className="h-4 w-4 text-slate-400" />
+          <div className="p-6 rounded border border-white/5 bg-white/[0.01] space-y-4">
+            <div className="h-8 w-8 rounded bg-white/5 flex items-center justify-center">
+              <UserCheck className="h-4 w-4 text-indigo-400" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Multi-Sig Requirements</h4>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              For high-risk violations (e.g., security mandates), Zaxion requires signatures from both the PR author and a designated security officer.
+            </p>
           </div>
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Compliance Readiness</h3>
-          <p className="text-sm text-slate-500 leading-relaxed">
-            Signed overrides provide the documentation required for regulatory compliance (e.g., SOC2, HIPAA), where deviations from standard procedures must be justified and logged.
-          </p>
         </div>
-      </div>
+      </section>
 
       <div className="pt-12 border-t border-white/5">
         <Link 

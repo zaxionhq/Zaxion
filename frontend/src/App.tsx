@@ -12,9 +12,6 @@ import GovernanceDashboard from "./pages/GovernanceDashboard";
 import DocsLayout from "./components/docs/DocsLayout";
 import DocsOverview from "./pages/docs/Overview";
 import DocsConstitution from "./pages/docs/Constitution";
-import TheLaw from "./pages/docs/constitution/TheLaw";
-import TheJudgment from "./pages/docs/constitution/TheJudgment";
-import TheMemory from "./pages/docs/constitution/TheMemory";
 import DocsPolicies from "./pages/docs/Policies";
 import DocsSecurity from "./pages/docs/Security";
 import DocsDeterministicEvaluation from "./pages/docs/DeterministicEvaluation";
@@ -68,9 +65,6 @@ const App = () => (
                 <Route index element={<DocsOverview />} />
                 <Route path="overview" element={<DocsOverview />} />
                 <Route path="constitution" element={<DocsConstitution />} />
-                <Route path="constitution/the-law" element={<TheLaw />} />
-                <Route path="constitution/the-judgment" element={<TheJudgment />} />
-                <Route path="constitution/the-memory" element={<TheMemory />} />
                 <Route path="policies" element={<DocsPolicies />} />
                 <Route path="security" element={<DocsSecurity />} />
                 <Route path="deterministic-evaluation" element={<DocsDeterministicEvaluation />} />
