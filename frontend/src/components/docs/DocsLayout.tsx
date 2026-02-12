@@ -64,7 +64,7 @@ const DocsLayout = () => {
             <img 
               src="/zaxion-logo.png" 
               alt="Zaxion" 
-              className="h-6 w-auto object-contain brightness-0 invert opacity-70 group-hover:opacity-100 transition-opacity" 
+              className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" 
             />
             <span className="font-bold tracking-tight text-sm text-slate-200 group-hover:text-white transition-colors uppercase">
               ZAXION <span className="text-slate-500 font-medium lowercase italic">Docs</span>
