@@ -24,10 +24,21 @@ import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTra
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
+import { LoadingOverlay } from '@/components/ui/loading-overlay';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+  // Handle delayed navigation for docs
+  const handleDocsNavigation = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate('/docs');
+    }, 1500); // 1.5s delay for institutional feel
+  };
 
   // Handle deep link redirects from GitHub "Fix with Zaxion" button
   useEffect(() => {
@@ -42,6 +53,7 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#020617] text-white selection:bg-neon-cyan/30 overflow-x-hidden">
+      <LoadingOverlay isVisible={isTransitioning} message="Initializing Governance Docs..." />
       {/* Background depth layers */}
       <div className="fixed inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/10 blur-[120px] rounded-full" />
@@ -57,6 +69,14 @@ const LandingPage = () => {
           </div>
           
           <div className="hidden md:flex items-center gap-8">
+            <a 
+              href="/docs" 
+              onClick={handleDocsNavigation}
+              className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors"
+            >
+              Documentation
+            </a>
+            <Link to="/governance" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Governance Dashboard</Link>
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
             <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/waitlist')}>

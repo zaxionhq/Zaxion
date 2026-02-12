@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
@@ -12,52 +12,90 @@ import {
   Scale,
   History,
   FileText,
-  ShieldCheck
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DocsLayout = () => {
   const location = useLocation();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const menuGroups = [
+  const menuGroups = useMemo(() => [
     {
       label: "Core Layer",
       items: [
         { title: "Protocol Overview", path: "/docs/overview", icon: Info },
-        { title: "Governance Constitution", path: "/docs/constitution", icon: Scale },
-        { title: "Pillar 01: The Law", path: "/docs/constitution/the-law", icon: ShieldCheck, isNested: true },
-        { title: "Pillar 02: The Judgment", path: "/docs/constitution/the-judgment", icon: Scale, isNested: true },
-        { title: "Pillar 03: The Memory", path: "/docs/constitution/the-memory", icon: History, isNested: true },
+        { 
+          title: "Governance Constitution", 
+          path: "/docs/constitution", 
+          icon: Scale,
+          children: [
+            { title: "The Law", path: "/docs/constitution#the-law" },
+            { title: "The Judgment", path: "/docs/constitution#the-judgment" },
+            { title: "The Memory", path: "/docs/constitution#the-memory" },
+          ]
+        },
         { title: "Canonical Policies", path: "/docs/policies", icon: FileText },
-        { title: "Security Model", path: "/docs/security", icon: Shield },
+        { 
+          title: "Security Model", 
+          path: "/docs/security", 
+          icon: Shield,
+          children: [
+            { title: "Stateless Pipeline", path: "/docs/security#stateless-pipeline" },
+            { title: "Zero-Execution", path: "/docs/security#zero-execution" },
+            { title: "Audit Integrity", path: "/docs/security#audit-integrity" },
+          ]
+        },
       ]
     },
     {
-      label: "Technical Engine",
+      label: "Technical Layer",
       items: [
-        { title: "Deterministic Evaluation", path: "/docs/deterministic-evaluation", icon: Terminal },
-        { title: "AST Analysis", path: "/docs/ast-analysis", icon: Cpu },
-        { title: "Risk-Proportional Model", path: "/docs/risk-model", icon: Shield },
+        { title: "Deterministic Evaluation", path: "/docs/deterministic-evaluation", icon: Cpu },
+        { title: "AST-Fact Extraction", path: "/docs/ast-analysis", icon: Terminal },
+        { title: "Risk Scoring Model", path: "/docs/risk-model", icon: Shield },
         { title: "Enforcement Lifecycle", path: "/docs/enforcement-lifecycle", icon: History },
       ]
     },
     {
       label: "Implementation",
       items: [
-        { title: "GitHub Integration", path: "/docs/implementation/github-integration", icon: BookOpen },
+        { title: "GitHub App Setup", path: "/docs/implementation/github-integration", icon: Lock },
         { title: "Policy Configuration", path: "/docs/implementation/policy-configuration", icon: Terminal },
-        { title: "Override Protocol", path: "/docs/implementation/override-protocol", icon: Lock },
+        { title: "Override Protocol", path: "/docs/implementation/override-protocol", icon: ExternalLink },
       ]
     },
     {
-      label: "Governance & Audit",
+      label: "Audit & Ledger",
       items: [
         { title: "Institutional Audit Trail", path: "/docs/audit-trail", icon: History },
         { title: "Signed Overrides", path: "/docs/signed-overrides", icon: FileText },
       ]
     }
-  ];
+  ], []);
+
+  // Auto-expand the group that contains the current path
+  useEffect(() => {
+    menuGroups.forEach(group => {
+      group.items.forEach(item => {
+        const isPathActive = location.pathname === item.path;
+        const isChildActive = item.children?.some(child => location.pathname + location.hash === child.path);
+        
+        if ((isPathActive || isChildActive) && item.children) {
+          setExpandedItems(prev => prev.includes(item.title) ? prev : [...prev, item.title]);
+        }
+      });
+    });
+  }, [location.pathname, location.hash, menuGroups]);
+
+  const toggleExpand = (title: string) => {
+    setExpandedItems(prev => 
+      prev.includes(title) 
+        ? prev.filter(t => t !== title) 
+        : [...prev, title]
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#050505] text-slate-200 overflow-hidden">
@@ -93,25 +131,76 @@ const DocsLayout = () => {
                   {group.label}
                 </h4>
                 <div className="space-y-1">
-                  {group.items.map((item, j) => (
-                    <Link
-                      key={j}
-                      to={item.path}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-1.5 text-xs font-medium rounded-md transition-all group",
-                        item.isNested && "ml-4 border-l border-white/5 rounded-none pl-6",
-                        location.pathname === item.path 
-                          ? "bg-white/5 text-white border border-white/5" 
-                          : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.02]"
-                      )}
-                    >
-                      <item.icon className={cn(
-                        "h-3.5 w-3.5 shrink-0 transition-colors",
-                        location.pathname === item.path ? "text-indigo-400" : "group-hover:text-slate-300"
-                      )} />
-                      {item.title}
-                    </Link>
-                  ))}
+                  {group.items.map((item, j) => {
+                    const isExpanded = expandedItems.includes(item.title);
+                    const isActive = location.pathname === item.path;
+                    
+                    return (
+                      <div key={j} className="space-y-1">
+                        <div className="flex items-center group relative">
+                          <Link
+                            to={item.path}
+                            className={cn(
+                              "flex-1 flex items-center gap-3 px-4 py-1.5 text-xs font-medium rounded-md transition-all",
+                              isActive 
+                                ? "bg-white/5 text-white border border-white/5" 
+                                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.02]"
+                            )}
+                          >
+                            <item.icon className={cn(
+                              "h-3.5 w-3.5 shrink-0 transition-colors",
+                              isActive ? "text-indigo-400" : "group-hover:text-slate-300"
+                            )} />
+                            {item.title}
+                          </Link>
+                          
+                          {item.children && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                toggleExpand(item.title);
+                              }}
+                              className="absolute right-2 p-1 text-slate-600 hover:text-slate-400 transition-colors"
+                            >
+                              <ChevronDown className={cn(
+                                "h-3 w-3 transition-transform duration-200",
+                                isExpanded ? "rotate-180" : ""
+                              )} />
+                            </button>
+                          )}
+                        </div>
+
+                        {item.children && isExpanded && (
+                          <div className="ml-9 border-l border-white/5 space-y-1 mt-1">
+                            {item.children.map((child, k) => {
+                              const isChildActive = location.pathname + location.hash === child.path;
+                              
+                              return (
+                                <Link
+                                  key={k}
+                                  to={child.path}
+                                  className={cn(
+                                    "flex items-center gap-2 px-4 py-1 text-[11px] font-medium transition-colors relative group",
+                                    isChildActive ? "text-indigo-400" : "text-slate-600 hover:text-slate-300"
+                                  )}
+                                >
+                                  <div className={cn(
+                                    "absolute left-0 w-2 h-[1px]",
+                                    isChildActive ? "bg-indigo-400/50" : "bg-white/5"
+                                  )} />
+                                  {child.title}
+                                  <ChevronRight className={cn(
+                                    "h-2 w-2 transition-opacity ml-auto",
+                                    isChildActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                  )} />
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
