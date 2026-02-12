@@ -60,11 +60,11 @@ const DocsLayout = () => {
       {/* Sidebar */}
       <aside className="w-64 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0">
         <div className="p-6 border-b border-white/5">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3.5 group">
             <img 
               src="/zaxion-logo.png" 
               alt="Zaxion" 
-              className="h-6 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity" 
+              className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" 
             />
             <span className="font-bold tracking-tight text-sm text-slate-200 group-hover:text-white transition-colors uppercase">
               ZAXION <span className="text-slate-500 font-medium lowercase italic">Docs</span>
