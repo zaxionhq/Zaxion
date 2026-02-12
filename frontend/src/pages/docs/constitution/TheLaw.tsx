@@ -1,5 +1,4 @@
-import React from 'react';
-import { ShieldCheck, Terminal, ArrowRight, FileCode, Lock } from 'lucide-react';
+import { ArrowRight, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DocsAccordion from '../../../components/docs/DocsAccordion';
 
@@ -41,8 +40,8 @@ const TheLaw = () => {
                 </div>
                 <code className="text-[11px] text-indigo-300 block font-mono">
                   $ zaxion policy verify --id pol_7721<br />
-                  > Hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855<br />
-                  > Status: VERIFIED (CANONICAL)
+                  &gt; Hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855<br />
+                  &gt; Status: VERIFIED (CANONICAL)
                 </code>
               </div>
             </DocsAccordion>
