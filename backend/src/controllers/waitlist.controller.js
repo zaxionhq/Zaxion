@@ -1,5 +1,5 @@
 // src/controllers/waitlist.controller.js
-import { initDb } from "../models/index.js";
+import { waitlistService } from "../services/waitlist.service.js";
 import { emailService } from "../services/email.service.js";
 
 /**
@@ -27,32 +27,25 @@ export const joinWaitlist = async (req, res) => {
       });
     }
 
-    // 2. Check for duplicate entry
-    const existingEntry = await db.Waitlist.findOne({
-      where: { email: email.toLowerCase() },
+    // 2. Delegate to Service
+    const { existing, entry } = await waitlistService.join(db, {
+      email,
+      ipAddress: req.ip || req.headers["x-forwarded-for"],
+      userAgent: req.headers["user-agent"]
     });
 
-    if (existingEntry) {
-      // Return success to avoid information leakage, but don't do anything
+    if (existing) {
+      // Return success to avoid information leakage
       return res.status(200).json({
         success: true,
         message: "Protocol registration verified.",
       });
     }
 
-    // 3. Create new entry
-    await db.Waitlist.create({
-      email: email.toLowerCase(),
-      ipAddress: req.ip || req.headers["x-forwarded-for"] || "unknown",
-      userAgent: req.headers["user-agent"] || "unknown",
-      status: "PENDING",
-    });
-
-    // 4. Trigger automated email handshake (Email Service)
+    // 3. Trigger automated email handshake
     try {
       await emailService.sendWaitlistWelcome(email.toLowerCase());
     } catch (emailError) {
-      // We don't fail the request if email fails, but we log it
       console.error("[WaitlistController] Failed to send welcome email:", emailError.message);
     }
 
@@ -76,9 +69,7 @@ export const joinWaitlist = async (req, res) => {
 export const getWaitlist = async (req, res) => {
   try {
     const db = req.app.locals.db;
-    const entries = await db.Waitlist.findAll({
-      order: [["createdAt", "DESC"]],
-    });
+    const entries = await waitlistService.getAll(db);
 
     return res.status(200).json({
       success: true,
