@@ -76,11 +76,10 @@ const LandingPage = () => {
             >
               Documentation
             </a>
-            <Link to="/governance" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Governance Dashboard</Link>
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
-            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/waitlist')}>
-              Join Waitlist
+            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
+              Access Console
             </NeonButton>
           </div>
         </div>
@@ -111,14 +110,23 @@ const LandingPage = () => {
               Zaxion provides a deterministic, auditable framework for enforcing organizational standards and recording immutable intent. Designed for senior engineering and security teams.
             </p>
 
-            <div className="flex flex-col items-center gap-4">
-              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/waitlist')}>
-                Join Waitlist
+            <div className="flex flex-col items-center gap-6">
+              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
+                Access Console
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
-              <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/30">
-                Design Partner Cohort: 04/10 Slots Remaining
-              </p>
+              
+              <div className="flex flex-col items-center gap-2">
+                <Link 
+                  to="/waitlist" 
+                  className="text-sm font-bold text-white/40 hover:text-neon-cyan transition-colors"
+                >
+                  Request Beta Access
+                </Link>
+                <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/20">
+                  Design Partner Cohort: 04/10 Slots Remaining
+                </p>
+              </div>
             </div>
 
             {/* Hero Artifact */}
@@ -342,15 +350,15 @@ const LandingPage = () => {
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
-              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/waitlist')}>
-                Join Waitlist
+              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/governance')}>
+                Access Console
               </NeonButton>
               
               <Link 
-                to="/docs/overview" 
+                to="/waitlist" 
                 className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
               >
-                Institutional Registry
+                Request Beta Access
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>

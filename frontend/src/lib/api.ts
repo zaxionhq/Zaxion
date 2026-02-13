@@ -20,7 +20,7 @@ interface RetryConfig {
   retryCondition?: (error: ApiError) => boolean;
 }
 
-const API_BASE: string = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const API_BASE: string = import.meta.env.VITE_API_BASE_URL || "/api";
 const MOCK_MODE: boolean = import.meta.env.VITE_MOCK === 'true';
 
 // CSRF token management

@@ -7,8 +7,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "./pages/LandingPage";
 import Waitlist from "./pages/Waitlist";
+import LoginPage from "./pages/LoginPage";
 import DecisionResolutionConsole from "./pages/DecisionResolutionConsole";
 import GovernanceDashboard from "./pages/GovernanceDashboard";
+import GovernanceDecisions from "./pages/GovernanceDecisions";
+import GovernanceAnalytics from "./pages/GovernanceAnalytics";
+import GovernanceSettings from "./pages/GovernanceSettings";
 import DocsLayout from "./components/docs/DocsLayout";
 import DocsOverview from "./pages/docs/Overview";
 import DocsConstitution from "./pages/docs/Constitution";
@@ -55,10 +59,14 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/waitlist" element={<Waitlist />} />
               <Route path="/pr/:owner/:repo/:prNumber" element={<DecisionResolutionConsole />} />
               <Route path="/workspace" element={<WorkspaceRedirect />} />
               <Route path="/governance" element={<GovernanceDashboard />} />
+              <Route path="/governance/decisions" element={<GovernanceDecisions />} />
+              <Route path="/governance/analytics" element={<GovernanceAnalytics />} />
+              <Route path="/governance/settings" element={<GovernanceSettings />} />
               
               {/* Documentation Ecosystem */}
               <Route path="/docs" element={<DocsLayout />}>
