@@ -1,8 +1,19 @@
 import React from 'react';
-import { Shield, LayoutDashboard, Settings, History, BarChart3, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, History, BarChart3, Settings, Shield, ArrowLeft, LogOut, RefreshCw, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useSession } from '@/hooks/useSession';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -10,6 +21,11 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const { user, logout } = useSession();
+
+  const handleConnectAnother = () => {
+    window.location.href = `/api/v1/auth/github?redirect_url=${encodeURIComponent(window.location.pathname)}`;
+  };
 
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/governance' },
@@ -48,14 +64,39 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </nav>
 
         <div className="p-4 border-t border-border space-y-4">
-          <Link
-            to="/"
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Console
-          </Link>
-          <div className="flex items-center justify-between px-3">
+          {/* User Profile Section */}
+          <div className="px-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-3 px-2 h-12 hover:bg-accent/50">
+                  <Avatar className="h-8 w-8 border border-border">
+                    <AvatarImage src={user?.avatar_url} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {user?.username?.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start overflow-hidden">
+                    <span className="text-sm font-bold truncate w-full">{user?.displayName || user?.username}</span>
+                    <span className="text-[10px] text-muted-foreground truncate w-full">@{user?.username}</span>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 mb-2">
+                <DropdownMenuLabel>Account Management</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleConnectAnother} className="cursor-pointer">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <span>Switch Account</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign Out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="flex items-center justify-between px-3 pt-4 border-t border-border/50 mt-4">
             <span className="text-xs text-muted-foreground">Theme</span>
             <ThemeToggle />
           </div>

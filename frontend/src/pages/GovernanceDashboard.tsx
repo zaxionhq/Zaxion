@@ -1,35 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
 import { AnalyticsCards } from '@/components/governance/AnalyticsCards';
-import { DecisionExplorer } from '@/components/governance/DecisionExplorer';
 import { PolicySimulation } from '@/components/governance/PolicySimulation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, BarChart3, History, Microscope, AlertCircle } from 'lucide-react';
+import { Shield, Microscope, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-
-interface Hotspot {
-  repo: string;
-  count: number;
-}
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '@/hooks/useSession';
+import { api } from '@/lib/api';
 
 const GovernanceDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, loading: sessionLoading } = useSession();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    
+    if (!user) {
+      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, { replace: true });
+      return;
+    }
+
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch('/api/v1/analytics/governance/summary');
-        if (response.ok) {
-          const data = await response.json();
-          setAnalyticsData(data);
-        } else {
-          throw new Error('Failed to fetch governance analytics');
-        }
+        const response = await api.get('/v1/analytics/governance/summary');
+        setAnalyticsData(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -38,7 +35,18 @@ const GovernanceDashboard: React.FC = () => {
     };
 
     fetchAnalytics();
-  }, []);
+  }, [user, sessionLoading, navigate]);
+
+  if (sessionLoading || !user) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="text-white/40 font-mono text-xs uppercase tracking-[0.2em]">
+          Verifying Institutional Credentials...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -46,16 +54,16 @@ const GovernanceDashboard: React.FC = () => {
         <div className="flex items-center justify-between space-y-2">
           <div>
             <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent">
-              Governance Dashboard
+              Governance Strategy Hub
             </h2>
             <p className="text-muted-foreground">
-              Monitor policy compliance, analyze trust signals, and simulate governance changes.
+              Monitor systemic trust and simulate the impact of new governance policies.
             </p>
           </div>
           <div className="flex items-center space-x-2">
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-500 text-xs font-medium">
               <Shield className="h-3 w-3" />
-              Phase 6: Compliance Mode
+              Enterprise Mode Active
             </div>
           </div>
         </div>
@@ -70,68 +78,15 @@ const GovernanceDashboard: React.FC = () => {
 
         <AnalyticsCards data={analyticsData} isLoading={isLoading} />
 
-        <Tabs defaultValue="explorer" className="space-y-4">
-          <TabsList className="bg-muted/50 border border-border/50">
-            <TabsTrigger value="explorer" className="data-[state=active]:bg-background">
-              <History className="mr-2 h-4 w-4" />
-              Decision Explorer
-            </TabsTrigger>
-            <TabsTrigger value="simulation" className="data-[state=active]:bg-background">
-              <Microscope className="mr-2 h-4 w-4" />
-              Policy Simulation
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="data-[state=active]:bg-background">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Hotspot Analysis
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="explorer" className="space-y-4">
-            <div className="grid gap-4">
-              <DecisionExplorer />
+        <div className="grid gap-6">
+          <div className="rounded-lg border border-border/50 bg-card/30 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Microscope className="h-5 w-5 text-primary" />
+              <h3 className="font-bold tracking-tight text-lg">Policy Impact Simulator</h3>
             </div>
-          </TabsContent>
-
-          <TabsContent value="simulation" className="space-y-4">
             <PolicySimulation />
-          </TabsContent>
-
-          <TabsContent value="insights" className="space-y-4">
-            <div className="rounded-lg border border-border/50 bg-card/30 p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <h3 className="font-bold tracking-tight">Violation Hotspots</h3>
-              </div>
-              
-              <div className="space-y-4">
-                {analyticsData?.hotspots?.length > 0 ? (
-                  analyticsData.hotspots.map((hotspot: Hotspot) => (
-                    <div key={hotspot.repo} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
-                      <div className="flex items-center gap-3">
-                        <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="font-medium">{hotspot.repo}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="destructive">{hotspot.count} Blocks</Badge>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/governance/repo/${encodeURIComponent(hotspot.repo)}`}>
-                            Analyze
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Shield className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                    <p className="text-sm">No violation hotspots detected.</p>
-                    <p className="text-xs">Your repositories are currently following all governance policies.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );
