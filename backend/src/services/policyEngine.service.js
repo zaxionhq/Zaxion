@@ -7,7 +7,7 @@ import * as logger from "../utils/logger.js";
 export class PolicyEngineService {
   constructor(octokit) {
     this.octokit = octokit;
-    this.POLICY_VERSION = "v2.0.0";
+    this.POLICY_VERSION = 1;
   }
 
   /**

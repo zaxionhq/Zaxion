@@ -77,18 +77,39 @@ export async function getExecutiveSummary(db) {
     const hotspots = await db.Decision.findAll({
       attributes: [
         [db.sequelize.col('factSnapshot.repo_full_name'), 'repo'],
-        [db.sequelize.fn('COUNT', db.sequelize.col('Decision.id')), 'count']
+        [db.sequelize.fn('COUNT', db.sequelize.col('Decision.id')), 'count'],
+        [db.sequelize.col('policyVersion.policy.name'), 'policy_name'],
+        [db.sequelize.col('policyVersion.version_number'), 'version'],
+        [db.sequelize.col('policyVersion.creator.username'), 'created_by']
       ],
       where: { result: 'BLOCK' },
-      include: [{ model: db.FactSnapshot, as: 'factSnapshot', attributes: [] }],
-      group: ['factSnapshot.repo_full_name'],
+      include: [
+        { model: db.FactSnapshot, as: 'factSnapshot', attributes: [] },
+        { 
+          model: db.PolicyVersion, 
+          as: 'policyVersion', 
+          attributes: [],
+          include: [
+            { model: db.Policy, as: 'policy', attributes: [] },
+            { model: db.User, as: 'creator', attributes: [] }
+          ]
+        }
+      ],
+      group: [
+        'factSnapshot.repo_full_name', 
+        'policyVersion.id', 
+        'policyVersion.policy.id', 
+        'policyVersion.creator.id'
+      ],
       order: [[db.sequelize.literal('count'), 'DESC']],
       limit: 5,
       raw: true
     });
 
     return {
-      globalTrustScore: parseFloat(globalTrustScore.toFixed(2)),
+      trustScore: parseFloat(globalTrustScore.toFixed(2)),
+      bypassVelocity: totalDecisions > 0 ? parseFloat((totalOverrides / totalDecisions).toFixed(2)) : 0,
+      frictionIndex: 0, // Placeholder for global friction
       totalDecisions,
       totalBlocks,
       totalOverrides,
@@ -113,7 +134,50 @@ export async function listDecisions(db, limit = 50, offset = 0) {
         {
           model: db.FactSnapshot,
           as: 'factSnapshot',
-          attributes: ['repo_owner', 'repo_name', 'pr_number']
+          attributes: ['repo_full_name', 'pr_number']
+        },
+        {
+          model: db.Override,
+          as: 'override',
+          required: false,
+          attributes: ['id', 'status', 'category'],
+          include: [
+            {
+              model: db.OverrideSignature,
+              as: 'signatures',
+              attributes: ['justification', 'actor_id', 'createdAt'],
+              order: [['createdAt', 'DESC']],
+              include: [
+                {
+                  model: db.User,
+                  as: 'actor',
+                  attributes: ['username', 'displayName']
+                }
+              ]
+            }
+          ]
+        },
+        // Also check if this decision is the target of an override in the Overrides table
+        {
+          model: db.Override,
+          as: 'decisionOverride',
+          required: false,
+          attributes: ['id', 'status', 'category'],
+          include: [
+            {
+              model: db.OverrideSignature,
+              as: 'signatures',
+              attributes: ['justification', 'actor_id', 'createdAt'],
+              order: [['createdAt', 'DESC']],
+              include: [
+                {
+                  model: db.User,
+                  as: 'actor',
+                  attributes: ['username', 'displayName']
+                }
+              ]
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']],
@@ -121,15 +185,32 @@ export async function listDecisions(db, limit = 50, offset = 0) {
       offset
     });
 
-    return decisions.map(d => ({
-      id: d.id,
-      repo_owner: d.factSnapshot?.repo_owner,
-      repo_name: d.factSnapshot?.repo_name,
-      pr_number: d.factSnapshot?.pr_number,
-      result: d.result,
-      override_id: d.override_id,
-      created_at: d.createdAt
-    }));
+    return decisions.map(d => {
+      const [owner, name] = (d.factSnapshot?.repo_full_name || '').split('/');
+      
+      // Merge override data from both potential sources
+      const overrideData = d.override || d.decisionOverride;
+      
+      // Safety check: Filter out rejected or expired overrides from the "OVERRIDDEN" badge
+      const isActiveOverride = overrideData && (overrideData.status === 'APPROVED' || overrideData.status === 'REVOKED');
+      
+      return {
+        id: d.id,
+        repo_owner: owner || 'unknown',
+        repo_name: name || 'unknown',
+        pr_number: d.factSnapshot?.pr_number,
+        result: d.result,
+        override_id: isActiveOverride ? (d.override_id || overrideData?.id) : null,
+        override: isActiveOverride ? {
+          id: overrideData.id,
+          status: overrideData.status,
+          category: overrideData.category,
+          justification: overrideData.signatures?.[0]?.justification,
+          actor: overrideData.signatures?.[0]?.actor?.displayName || overrideData.signatures?.[0]?.actor?.username
+        } : null,
+        created_at: d.createdAt
+      };
+    });
   } catch (error) {
     logger.error({ error }, "Analytics: Failed to list decisions");
     throw error;

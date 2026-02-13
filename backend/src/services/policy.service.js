@@ -2,8 +2,12 @@
 
 export async function createPolicy(db, payload) {
   // Payload: { name, scope, target_id, owning_role }
+  
+  // If we are creating a policy that would effectively be a "System Policy" 
+  // but with a better name, we can do it here. 
+  // However, for now we just follow the standard creation.
   const policy = await db.Policy.create({
-    name: payload.name,
+    name: payload.name === 'Internal Zaxion Policy' ? 'Zaxion Core Policy' : payload.name,
     scope: payload.scope,
     target_id: payload.target_id,
     owning_role: payload.owning_role,
@@ -28,14 +32,51 @@ export async function getPolicy(db, id) {
 
 export async function listPolicies(db, scope, target_id) {
   const where = {};
-  if (scope) where.scope = scope;
-  if (target_id) where.target_id = target_id;
+  
+  // If a specific target_id (like a repo) is requested, we want to show:
+  // 1. Policies specifically for that repo
+  // 2. Global/Org-level policies (target_id = 'GLOBAL')
+  if (target_id && target_id !== 'GLOBAL') {
+    where[db.Sequelize.Op.or] = [
+      { target_id: target_id },
+      { target_id: 'GLOBAL' }
+    ];
+  } else {
+    if (scope) where.scope = scope;
+    if (target_id) where.target_id = target_id;
+  }
 
   const policies = await db.Policy.findAll({
     where,
+    include: [
+      {
+        model: db.PolicyVersion,
+        as: 'versions',
+        attributes: ['id', 'version_number', 'enforcement_level', 'rules_logic', 'description', 'createdAt'],
+        order: [['version_number', 'DESC']],
+        include: [
+          {
+            model: db.User,
+            as: 'creator',
+            attributes: ['username', 'displayName', 'email']
+          }
+        ]
+      },
+    ],
     order: [['name', 'ASC']],
   });
-  return policies.map((p) => p.toJSON());
+  
+  return policies.map((p) => {
+    const policy = p.toJSON();
+    if (policy.versions && policy.versions.length > 0) {
+      // For the inventory list, we might want the latest version's details at the top level
+      policy.latest_version = policy.versions[0];
+      policy.created_by = policy.versions[0].creator;
+      // Use version description if policy description is missing
+      policy.display_description = policy.description || policy.versions[0].description;
+    }
+    return policy;
+  });
 }
 
 /**

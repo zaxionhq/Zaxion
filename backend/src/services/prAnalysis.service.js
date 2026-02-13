@@ -1,4 +1,5 @@
 import sequelize from "../config/sequelize.js";
+import { initDb } from "../models/index.js";
 import { Octokit } from "@octokit/rest";
 import { DiffAnalyzerService } from "./diffAnalyzer.service.js";
 import { PolicyEngineService } from "./policyEngine.service.js";
@@ -198,6 +199,52 @@ export class PrAnalysisService {
         }
       );
 
+      // F. Sync to Governance Analytics (Phase 5/6 Pillar 4)
+      // This ensures the decision appears in the Audit Trail and Analytics
+      try {
+        const db = await initDb();
+        
+        // 1. Resolve Policy Version
+        const versionStr = decisionObject.policy_version || 'v1.0.0';
+        const versionInt = parseInt(versionStr.replace(/[^0-9]/g, '')) || 1;
+
+        const policyVersion = await db.PolicyVersion.findOne({
+          where: { version_number: versionInt }
+        });
+
+        if (policyVersion) {
+          // 2. Create Fact Snapshot
+          const factSnapshot = await db.FactSnapshot.create({
+            repo_full_name: `${owner}/${repo}`,
+            pr_number: prNumber,
+            commit_sha: headSha,
+            data: {
+              facts: decisionObject.facts || {},
+              risk_level: decisionObject.advisor?.riskAssessment?.riskLevel || 'MEDIUM'
+            }
+          });
+
+          // 3. Create Governance Decision
+          await db.Decision.create({
+            policy_version_id: policyVersion.id,
+            fact_id: factSnapshot.id,
+            result: decisionObject.decision === 'OVERRIDDEN_PASS' ? 'PASS' : decisionObject.decision,
+            rationale: decisionObject.decisionReason,
+            evaluation_hash: decisionObject.evaluation_hash || null,
+            github_check_run_id: checkRunId || null,
+            author_handle: prDetails.user.login,
+            pr_title: prDetails.title,
+            base_branch: baseRef,
+            risk_score: (decisionObject.advisor?.riskAssessment?.confidence || 0) * 100
+          });
+          
+          logger.log(`[PrAnalysisService] [trace:${traceId}] action: GOVERNANCE_SYNC_SUCCESS`);
+        }
+      } catch (syncErr) {
+        logger.error(`[PrAnalysisService] [trace:${traceId}] action: GOVERNANCE_SYNC_FAILED error: ${syncErr.message}`);
+        // We don't throw here to avoid failing the PR analysis if analytics sync fails
+      }
+
       // FATAL SIGNAL: If no rows were updated, it means the policy version changed while we were analyzing.
       // This is an "Elite Level" safety check to detect version drift/races.
       if (affectedRows === 0) {
@@ -217,6 +264,7 @@ export class PrAnalysisService {
       
       logger.log(`[PrAnalysisService] [trace:${traceId}] pr: #${prNumber} action: COMPLETED_ANALYSIS decision: ${decisionObject.decision}`);
   
+      return;
     } catch (error) {
       logger.error(`[PrAnalysisService] Failed: ${error.message}`);
       
