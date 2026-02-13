@@ -10,9 +10,9 @@ export default function analyticsRoutesFactory(db) {
   const router = Router();
   const controller = analyticsControllerFactory(db);
 
-  // All analytics routes require authentication and admin/auditor roles
+  // All analytics routes require authentication and user/admin roles
   router.use(authenticateJWT);
-  router.use(authorize(['admin', 'auditor']));
+  router.use(authorize(['user', 'admin', 'auditor']));
 
   router.get('/summary', controller.getExecutiveSummary);
   router.get('/repo', controller.getRepoMetrics);

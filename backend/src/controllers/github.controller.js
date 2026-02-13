@@ -466,7 +466,7 @@ export default function githubControllerFactory(db) {
         }
 
         // 2. Log to overrides table (The Authoritative Ledger for Bypasses)
-        await db.sequelize.query(
+        const [overrideResult] = await db.sequelize.query(
           `INSERT INTO pr_overrides (pr_decision_id, user_login, override_reason, category, ttl_hours, created_at)
            VALUES (:decisionId, :userLogin, :reason, :category, :ttlHours, NOW())`,
           {
@@ -481,6 +481,35 @@ export default function githubControllerFactory(db) {
             transaction
           }
         );
+
+        // 3. Sync to Governance Overrides (Phase 6 Pillar 2)
+        // This ensures the override appears in the Audit Trail and Analytics
+        try {
+          const { createOverride } = await import('../services/override.service.js');
+          
+          // Find the corresponding Governance Decision
+          const govDecision = await db.Decision.findOne({
+            where: { github_check_run_id: legacyDecision.github_check_run_id },
+            transaction
+          });
+
+          if (govDecision) {
+            await createOverride(db, {
+              decision_id: govDecision.id,
+              evaluation_hash: govDecision.evaluation_hash,
+              target_sha: legacyDecision.commit_sha,
+              category: category,
+              reason: reason,
+              ttl_hours: ttl_hours
+            }, user.id || user.login); // userId in system
+            log(`[Override] Governance sync successful for Decision ${govDecision.id}`);
+          } else {
+            warn(`[Override] Governance Decision not found for check_run_id ${legacyDecision.github_check_run_id}. Sync skipped.`);
+          }
+        } catch (syncErr) {
+          error("[Override] Governance sync failed:", syncErr.message);
+          // Non-blocking for the PR Gate itself
+        }
 
         // 4. Update GitHub Check Run & Commit Status
         // MANDATORY: Use GitHub App identity for reporting status.

@@ -6,7 +6,15 @@ export function setAuthCookies(res, accessToken, refreshToken, accessTokenOpts, 
 }
 
 export function clearAuthCookies(res) {
-  res.clearCookie("app_jwt", { path: "/" });
-  res.clearCookie("app_refresh", { path: "/" });
-  res.clearCookie("oauth_state", { path: "/" }); // Clear the OAuth state cookie as well
+  const isProd = process.env.NODE_ENV === "production";
+  const options = { 
+    path: "/", 
+    httpOnly: true, 
+    secure: isProd, 
+    sameSite: "lax" 
+  };
+  res.clearCookie("app_jwt", options);
+  res.clearCookie("app_refresh", options);
+  res.clearCookie("oauth_state", options);
+  res.clearCookie("oauth_redirect", options);
 }

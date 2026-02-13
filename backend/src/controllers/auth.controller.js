@@ -26,7 +26,8 @@ const authController = (db) => {
     try {
       const clientId = process.env.GITHUB_CLIENT_ID;
       const redirectUri = process.env.GITHUB_REDIRECT_URI;
-      const { redirect_url } = req.query;
+      const { redirect_url, redirect } = req.query;
+      const finalRedirectUrl = redirect_url || redirect;
 
       if (!clientId || !redirectUri) {
         return res.status(500).json({ error: "GitHub OAuth not configured" });
@@ -38,19 +39,20 @@ const authController = (db) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
+        path: "/",
         maxAge: 1000 * 60 * 15, // 15 mins
       };
       res.cookie("oauth_state", state, stateCookieOpts);
 
       // Store redirect URL if provided
-      if (redirect_url) {
-        res.cookie("oauth_redirect", redirect_url, {
+      if (finalRedirectUrl) {
+        res.cookie("oauth_redirect", finalRedirectUrl, {
           ...stateCookieOpts,
           maxAge: 1000 * 60 * 10, // 10 mins
         });
       }
 
-      const url = `${GITHUB_AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo%20read:user%20user:email&state=${encodeURIComponent(state)}`;
+      const url = `${GITHUB_AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo%20read:user%20user:email&state=${encodeURIComponent(state)}&prompt=select_account`;
       
       // Properly redirect to GitHub OAuth
       return res.redirect(302, url);
@@ -154,23 +156,37 @@ const authController = (db) => {
 
       // Get stored redirect URL
       const oauthRedirect = req.cookies.oauth_redirect;
-      res.clearCookie("oauth_redirect");
+      log(`OAuth Callback: Found redirect cookie: ${oauthRedirect}`);
+      
+      // Clear the redirect cookie with same options as set
+      res.clearCookie("oauth_redirect", {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax"
+      });
 
       // redirect to frontend
-      const frontend = env.FRONTEND_ORIGIN || env.FRONTEND_URL || "http://localhost:8080";
-      const targetUrl = oauthRedirect || `${frontend}/?auth=success`;
+      let frontend = env.FRONTEND_ORIGIN || env.FRONTEND_URL || "http://localhost:8080";
+      // Remove trailing slash from frontend URL if present
+      frontend = frontend.replace(/\/+$/, "");
+      
+      const targetUrl = oauthRedirect || "/governance";
       
       // Ensure targetUrl is absolute if it's from oauthRedirect
       let finalRedirect;
       if (oauthRedirect) {
+        // Ensure oauthRedirect starts with a slash if it's a relative path
+        const path = oauthRedirect.startsWith('/') ? oauthRedirect : `/${oauthRedirect}`;
         // If it's already an absolute URL, use it; otherwise prepend frontend origin
-        finalRedirect = oauthRedirect.startsWith('http') ? oauthRedirect : `${frontend}${oauthRedirect}`;
-        // Append auth=success if not present
-        const separator = finalRedirect.includes('?') ? '&' : '?';
-        finalRedirect += `${separator}auth=success`;
+        finalRedirect = oauthRedirect.startsWith('http') ? oauthRedirect : `${frontend}${path}`;
       } else {
-        finalRedirect = targetUrl;
+        finalRedirect = `${frontend}/governance`;
       }
+
+      // Append auth=success
+      const separator = finalRedirect.includes('?') ? '&' : '?';
+      finalRedirect += `${separator}auth=success`;
 
       log(`Redirecting to frontend: ${finalRedirect}`);
       return res.redirect(302, finalRedirect);
