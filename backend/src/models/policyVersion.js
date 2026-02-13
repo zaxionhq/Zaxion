@@ -45,6 +45,11 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Description of changes in this version',
+      },
     },
     {
       sequelize,

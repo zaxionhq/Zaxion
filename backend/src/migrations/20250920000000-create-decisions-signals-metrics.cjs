@@ -78,9 +78,9 @@ module.exports = {
         allowNull: false,
       },
       target_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.STRING,
         allowNull: false,
-        comment: 'Org, Repo, or Team UUID',
+        comment: 'Org UUID, Repo full_name, or Team identifier',
       },
       signal_level: {
         type: Sequelize.ENUM('INFO', 'ATTENTION', 'ANOMALY'),

@@ -7,6 +7,7 @@ export default (sequelize) => {
       this.belongsTo(models.Override, { foreignKey: 'override_id', as: 'override' });
       this.belongsTo(models.Decision, { foreignKey: 'previous_decision_id', as: 'previousDecision' });
       this.belongsTo(models.FactSnapshot, { foreignKey: 'fact_id', as: 'factSnapshot' });
+      this.hasOne(models.Override, { foreignKey: 'decision_id', as: 'decisionOverride' });
     }
   }
 

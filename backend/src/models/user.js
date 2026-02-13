@@ -8,6 +8,10 @@ export default (sequelize, DataTypes) => {
         foreignKey: "userId",
         as: "testCases",
       });
+      this.hasMany(models.RefreshToken, {
+        foreignKey: "userId",
+        as: "refreshTokens",
+      });
     }
   }
 

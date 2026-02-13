@@ -19,9 +19,9 @@ module.exports = {
         allowNull: false,
       },
       target_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.STRING,
         allowNull: false,
-        comment: 'UUID of the Organization or Repository',
+        comment: 'Identifier of the Organization or Repository (UUID or full_name)',
       },
       owning_role: {
         type: Sequelize.STRING,

@@ -19,8 +19,9 @@ export default (sequelize) => {
         allowNull: false,
       },
       target_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
+        comment: 'Identifier of the target (Org UUID, Repo full_name, etc.)',
       },
       signal_level: {
         type: DataTypes.ENUM('INFO', 'ATTENTION', 'ANOMALY'),

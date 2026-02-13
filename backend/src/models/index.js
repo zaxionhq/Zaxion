@@ -41,14 +41,6 @@ export async function initDb() {
     }
   });
 
-  // Explicitly define associations here if not handled in model's associate method
-  if (!db.User.associations.refreshTokens) { // Prevent re-adding if hot-reloading
-    db.User.hasMany(db.RefreshToken, { foreignKey: 'userId', as: 'refreshTokens' });
-  }
-  if (!db.RefreshToken.associations.User) { // Prevent re-adding if hot-reloading
-    db.RefreshToken.belongsTo(db.User, { foreignKey: 'userId' });
-  }
-
   // ✅ Export Sequelize + models
   db.sequelize = sequelize;
   db.Sequelize = Sequelize;

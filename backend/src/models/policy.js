@@ -27,13 +27,18 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
       target_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
-        comment: 'UUID of the Organization or Repository',
+        comment: 'Identifier of the Organization or Repository (UUID or full_name)',
       },
       owning_role: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Detailed description of the policy goals',
       },
     },
     {
