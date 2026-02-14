@@ -99,16 +99,18 @@ async function startServer() {
   await assertDatabaseConnectionOk();
 
   // Initialize PR Analysis Worker (PR Gate)
+  console.log("⚙️ [WORKER] Initializing PR Analysis Worker...");
   try {
     initPrAnalysisWorker();
-    log("✅ PR Analysis Worker initialized");
+    console.log("✅ [WORKER] PR Analysis Worker initialized");
   } catch (err) {
-    logError("Failed to initialize PR Analysis Worker", err);
+    console.error("❌ [WORKER] Failed to initialize PR Analysis Worker", err);
     // We don't exit process here, as API should still work even if worker fails (though Gate is down)
   }
 
+  console.log("🌐 [SERVER] Starting HTTP listener on port:", PORT);
   const server = app.listen(PORT, () => {
-    log(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
+    console.log(`🚀 [SERVER] Zaxion Protocol LIVE on http://localhost:${PORT} (env: ${NODE_ENV})`);
   });
 
   process.on("SIGTERM", () => shutdown(server));
