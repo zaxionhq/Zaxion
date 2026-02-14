@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import env from "../config/env.js";
+import { log, warn, error } from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +24,7 @@ class EmailService {
    */
   init() {
     if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
-      console.warn("[EmailService] SMTP credentials missing. Email delivery disabled.");
+      warn("[EmailService] SMTP credentials missing. Email delivery disabled.");
       return;
     }
 
@@ -38,11 +39,11 @@ class EmailService {
     });
 
     // Verify connection configuration (Non-blocking)
-    this.transporter.verify((error, success) => {
-      if (error) {
-        console.warn("[EmailService] Transporter verification failed (Will retry on send):", error.message);
+    this.transporter.verify((err, success) => {
+      if (err) {
+        warn("[EmailService] Transporter verification failed (Will retry on send):", { error: err.message });
       } else {
-        console.log("[EmailService] Transporter ready for protocol handshake.");
+        log("[EmailService] Transporter ready for protocol handshake.");
       }
     });
   }
@@ -53,7 +54,7 @@ class EmailService {
    */
   async sendWaitlistWelcome(to) {
     if (!this.transporter) {
-      console.warn("[EmailService] Cannot send email: Transporter not initialized.");
+      warn("[EmailService] Cannot send email: Transporter not initialized.");
       return;
     }
 
@@ -91,11 +92,11 @@ class EmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("[EmailService] Welcome email sent to:", to, "ID:", info.messageId);
+      log("[EmailService] Welcome email sent to:", { to, messageId: info.messageId });
       return info;
-    } catch (error) {
-      console.error("[EmailService] Failed to send welcome email:", error);
-      throw error;
+    } catch (err) {
+      error("[EmailService] Failed to send welcome email:", { error: err.message });
+      throw err;
     }
   }
 }
