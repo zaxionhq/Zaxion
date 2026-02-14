@@ -21,8 +21,8 @@ const dbName = process.env.DB_NAME;
 const databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
 
 // Construct the sequelize-cli command with all necessary arguments, using --url
-const sequelizeCliPath = path.resolve(__dirname, '../node_modules/.bin/sequelize-cli');
-const sequelizeCliCommand = `${sequelizeCliPath} db:migrate --url ${databaseUrl} --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
+const sequelizeCliPath = path.resolve(__dirname, '../node_modules/sequelize-cli/lib/sequelize');
+const sequelizeCliCommand = `node ${sequelizeCliPath} db:migrate --url "${databaseUrl}" --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
 
 try {
   logger.info('Running Sequelize migrations...');
