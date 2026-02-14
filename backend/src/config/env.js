@@ -63,10 +63,13 @@ const schema = z.object({
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments
   if (env.NODE_ENV !== "test") {
-    if (!env.DB_NAME) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_NAME"], message: "Required in non-test environment" });
-    if (!env.APP_DB_USER) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_USER"], message: "Required in non-test environment" });
-    if (!env.APP_DB_PASSWORD) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_PASSWORD"], message: "Required in non-test environment" });
-    if (!env.DB_HOST) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_HOST"], message: "Required in non-test environment" });
+    // If DATABASE_URL is not provided, we must have individual fields
+    if (!env.DATABASE_URL) {
+      if (!env.DB_NAME) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_NAME"], message: "Required in non-test environment if DATABASE_URL is missing" });
+      if (!env.APP_DB_USER) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_USER"], message: "Required in non-test environment if DATABASE_URL is missing" });
+      if (!env.APP_DB_PASSWORD) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_PASSWORD"], message: "Required in non-test environment if DATABASE_URL is missing" });
+      if (!env.DB_HOST) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_HOST"], message: "Required in non-test environment if DATABASE_URL is missing" });
+    }
   }
 })
 .transform((env) => {
