@@ -12,17 +12,20 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // Construct the DATABASE_URL explicitly for sequelize-cli --url
-const dbUser = process.env.APP_DB_USER || process.env.DB_USER;
-const dbPassword = process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD;
-const dbHost = process.env.LOCAL_DB_HOST || process.env.DB_HOST;
-const dbPort = process.env.DB_PORT || 5432;
-const dbName = process.env.DB_NAME;
+// Prefer the full DATABASE_URL if provided, otherwise construct it
+let databaseUrl = process.env.DATABASE_URL;
 
-const databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+if (!databaseUrl) {
+  const dbUser = process.env.APP_DB_USER || process.env.DB_USER;
+  const dbPassword = process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD;
+  const dbHost = process.env.LOCAL_DB_HOST || process.env.DB_HOST;
+  const dbPort = process.env.DB_PORT || 5432;
+  const dbName = process.env.DB_NAME;
+  databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+}
 
-// Construct the sequelize-cli command with all necessary arguments, using --url
-const sequelizeCliPath = path.resolve(__dirname, '../node_modules/sequelize-cli/index.js');
-const sequelizeCliCommand = `node ${sequelizeCliPath} db:migrate --url "${databaseUrl}" --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
+// Use npx to run sequelize-cli, which is more robust in different environments (Docker/Railway)
+const sequelizeCliCommand = `npx sequelize-cli db:migrate --url "${databaseUrl}" --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
 
 try {
   logger.info('Running Sequelize migrations...');
