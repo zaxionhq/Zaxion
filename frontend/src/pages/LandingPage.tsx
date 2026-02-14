@@ -344,17 +344,18 @@ const LandingPage = () => {
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
-              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/governance')}>
-                Access Console
+              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/waitlist')}>
+                Join Waitlist
               </NeonButton>
               
-              <Link 
-                to="/waitlist" 
+              <a 
+                href="/docs" 
+                onClick={handleDocsNavigation}
                 className="group flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white transition-colors"
               >
-                Request Beta Access
+                Read Documentation
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </a>
             </div>
 
             <p className="mt-16 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">

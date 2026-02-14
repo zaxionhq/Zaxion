@@ -38,21 +38,31 @@ async function assertDatabaseConnectionOk() {
     return;
   }
 
-  try {
-    // Test DB connection
-    await db.sequelize.authenticate();
-    log("✅ DB connection authenticated");
+  const MAX_RETRIES = 5;
+  let retries = 0;
 
-    // In dev only, sync models for convenience. In production, use migrations.
-    if (NODE_ENV !== "production") {
-      // Using force:false and alter:false to prevent automatic schema changes
-      // that could cause data loss. Use migrations for schema changes instead.
-      await db.sequelize.sync({ force: false, alter: false });
-      log("✅ Sequelize sync completed (dev mode)");
+  while (retries < MAX_RETRIES) {
+    try {
+      // Test DB connection
+      await db.sequelize.authenticate();
+      log("✅ DB connection authenticated");
+      
+      // In dev only, sync models for convenience. In production, use migrations.
+      if (NODE_ENV !== "production") {
+        await db.sequelize.sync({ force: false, alter: false });
+        log("✅ Sequelize sync completed (dev mode)");
+      }
+      return; // Success!
+    } catch (err) {
+      retries++;
+      warn(`⚠️ DB connection attempt ${retries}/${MAX_RETRIES} failed. Retrying in 5s...`, { error: err.message });
+      if (retries >= MAX_RETRIES) {
+        logError("❌ Unable to connect to the database after maximum retries:", err);
+        process.exit(1);
+      }
+      // Wait 5 seconds before retrying
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
-  } catch (err) {
-    logError("Unable to connect to the database:", err);
-    process.exit(1);
   }
 }
 
