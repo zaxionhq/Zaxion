@@ -94,6 +94,8 @@ const parsed = schema.safeParse(process.env);
 const foundKeys = Object.keys(process.env).filter(k => !k.includes("PASS") && !k.includes("SECRET") && !k.includes("KEY"));
 const envCount = Object.keys(process.env).length;
 console.log(`[ENV DEBUG] process.env contains ${envCount} keys.`);
+console.log(`[ENV DEBUG] Railway Service Name: ${process.env.RAILWAY_SERVICE_NAME || "Unknown"}`);
+console.log(`[ENV DEBUG] Railway Environment: ${process.env.RAILWAY_ENVIRONMENT_NAME || "Unknown"}`);
 console.log(`[ENV DEBUG] Non-sensitive keys found: ${foundKeys.join(", ")}`);
 console.log(`[ENV DEBUG] JWT_SECRET exists in process.env: ${!!process.env.JWT_SECRET}`);
 console.log(`[ENV DEBUG] SMTP_USER exists in process.env: ${!!process.env.SMTP_USER}`);
