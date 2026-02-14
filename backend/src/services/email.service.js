@@ -37,10 +37,10 @@ class EmailService {
       },
     });
 
-    // Verify connection configuration
+    // Verify connection configuration (Non-blocking)
     this.transporter.verify((error, success) => {
       if (error) {
-        console.error("[EmailService] Transporter verification failed:", error.message);
+        console.warn("[EmailService] Transporter verification failed (Will retry on send):", error.message);
       } else {
         console.log("[EmailService] Transporter ready for protocol handshake.");
       }
