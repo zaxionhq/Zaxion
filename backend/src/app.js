@@ -20,6 +20,10 @@ import { generateCSRFToken, verifyCSRFToken } from './middleware/csrf.js';
 export default function createApp(db) {
   const app = express();
 
+  // Trust proxy - Essential for Railway/Vercel to get the real user IP
+  // This must be set BEFORE any rate limiters are applied
+  app.set('trust proxy', 1);
+
   // Make db accessible globally via app.locals for middlewares/routes
   app.locals.db = db;
 
