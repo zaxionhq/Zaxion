@@ -1,21 +1,21 @@
 // src/server.js
-console.log("🚀 [BOOTSTRAP] Zaxion server starting...");
+log("🚀 [BOOTSTRAP] Zaxion server starting...");
 
 import env from "./config/env.js";
 import sequelize from "./config/sequelize.js";
 import { log, error as logError, warn } from "./utils/logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
 
-console.log("📦 [BOOTSTRAP] Imports completed. Initializing database...");
+log("📦 [BOOTSTRAP] Imports completed. Initializing database...");
 
 // Initialize DB and get the db object
 const db = await initDb();
-console.log("✅ [BOOTSTRAP] Database initialized (models loaded)");
+log("✅ [BOOTSTRAP] Database initialized (models loaded)");
 
 // Dynamically import app *after* db is loaded, and pass db to it
 const { default: createApp } = await import("./app.js");
 const app = createApp(db); // Pass the initialized db to the app factory
-console.log("✅ [BOOTSTRAP] Express application created");
+log("✅ [BOOTSTRAP] Express application created");
 
 // Parse command line arguments for port
 const args = process.argv.slice(2);
@@ -38,10 +38,10 @@ log(`[ENV CHECK] PORT: ${env.get("PORT")}, NODE_ENV: ${env.NODE_ENV}, DB_USER: $
 // initTelemetry();
 
 async function assertDatabaseConnectionOk() {
-  console.log("🔍 [DB] Checking connection...");
+  log("🔍 [DB] Checking connection...");
   // Guard DB bootstrap in CI mode
   if (env.APP_MODE === "ci") {
-    console.log("⏩ CI mode detected: Skipping DB authentication check");
+    log("⏩ CI mode detected: Skipping DB authentication check");
     return;
   }
 
@@ -52,19 +52,19 @@ async function assertDatabaseConnectionOk() {
     try {
       // Test DB connection
       await db.sequelize.authenticate();
-      console.log("✅ DB connection authenticated");
+      log("✅ DB connection authenticated");
       
       // In dev only, sync models for convenience. In production, use migrations.
       if (NODE_ENV !== "production") {
         await db.sequelize.sync({ force: false, alter: false });
-        console.log("✅ Sequelize sync completed (dev mode)");
+        log("✅ Sequelize sync completed (dev mode)");
       }
       return; // Success!
     } catch (err) {
       retries++;
-      console.warn(`⚠️ DB connection attempt ${retries}/${MAX_RETRIES} failed. Retrying in 5s...`, { error: err.message });
+      warn(`⚠️ DB connection attempt ${retries}/${MAX_RETRIES} failed. Retrying in 5s...`, { error: err.message });
       if (retries >= MAX_RETRIES) {
-        console.error("❌ Unable to connect to the database after maximum retries:", err);
+        logError("❌ Unable to connect to the database after maximum retries:", err);
         process.exit(1);
       }
       // Wait 5 seconds before retrying
@@ -95,22 +95,22 @@ function shutdown(server) {
 import { initPrAnalysisWorker } from "./workers/prAnalysis.worker.js";
 
 async function startServer() {
-  console.log("🚀 [SERVER] Starting bootstrap sequence...");
+  log("🚀 [SERVER] Starting bootstrap sequence...");
   await assertDatabaseConnectionOk();
 
   // Initialize PR Analysis Worker (PR Gate)
-  console.log("⚙️ [WORKER] Initializing PR Analysis Worker...");
+  log("⚙️ [WORKER] Initializing PR Analysis Worker...");
   try {
     initPrAnalysisWorker();
-    console.log("✅ [WORKER] PR Analysis Worker initialized");
+    log("✅ [WORKER] PR Analysis Worker initialized");
   } catch (err) {
-    console.error("❌ [WORKER] Failed to initialize PR Analysis Worker", err);
+    logError("❌ [WORKER] Failed to initialize PR Analysis Worker", err);
     // We don't exit process here, as API should still work even if worker fails (though Gate is down)
   }
 
-  console.log("🌐 [SERVER] Starting HTTP listener on port:", PORT);
+  log(`🌐 [SERVER] Starting HTTP listener on port: ${PORT}`);
   const server = app.listen(PORT, () => {
-    console.log(`🚀 [SERVER] Zaxion Protocol LIVE on http://localhost:${PORT} (env: ${NODE_ENV})`);
+    log(`🚀 [SERVER] Zaxion Protocol LIVE on http://localhost:${PORT} (env: ${NODE_ENV})`);
   });
 
   process.on("SIGTERM", () => shutdown(server));
