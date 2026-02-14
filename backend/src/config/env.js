@@ -92,7 +92,11 @@ const parsed = schema.safeParse(process.env);
 
 // DEBUG LOG: Let's see what keys are actually present in process.env
 const foundKeys = Object.keys(process.env).filter(k => !k.includes("PASS") && !k.includes("SECRET") && !k.includes("KEY"));
-logger.log(`[ENV DEBUG] process.env contains ${Object.keys(process.env).length} keys. Non-sensitive keys found: ${foundKeys.join(", ")}`);
+const envCount = Object.keys(process.env).length;
+console.log(`[ENV DEBUG] process.env contains ${envCount} keys.`);
+console.log(`[ENV DEBUG] Non-sensitive keys found: ${foundKeys.join(", ")}`);
+console.log(`[ENV DEBUG] JWT_SECRET exists in process.env: ${!!process.env.JWT_SECRET}`);
+console.log(`[ENV DEBUG] SMTP_USER exists in process.env: ${!!process.env.SMTP_USER}`);
 
 if (!parsed.success) {
   const errs = parsed.error.format();
