@@ -78,8 +78,8 @@ const LandingPage = () => {
             </a>
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
-            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
-              Access Console
+            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/waitlist')}>
+              Join Waitlist
             </NeonButton>
           </div>
         </div>
@@ -111,18 +111,12 @@ const LandingPage = () => {
             </p>
 
             <div className="flex flex-col items-center gap-6">
-              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
-                Access Console
+              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/waitlist')}>
+                Join the Waitlist
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               
               <div className="flex flex-col items-center gap-2">
-                <Link 
-                  to="/waitlist" 
-                  className="text-sm font-bold text-white/40 hover:text-neon-cyan transition-colors"
-                >
-                  Request Beta Access
-                </Link>
                 <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/20">
                   Design Partner Cohort: 04/10 Slots Remaining
                 </p>
