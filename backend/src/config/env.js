@@ -92,7 +92,7 @@ const parsed = schema.safeParse(process.env);
 
 // DEBUG LOG: Let's see what keys are actually present in process.env
 const foundKeys = Object.keys(process.env).filter(k => !k.includes("PASS") && !k.includes("SECRET") && !k.includes("KEY"));
-logger.info(`[ENV DEBUG] process.env contains ${Object.keys(process.env).length} keys. Non-sensitive keys found: ${foundKeys.join(", ")}`);
+logger.log(`[ENV DEBUG] process.env contains ${Object.keys(process.env).length} keys. Non-sensitive keys found: ${foundKeys.join(", ")}`);
 
 if (!parsed.success) {
   const errs = parsed.error.format();
