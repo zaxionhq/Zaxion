@@ -7,26 +7,21 @@ const redisUrl = env.get("REDIS_URL");
 
 let prAnalysisQueue = null;
 
-if (!redisUrl || redisUrl.includes("localhost")) {
-  logger.warn("⚠️ No production Redis URL found. PR Analysis background jobs will be disabled.");
-} else {
-  try {
-    // Create the Queue
-    const queue = new Queue("pr-analysis", {
-      connection: {
-        url: redisUrl,
-        // Strict connection settings to avoid crash loops
-        connectTimeout: 5000,
-        maxRetriesPerRequest: 1,
-        retryStrategy: function(times) {
-          // If we fail, don't keep trying forever in production if it's not available
-          if (times > 2) {
-              logger.warn("Redis connection failed. Background queue is inactive.");
-              return null; 
-          }
-          return 1000;
+try {
+  // Create the Queue
+  // We use a small retry strategy for the initial connection check
+  const queue = new Queue("pr-analysis", {
+    connection: {
+      url: redisUrl,
+      retryStrategy: function(times) {
+        // If we fail more than 3 times, stop trying to connect to avoid spamming logs
+        if (times > 3) {
+            logger.warn("Redis connection failed too many times. Disabling Queue.");
+            return null; // Stop retrying
         }
-      },
+        return Math.min(times * 50, 2000);
+      }
+    },
     defaultJobOptions: {
       attempts: 3, 
       backoff: {
@@ -45,8 +40,7 @@ if (!redisUrl || redisUrl.includes("localhost")) {
   prAnalysisQueue = queue;
   
 } catch (err) {
-    logger.error("Failed to initialize BullMQ Queue:", err.message);
-  }
+  logger.error("Failed to initialize BullMQ Queue:", err.message);
 }
 
 export { prAnalysisQueue };
