@@ -18,7 +18,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const schema = z.object({
   // --- Core ---
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  APP_MODE: z.enum(["ci", "dev", "prod"]).default("dev"),
+  APP_MODE: z.enum(["ci", "dev", "prod", "production"]).default("dev"),
   PORT: z.coerce.number().default(5000),
 
   // --- Database ---
@@ -90,19 +90,8 @@ const schema = z.object({
 // 1. Parse and Validate
 const parsed = schema.safeParse(process.env);
 
-// DEBUG LOG: Let's see what keys are actually present in process.env
-const foundKeys = Object.keys(process.env).filter(k => !k.includes("PASS") && !k.includes("SECRET") && !k.includes("KEY"));
-const envCount = Object.keys(process.env).length;
-console.log(`[ENV DEBUG] process.env contains ${envCount} keys.`);
-console.log(`[ENV DEBUG] Railway Service Name: ${process.env.RAILWAY_SERVICE_NAME || "Unknown"}`);
-console.log(`[ENV DEBUG] Railway Environment: ${process.env.RAILWAY_ENVIRONMENT_NAME || "Unknown"}`);
-console.log(`[ENV DEBUG] Non-sensitive keys found: ${foundKeys.join(", ")}`);
-console.log(`[ENV DEBUG] JWT_SECRET exists in process.env: ${!!process.env.JWT_SECRET}`);
-console.log(`[ENV DEBUG] SMTP_USER exists in process.env: ${!!process.env.SMTP_USER}`);
-
 if (!parsed.success) {
   const errs = parsed.error.format();
-  console.log("[ENV DEBUG] Validation Errors:", JSON.stringify(errs, null, 2));
   if ((process.env.NODE_ENV || "development") === "production") {
     logger.error("Critical: Env validation failed in production:", JSON.stringify(errs, null, 2));
     throw new Error("Missing or invalid environment variables");
