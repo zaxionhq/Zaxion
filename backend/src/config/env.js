@@ -102,6 +102,7 @@ console.log(`[ENV DEBUG] SMTP_USER exists in process.env: ${!!process.env.SMTP_U
 
 if (!parsed.success) {
   const errs = parsed.error.format();
+  console.log("[ENV DEBUG] Validation Errors:", JSON.stringify(errs, null, 2));
   if ((process.env.NODE_ENV || "development") === "production") {
     logger.error("Critical: Env validation failed in production:", JSON.stringify(errs, null, 2));
     throw new Error("Missing or invalid environment variables");
