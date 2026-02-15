@@ -41,7 +41,7 @@ export default function createApp(db) {
       if(!origin) return callback(null, true);
       
       // Check if the origin is allowed
-      const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:5000', 'http://localhost:8080'];
+      const allowedOrigins = [FRONTEND_ORIGIN, process.env.FRONTEND_URL, 'http://localhost:5000', 'http://localhost:8080'];
       if(allowedOrigins.indexOf(origin) !== -1 || !isProd) {
         callback(null, true);
       } else {
