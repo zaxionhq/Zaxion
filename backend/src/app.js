@@ -33,6 +33,9 @@ export default function createApp(db) {
 
   // Security headers
   app.use(helmet());
+  
+  // Handle preflight requests
+  app.options('*', cors());
 
   // CORS configuration
   app.use(cors({
@@ -41,10 +44,18 @@ export default function createApp(db) {
       if(!origin) return callback(null, true);
       
       // Check if the origin is allowed
-      const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:5000', 'http://localhost:8080'];
+      // In production, we need to allow the Vercel frontend domain
+      const allowedOrigins = [
+        FRONTEND_ORIGIN, 
+        'http://localhost:5000', 
+        'http://localhost:8080',
+        'https://zaxion-bice.vercel.app' // Explicitly add Vercel domain
+      ];
+      
       if(allowedOrigins.indexOf(origin) !== -1 || !isProd) {
         callback(null, true);
       } else {
+        log(`[CORS] Blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
