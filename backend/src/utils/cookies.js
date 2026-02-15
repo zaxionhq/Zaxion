@@ -1,16 +1,8 @@
 // src/utils/cookies.js
 
 export function setAuthCookies(res, accessToken, refreshToken, accessTokenOpts, refreshTokenOpts) {
-  const isProd = process.env.NODE_ENV === "production";
-  const defaultOpts = {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
-    path: "/"
-  };
-
-  res.cookie("app_jwt", accessToken, { ...defaultOpts, ...accessTokenOpts });
-  res.cookie("app_refresh", refreshToken, { ...defaultOpts, ...refreshTokenOpts });
+  res.cookie("app_jwt", accessToken, accessTokenOpts);
+  res.cookie("app_refresh", refreshToken, refreshTokenOpts);
 }
 
 export function clearAuthCookies(res) {
@@ -19,7 +11,7 @@ export function clearAuthCookies(res) {
     path: "/", 
     httpOnly: true, 
     secure: isProd, 
-    sameSite: isProd ? "none" : "lax"
+    sameSite: "lax" 
   };
   res.clearCookie("app_jwt", options);
   res.clearCookie("app_refresh", options);

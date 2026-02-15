@@ -33,9 +33,6 @@ export default function createApp(db) {
 
   // Security headers
   app.use(helmet());
-  
-  // Handle preflight requests
-  app.options('*', cors());
 
   // CORS configuration
   app.use(cors({
@@ -44,18 +41,10 @@ export default function createApp(db) {
       if(!origin) return callback(null, true);
       
       // Check if the origin is allowed
-      // In production, we need to allow the Vercel frontend domain
-      const allowedOrigins = [
-        FRONTEND_ORIGIN, 
-        'http://localhost:5000', 
-        'http://localhost:8080',
-        'https://zaxion-bice.vercel.app' // Explicitly add Vercel domain
-      ];
-      
+      const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:5000', 'http://localhost:8080'];
       if(allowedOrigins.indexOf(origin) !== -1 || !isProd) {
         callback(null, true);
       } else {
-        log(`[CORS] Blocked origin: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -103,8 +92,8 @@ export default function createApp(db) {
   // Only verify CSRF token for API routes that modify data
   // Exclude test generation endpoints from CSRF verification temporarily
   app.use('/api', (req, res, next) => {
-    // Skip CSRF verification for test generation endpoints, webhooks, and waitlist
-    if (req.path.includes('/testcases/generate') || req.path.includes('/webhooks') || req.path.includes('/waitlist')) {
+    // Skip CSRF verification for test generation endpoints and webhooks
+    if (req.path.includes('/testcases/generate') || req.path.includes('/webhooks')) {
       return next();
     }
     return verifyCSRFToken(req, res, next);
