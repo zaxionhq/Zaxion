@@ -18,8 +18,8 @@ export const generateCSRFToken = (req, res, next) => {
     // For Double Submit, the cookie can be httpOnly if we have an endpoint to return the value.
     res.cookie('csrf_token', token, {
       httpOnly: true, // Secure: Frontend gets value via API, not reading cookie directly
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: true, // Always secure for production/railway
+      sameSite: 'none', // Required for cross-site (Vercel -> Railway)
       maxAge: 30 * 60 * 1000 // 30 mins
     });
   }
