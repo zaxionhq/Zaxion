@@ -38,7 +38,7 @@ const authController = (db) => {
       const stateCookieOpts = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
         maxAge: 1000 * 60 * 15, // 15 mins
       };
@@ -163,7 +163,7 @@ const authController = (db) => {
         path: "/",
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax"
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
       });
 
       // redirect to frontend

@@ -16,7 +16,7 @@ export const generateCSRFToken = (req, res, next) => {
     res.cookie('app_session_id', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 30 * 60 * 1000 // 30 mins
     });
   }

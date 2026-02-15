@@ -11,7 +11,7 @@ export function clearAuthCookies(res) {
     path: "/", 
     httpOnly: true, 
     secure: isProd, 
-    sameSite: "lax" 
+    sameSite: isProd ? "none" : "lax" 
   };
   res.clearCookie("app_jwt", options);
   res.clearCookie("app_refresh", options);
