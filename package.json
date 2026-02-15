@@ -1,4 +1,7 @@
 {
+  "name": "zaxion",
+  "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "@testsprite/testsprite-mcp": "^0.0.13",
     "@types/react-syntax-highlighter": "^15.5.13",
