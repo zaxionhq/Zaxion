@@ -27,8 +27,7 @@ const MOCK_MODE: boolean = import.meta.env.VITE_MOCK === 'true';
 let csrfToken: string | null = null;
 
 const getCSRFToken = async (): Promise<string | null> => {
-  if (csrfToken) return csrfToken;
-  
+  // Always fetch a fresh token to ensure cookie sync, especially for first requests
   try {
     const response = await fetch(`${API_BASE}/csrf-token`, {
       credentials: 'include'
@@ -126,16 +125,25 @@ async function requestWithRetry<TResponse>(
       const timeoutId = setTimeout(() => controller.abort(), 10000); // Reduced to 10 second timeout
       
       // Get CSRF token for non-GET requests
-      const token = method !== 'GET' ? await getCSRFToken() : null;
+      let token = null;
+      if (method !== 'GET') {
+        token = await getCSRFToken();
+      }
       
+      // Explicitly define headers as Record<string, string>
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(init?.headers as Record<string, string> || {}),
+      };
+
+      if (token) {
+        headers["X-CSRF-Token"] = token;
+      }
+
       const res = await fetch(url, {
         method,
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { "X-CSRF-Token": token }),
-          ...(init?.headers || {}),
-        },
+        headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
         ...init,

@@ -23,11 +23,7 @@ const Waitlist = () => {
 
     setIsLoading(true);
     try {
-      // Ensure we have a valid CSRF token before submitting
-      // This call will set the cookie and return the token
-      // Using direct fetch to ensure we hit the endpoint even if cached
-      await api.get('/csrf-token');
-      
+      // API client now handles CSRF token retrieval automatically
       await api.post('/v1/waitlist', { email });
       setSubmitted(true);
       toast.success('Registration verified. Welcome to the protocol.');
