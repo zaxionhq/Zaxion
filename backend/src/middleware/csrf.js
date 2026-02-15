@@ -28,6 +28,10 @@ export const generateCSRFToken = (req, res, next) => {
   // or the explicit /csrf-token endpoint
   res.setHeader('X-CSRF-Token', token);
   
+  // Attach to request/response for easier access in route handlers
+  req.csrfToken = token;
+  res.locals.csrfToken = token;
+  
   next();
 };
 
@@ -47,12 +51,19 @@ export const verifyCSRFToken = (req, res, next) => {
   // Get token from cookie
   const cookieToken = req.cookies?.csrf_token;
   
-  // For development debugging
+  // For development debugging - Log EVERYTHING
   logger.debug(`[CSRF] Verifying token for ${req.method} ${req.path}`);
   logger.debug(`[CSRF] Cookie Token: ${cookieToken ? 'Present' : 'Missing'}`);
   logger.debug(`[CSRF] Header Token: ${headerToken ? 'Present' : 'Missing'}`);
   
+  if (process.env.NODE_ENV !== 'production' || !cookieToken || !headerToken) {
+    if (req.headers.cookie) logger.debug(`[CSRF] Raw Cookie Header: ${req.headers.cookie.substring(0, 50)}...`);
+    if (cookieToken) logger.debug(`[CSRF] Parsed Cookie: ${cookieToken.substring(0, 10)}...`);
+    if (headerToken) logger.debug(`[CSRF] Header: ${headerToken.substring(0, 10)}...`);
+  }
+  
   if (!cookieToken || !headerToken) {
+    logger.error(`[CSRF] Failed: Missing token. Cookie: ${!!cookieToken}, Header: ${!!headerToken}`);
     return res.status(403).json({
       code: 'CSRF_TOKEN_MISSING',
       message: 'CSRF token is required (cookie or header missing).'
