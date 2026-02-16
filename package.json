@@ -5,6 +5,9 @@
   "dependencies": {
     "@testsprite/testsprite-mcp": "^0.0.13",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "bull": "^4.16.5",
+    "bullmq": "^5.69.3",
+    "ioredis": "^5.9.3",
     "react-syntax-highlighter": "^16.1.0"
   },
   "devDependencies": {
