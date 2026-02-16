@@ -58,12 +58,15 @@ export const sendTestEmail = async (req, res) => {
 
 export const checkNetwork = async (req, res) => {
   const host = env.SMTP_HOST || 'smtp.gmail.com';
-  const port = 465; // Checking the SSL port
   
   const results = {
-    target: { host, port },
+    target: host,
     dns: null,
-    tcp: null,
+    tcp: {
+      port465: null,
+      port587: null,
+      port80: null
+    },
     env: {
       SMTP_HOST: env.SMTP_HOST,
       SMTP_USER_CONFIGURED: !!env.SMTP_USER,
@@ -81,39 +84,59 @@ export const checkNetwork = async (req, res) => {
     });
     results.dns = { success: true, addresses };
     
-    // 2. TCP Connection Test
-    if (addresses && addresses.length > 0) {
-      const ip = addresses[0];
-      const start = Date.now();
-      
-      await new Promise((resolve, reject) => {
+    // Helper function to test TCP connection
+    const testPort = (port, ip) => {
+      return new Promise((resolve) => {
+        const start = Date.now();
         const socket = new net.Socket();
-        socket.setTimeout(5000); // 5s timeout for raw TCP
+        socket.setTimeout(5000); // 5s timeout
         
         socket.on('connect', () => {
           const time = Date.now() - start;
-          results.tcp = { success: true, ip, time: `${time}ms`, message: 'Port is OPEN' };
           socket.destroy();
-          resolve();
+          resolve({ success: true, time: `${time}ms`, message: 'OPEN' });
         });
         
         socket.on('timeout', () => {
           socket.destroy();
-          reject(new Error('TCP Connection Timeout (5000ms)'));
+          resolve({ success: false, error: 'TIMEOUT' });
         });
         
         socket.on('error', (err) => {
           socket.destroy();
-          reject(err);
+          resolve({ success: false, error: err.message });
         });
         
         socket.connect(port, ip);
       });
+    };
+
+    // 2. TCP Connection Tests
+    if (addresses && addresses.length > 0) {
+      const ip = addresses[0];
+      
+      // Test Port 465 (SSL)
+      results.tcp.port465 = await testPort(465, ip);
+      
+      // Test Port 587 (STARTTLS)
+      results.tcp.port587 = await testPort(587, ip);
+      
+      // Test Port 80 (Google Control - confirms general internet access)
+      // Resolve google.com first for control test
+      try {
+        const googleIPs = await new Promise((resolve) => dns.resolve4('google.com', (err, addrs) => resolve(addrs || [])));
+        if (googleIPs.length > 0) {
+           results.tcp.port80 = await testPort(80, googleIPs[0]);
+        } else {
+           results.tcp.port80 = { success: false, error: 'DNS Failed for google.com' };
+        }
+      } catch (e) {
+        results.tcp.port80 = { success: false, error: e.message };
+      }
     }
   } catch (error) {
     if (!results.dns) results.dns = { success: false, error: error.message };
-    else if (!results.tcp) results.tcp = { success: false, error: error.message };
   }
   
-  res.json(results);
+  return res.json(results);
 };

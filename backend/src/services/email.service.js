@@ -38,8 +38,8 @@ class EmailService {
     // Simplified transport configuration (Let Nodemailer handle DNS/IPv4)
     this.transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
-      port: 465, // SSL
-      secure: true, 
+      port: 587, // STARTTLS
+      secure: false, 
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
