@@ -36,7 +36,7 @@ class EmailService {
     }
 
     // --- STRATEGY 1: OAuth2 (Enterprise/Gmail API) ---
-    // Preferred: Uses tokens instead of passwords, not blocked by IP location.
+    // Preferred: Uses tokens instead of raw credentials, not blocked by IP location.
     if (env.GMAIL_CLIENT_ID && env.GMAIL_REFRESH_TOKEN) {
       log("[EmailService] Configuring OAuth2 transport (Gmail API)...");
       this.transporter = nodemailer.createTransport({

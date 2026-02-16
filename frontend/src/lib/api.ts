@@ -122,7 +122,8 @@ async function requestWithRetry<TResponse>(
     try {
       const url = buildUrl(path);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Reduced to 10 second timeout
+      // Increased timeout to 30s to handle synchronous email sending on cold starts
+      const timeoutId = setTimeout(() => controller.abort(), 30000); 
       
       // Get CSRF token for non-GET requests
       let token = null;
