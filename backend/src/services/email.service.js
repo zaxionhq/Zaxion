@@ -36,6 +36,8 @@ class EmailService {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
       },
+      // Force IPv4 to avoid ENETUNREACH errors in some environments (like Railway)
+      family: 4,
     });
 
     // Verify connection configuration (Non-blocking)
