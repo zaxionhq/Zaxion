@@ -35,6 +35,27 @@ class EmailService {
       return;
     }
 
+    // --- STRATEGY 1: OAuth2 (Enterprise/Gmail API) ---
+    // Preferred: Uses tokens instead of passwords, not blocked by IP location.
+    if (env.GMAIL_CLIENT_ID && env.GMAIL_REFRESH_TOKEN) {
+      log("[EmailService] Configuring OAuth2 transport (Gmail API)...");
+      this.transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          type: "OAuth2",
+          user: env.SMTP_USER,
+          clientId: env.GMAIL_CLIENT_ID,
+          clientSecret: env.GMAIL_CLIENT_SECRET,
+          refreshToken: env.GMAIL_REFRESH_TOKEN,
+        },
+      });
+
+      this.verifyTransporter();
+      return;
+    }
+
+    // --- STRATEGY 2: Legacy SMTP (App Password) ---
+    // Fallback: Uses manual IP resolution to bypass IPv6 blocks on Railway.
     // Force resolve to IPv4 first to bypass Railway IPv6 issues
     dns.resolve4(env.SMTP_HOST, (err, addresses) => {
       let hostToUse = env.SMTP_HOST;
@@ -62,13 +83,17 @@ class EmailService {
         socketTimeout: 10000,
       });
 
-      this.transporter.verify((verifyErr, success) => {
-        if (verifyErr) {
-          warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
-        } else {
-          log("[EmailService] Transporter ready for protocol handshake.");
-        }
-      });
+      this.verifyTransporter();
+    });
+  }
+
+  verifyTransporter() {
+    this.transporter.verify((verifyErr, success) => {
+      if (verifyErr) {
+        warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
+      } else {
+        log("[EmailService] Transporter ready for protocol handshake.");
+      }
     });
   }
 
