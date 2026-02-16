@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import dns from "node:dns";
 import env from "../config/env.js";
 import { log, warn, error } from "../utils/logger.js";
 
@@ -34,29 +35,40 @@ class EmailService {
       return;
     }
 
-    this.transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: 587,
-      secure: false,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      },
-      // Force IPv4 to avoid ENETUNREACH errors in some environments (like Railway)
-      family: 4,
-      // Increase timeouts to handle slow cloud network handshakes
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,   // 10 seconds
-      socketTimeout: 10000,     // 10 seconds
-    });
-
-    // Verify connection configuration (Non-blocking)
-    this.transporter.verify((err, success) => {
-      if (err) {
-        warn("[EmailService] Transporter verification failed (Will retry on send):", { error: err.message });
+    // Force resolve to IPv4 first to bypass Railway IPv6 issues
+    dns.resolve4(env.SMTP_HOST, (err, addresses) => {
+      let hostToUse = env.SMTP_HOST;
+      if (!err && addresses && addresses.length > 0) {
+        hostToUse = addresses[0];
+        log(`[EmailService] Resolved ${env.SMTP_HOST} to IPv4: ${hostToUse}`);
       } else {
-        log("[EmailService] Transporter ready for protocol handshake.");
+        warn(`[EmailService] DNS resolution failed, using hostname: ${env.SMTP_HOST}`, err);
       }
+
+      this.transporter = nodemailer.createTransport({
+        host: hostToUse,
+        port: 587,
+        secure: false,
+        auth: {
+          user: env.SMTP_USER,
+          pass: env.SMTP_PASS,
+        },
+        tls: {
+          servername: env.SMTP_HOST, // Necessary for TLS when using IP
+        },
+        family: 4, // Double enforcement
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      });
+
+      this.transporter.verify((verifyErr, success) => {
+        if (verifyErr) {
+          warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
+        } else {
+          log("[EmailService] Transporter ready for protocol handshake.");
+        }
+      });
     });
   }
 
