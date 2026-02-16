@@ -38,7 +38,7 @@ class EmailService {
     // Simplified transport configuration (Let Nodemailer handle DNS/IPv4)
     this.transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
-      port: 587, // STARTTLS
+      port: env.SMTP_PORT || 587, // Use env or default to 587
       secure: false, 
       auth: {
         user: env.SMTP_USER,
