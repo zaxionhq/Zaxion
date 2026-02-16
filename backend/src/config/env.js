@@ -55,7 +55,8 @@ const schema = z.object({
 
   // --- Resend Email Configuration ---
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default("Zaxion Protocol <governance@zaxion.ai>"),
+  // Default to Resend's testing domain if no custom domain is configured
+  EMAIL_FROM: z.string().default("onboarding@resend.dev"),
 })
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments
