@@ -36,14 +36,18 @@ class EmailService {
 
     this.transporter = nodemailer.createTransport({
       host: env.SMTP_HOST,
-      port: 587, // Switch to 587 (STARTTLS) which is more reliable on cloud networks
-      secure: false, // false for 587, true for 465
+      port: 587,
+      secure: false,
       auth: {
         user: env.SMTP_USER,
         pass: env.SMTP_PASS,
       },
       // Force IPv4 to avoid ENETUNREACH errors in some environments (like Railway)
       family: 4,
+      // Increase timeouts to handle slow cloud network handshakes
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,   // 10 seconds
+      socketTimeout: 10000,     // 10 seconds
     });
 
     // Verify connection configuration (Non-blocking)

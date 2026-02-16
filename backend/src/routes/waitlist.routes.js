@@ -7,7 +7,7 @@ import { authorize } from "../middleware/authorize.js";
 
 const waitlistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 requests per hour
+  max: 100, // Limit each IP to 100 requests per hour (TEMPORARY: increased for testing)
   message: {
     success: false,
     message: "Too many protocol registration attempts. Please wait one hour.",
