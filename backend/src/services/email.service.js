@@ -23,7 +23,7 @@ class EmailService {
    * Initialize SMTP transporter
    */
   init() {
-    console.log("[EmailService] Initializing with:", { 
+    log("[EmailService] Initializing with:", { 
       host: env.SMTP_HOST, 
       user: env.SMTP_USER, 
       passLength: env.SMTP_PASS ? env.SMTP_PASS.length : 0 
