@@ -47,19 +47,19 @@ class EmailService {
 
       this.transporter = nodemailer.createTransport({
         host: hostToUse,
-        port: 587,
-        secure: false,
+        port: 465, // Use SSL (more reliable for Gmail in cloud)
+        secure: true, 
         auth: {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
         },
         tls: {
-          servername: env.SMTP_HOST, // Necessary for TLS when using IP
+          servername: env.SMTP_HOST, 
         },
-        family: 4, // Double enforcement
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
+        family: 4, 
+        connectionTimeout: 30000, // Increased timeout
+        greetingTimeout: 30000,
+        socketTimeout: 30000,
       });
 
       this.transporter.verify((verifyErr, success) => {
