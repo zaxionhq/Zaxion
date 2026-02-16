@@ -25,6 +25,7 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 3.  **Integration Purity**: External integrations (Slack, Jira, GitHub) must consume immutable records only and cannot mutate governance state.
 4.  **Operational Transparency**: No "Black Box" failures. Every system outage or recovery action must leave an explainable trace in the records.
 5.  **Governance Integrity**: Product features (UI, notifications, AI) must never "soften" or interpret the Judge's deterministic verdict.
+6.  **Security First**: Security hardening (JWT, IDOR, etc.) is a prerequisite for "Market Readiness".
 
 ---
 
@@ -45,6 +46,11 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 ### **Pillar 7.4 — Operational Readiness & Trust Hardening**
 - **Purpose**: Ensure production-grade reliability, load handling, and auditability.
 - **Focus**: Replayability, retention, and SLA-grade observability.
+- **Mandatory Security Fixes**:
+    1.  **JWT Hardening**: Restrict verification algorithms to `HS256` only (prevent `alg: none` attacks).
+    2.  **IDOR Protection**: Implement object-level authorization (User-Only Visibility + Admin Bypass).
+    3.  **Cookie Security**: Ensure `SameSite` and `Secure` attributes are correctly configured for production.
+    4.  **GitHub Scope**: Enforce "Linked Repo" checks to prevent unauthorized usage on personal repos.
 
 ### **Pillar 7.5 — Public Narrative & Open-Core Boundary**
 - **Purpose**: Define the market story, transparency model, and open-source strategy.
@@ -54,6 +60,10 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 - **Purpose**: Define the mandatory set of policies that govern the enterprise ecosystem.
 - **Focus**: Hardening security, coverage, and accountability.
 
+### **Pillar 7.7 — Repository Risk Intelligence & Historical Persistence**
+- **Purpose**: Transition from ephemeral gates to longitudinal intelligence.
+- **Focus**: Persistent PR history, risk metrics, and admin dashboards.
+
 ---
 
 ## **4. Success Metrics**
@@ -61,3 +71,4 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 - **Rollout Velocity**: Time from `OBSERVE_ONLY` to `ENFORCE` for new policies.
 - **Remediation Rate**: Percentage of violations resolved without manual security intervention.
 - **System Reliability**: Zero data loss and 100% explainability for decisions.
+- **Security Audit**: Zero Critical/High vulnerabilities (IDOR, JWT, etc. resolved).

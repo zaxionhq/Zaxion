@@ -2,6 +2,8 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import * as waitlistController from "../controllers/waitlist.controller.js";
+import { authenticateJWT } from "../middleware/auth.js";
+import { authorize } from "../middleware/authorize.js";
 
 const waitlistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -21,8 +23,7 @@ export default function waitlistRoutesFactory(db) {
   router.post("/", waitlistLimiter, waitlistController.joinWaitlist);
 
   // Admin: Get all entries
-  // TODO: Add admin authentication middleware here later
-  router.get("/", waitlistController.getWaitlist);
+  router.get("/", authenticateJWT, authorize(['admin']), waitlistController.getWaitlist);
 
   return router;
 }
