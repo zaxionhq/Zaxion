@@ -1,6 +1,6 @@
 // src/controllers/waitlist.controller.js
 import { waitlistService } from "../services/waitlist.service.js";
-import { emailService } from "../services/email.service.js";
+import { addWelcomeEmailJob } from "../queues/email.queue.js";
 import { log, error } from "../utils/logger.js";
 
 /**
@@ -43,13 +43,13 @@ export const joinWaitlist = async (req, res) => {
       });
     }
 
-    // 3. Trigger automated email handshake
+    // 3. Trigger automated email handshake (Async via Queue)
     try {
-      log(`[WaitlistController] Attempting to send welcome email to: ${email}`);
-      await emailService.sendWaitlistWelcome(email.toLowerCase());
-      log(`[WaitlistController] Welcome email sent successfully to: ${email}`);
+      log(`[WaitlistController] Queueing welcome email for: ${email}`);
+      await addWelcomeEmailJob(email);
+      log(`[WaitlistController] Welcome email queued successfully for: ${email}`);
     } catch (emailError) {
-      error("[WaitlistController] Failed to send welcome email:", emailError);
+      error("[WaitlistController] Failed to queue welcome email:", emailError);
     }
 
     return res.status(201).json({

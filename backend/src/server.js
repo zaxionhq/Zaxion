@@ -93,6 +93,7 @@ function shutdown(server) {
 }
 
 import { initPrAnalysisWorker } from "./workers/prAnalysis.worker.js";
+import "./workers/email.worker.js"; // Start email worker
 
 async function startServer() {
   log("🚀 [SERVER] Starting bootstrap sequence...");
