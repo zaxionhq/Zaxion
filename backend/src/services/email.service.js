@@ -1,66 +1,36 @@
 // src/services/email.service.js
-import nodemailer from "nodemailer";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import dns from "node:dns";
+import { Resend } from "resend";
 import env from "../config/env.js";
 import { log, warn, error } from "../utils/logger.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 /**
  * Email Service
- * Handles all protocol-level communications.
+ * Handles all protocol-level communications using Resend HTTP API.
+ * Replaces legacy SMTP/Nodemailer implementation.
  */
 class EmailService {
   constructor() {
-    this.transporter = null;
+    this.client = null;
     this.init();
   }
 
   /**
-   * Initialize SMTP transporter
+   * Initialize Resend Client
    */
   init() {
-    log("[EmailService] Initializing with:", { 
-      host: env.SMTP_HOST, 
-      user: env.SMTP_USER, 
-      passLength: env.SMTP_PASS ? env.SMTP_PASS.length : 0 
-    });
+    log("[EmailService] Initializing Resend client...");
 
-    if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
-      warn("[EmailService] SMTP credentials missing. Email delivery disabled.");
+    if (!env.RESEND_API_KEY) {
+      warn("[EmailService] RESEND_API_KEY missing. Email delivery disabled.");
       return;
     }
 
-    // Simplified transport configuration (Let Nodemailer handle DNS/IPv4)
-    this.transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT || 587, // Use env or default to 587
-      secure: false, 
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      },
-      tls: {
-        // Do not fail on invalid certs (optional, but helpful for some providers)
-        rejectUnauthorized: false 
-      },
-      family: 4, // Force IPv4
-      connectionTimeout: 30000, 
-      greetingTimeout: 30000,
-      socketTimeout: 30000,
-    });
-
-    this.transporter.verify((verifyErr, success) => {
-      if (verifyErr) {
-        warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
-      } else {
-        log("[EmailService] Transporter ready for protocol handshake.");
-      }
-    });
+    try {
+      this.client = new Resend(env.RESEND_API_KEY);
+      log("[EmailService] Resend client initialized successfully.");
+    } catch (err) {
+      error("[EmailService] Failed to initialize Resend client:", err);
+    }
   }
 
   /**
@@ -68,16 +38,20 @@ class EmailService {
    * @param {string} to - User email
    */
   async sendWaitlistWelcome(to) {
-    if (!this.transporter) {
-      warn("[EmailService] Cannot send email: Transporter not initialized.");
-      return;
+    if (!this.client) {
+      const msg = "[EmailService] Cannot send email: Resend client not initialized.";
+      warn(msg);
+      throw new Error(msg); // Throw so BullMQ can retry or fail the job
     }
 
-    const mailOptions = {
-      from: env.SMTP_FROM,
-      to,
-      subject: "Zaxion Protocol: Waitlist Registration Confirmed",
-      html: `
+    log(`[EmailService] Attempting to send welcome email to: ${to}`);
+
+    try {
+      const { data, error: resendError } = await this.client.emails.send({
+        from: env.EMAIL_FROM,
+        to: [to],
+        subject: "Zaxion Protocol: Waitlist Registration Confirmed",
+        html: `
         <div style="background-color: #050505; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; border-radius: 8px; max-width: 600px; margin: 0 auto; border: 1px solid #1a1a1a;">
           <div style="text-align: center; margin-bottom: 40px;">
             <h1 style="font-size: 28px; font-weight: 900; letter-spacing: -0.05em; margin: 0;">ZAXION <span style="color: #6366f1;">PROTOCOL</span></h1>
@@ -97,21 +71,23 @@ class EmailService {
             <p style="margin-top: 40px;">Stay secure,</p>
             <p><strong>The Zaxion Core Team</strong></p>
           </div>
-          
-          <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #1a1a1a; text-align: center; color: #444; font-size: 12px;">
-            <p>© 2026 Zaxion Protocol. All data encrypted at rest.</p>
-          </div>
         </div>
-      `,
-    };
+        `
+      });
 
-    try {
-      const info = await this.transporter.sendMail(mailOptions);
-      log("[EmailService] Welcome email sent to:", { to, messageId: info.messageId });
-      return info;
+      if (resendError) {
+        // Resend API returned an error object
+        error(`[EmailService] Resend API Error for ${to}:`, resendError);
+        throw new Error(`Resend API Error: ${resendError.message}`);
+      }
+
+      log(`[EmailService] Email sent successfully. ID: ${data?.id}`);
+      return data;
+
     } catch (err) {
-      error("[EmailService] Failed to send welcome email:", { error: err.message });
-      throw err;
+      // Network or other unexpected errors
+      error(`[EmailService] Critical failure sending email to ${to}:`, err);
+      throw err; // Ensure BullMQ knows it failed
     }
   }
 }
