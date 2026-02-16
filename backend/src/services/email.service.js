@@ -35,40 +35,31 @@ class EmailService {
       return;
     }
 
-    // Force resolve to IPv4 first to bypass Railway IPv6 issues
-    dns.resolve4(env.SMTP_HOST, (err, addresses) => {
-      let hostToUse = env.SMTP_HOST;
-      if (!err && addresses && addresses.length > 0) {
-        hostToUse = addresses[0];
-        log(`[EmailService] Resolved ${env.SMTP_HOST} to IPv4: ${hostToUse}`);
+    // Simplified transport configuration (Let Nodemailer handle DNS/IPv4)
+    this.transporter = nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: 465, // SSL
+      secure: true, 
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+      tls: {
+        // Do not fail on invalid certs (optional, but helpful for some providers)
+        rejectUnauthorized: false 
+      },
+      family: 4, // Force IPv4
+      connectionTimeout: 30000, 
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
+    });
+
+    this.transporter.verify((verifyErr, success) => {
+      if (verifyErr) {
+        warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
       } else {
-        warn(`[EmailService] DNS resolution failed, using hostname: ${env.SMTP_HOST}`, err);
+        log("[EmailService] Transporter ready for protocol handshake.");
       }
-
-      this.transporter = nodemailer.createTransport({
-        host: hostToUse,
-        port: 465, // Use SSL (more reliable for Gmail in cloud)
-        secure: true, 
-        auth: {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASS,
-        },
-        tls: {
-          servername: env.SMTP_HOST, 
-        },
-        family: 4, 
-        connectionTimeout: 30000, // Increased timeout
-        greetingTimeout: 30000,
-        socketTimeout: 30000,
-      });
-
-      this.transporter.verify((verifyErr, success) => {
-        if (verifyErr) {
-          warn("[EmailService] Transporter verification failed (Will retry on send):", { error: verifyErr.message });
-        } else {
-          log("[EmailService] Transporter ready for protocol handshake.");
-        }
-      });
     });
   }
 
