@@ -44,9 +44,11 @@ export const joinWaitlist = async (req, res) => {
 
     // 3. Trigger automated email handshake
     try {
+      console.log(`[WaitlistController] Attempting to send welcome email to: ${email}`);
       await emailService.sendWaitlistWelcome(email.toLowerCase());
+      console.log(`[WaitlistController] Welcome email sent successfully to: ${email}`);
     } catch (emailError) {
-      console.error("[WaitlistController] Failed to send welcome email:", emailError.message);
+      console.error("[WaitlistController] Failed to send welcome email:", emailError);
     }
 
     return res.status(201).json({

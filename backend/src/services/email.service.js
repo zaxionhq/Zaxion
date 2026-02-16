@@ -23,6 +23,12 @@ class EmailService {
    * Initialize SMTP transporter
    */
   init() {
+    console.log("[EmailService] Initializing with:", { 
+      host: env.SMTP_HOST, 
+      user: env.SMTP_USER, 
+      passLength: env.SMTP_PASS ? env.SMTP_PASS.length : 0 
+    });
+
     if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS) {
       warn("[EmailService] SMTP credentials missing. Email delivery disabled.");
       return;
