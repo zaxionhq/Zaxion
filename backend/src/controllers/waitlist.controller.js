@@ -52,11 +52,10 @@ export const joinWaitlist = async (req, res) => {
       error("[WaitlistController] Failed to send welcome email:", emailError);
     }
 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
-      message: "Protocol registration verified.",
+      message: "Protocol registration initiated. Check your inbox.",
     });
-
   } catch (error) {
     console.error("Waitlist Error:", error);
     return res.status(500).json({
