@@ -67,7 +67,7 @@ export const checkNetwork = async (req, res) => {
       port443: null, // HTTPS
     },
     env: {
-      RESEND_API_KEY_CONFIGURED: Boolean(env.RESEND_API_KEY) ? 'YES' : 'NO'
+      RESEND_API_KEY_CONFIGURED: env.RESEND_API_KEY ? 'YES' : 'NO'
     }
   };
 
