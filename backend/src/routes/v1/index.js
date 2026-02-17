@@ -10,7 +10,6 @@ import analyticsRoutesFactory from "../governanceAnalytics.routes.js";
 import chatbotRoutes from "../chatbot.routes.js";
 import webhookRoutesFactory from "../webhook.routes.js";
 import waitlistRoutesFactory from "../waitlist.routes.js";
-import diagnosticsRoutes from "../diagnostics.routes.js";
 
 export default function v1ApiRoutesFactory(db) {
   const router = Router();
@@ -25,7 +24,6 @@ export default function v1ApiRoutesFactory(db) {
   router.use("/chatbot", chatbotRoutes);
   router.use("/webhooks", webhookRoutesFactory());
   router.use("/waitlist", waitlistRoutesFactory(db));
-  router.use("/diagnostics", diagnosticsRoutes);
 
   return router;
 }
