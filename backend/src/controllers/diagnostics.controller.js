@@ -56,6 +56,15 @@ export const sendTestEmail = async (req, res) => {
   }
 };
 
+export const cleanQueue = async (req, res) => {
+  try {
+    await emailQueue.obliterate({ force: true });
+    return res.json({ success: true, message: "Queue obliterated. All jobs removed." });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const checkNetwork = async (req, res) => {
   // Check connectivity to Resend API
   const host = 'api.resend.com';
