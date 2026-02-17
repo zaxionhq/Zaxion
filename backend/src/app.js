@@ -17,6 +17,9 @@ import { Registry, Counter, Histogram } from 'prom-client';
 import { register, httpRequestCounter, httpRequestDurationSeconds } from './utils/metrics.js';
 import { generateCSRFToken, verifyCSRFToken } from './middleware/csrf.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export default function createApp(db) {
   const app = express();
 
@@ -33,6 +36,9 @@ export default function createApp(db) {
 
   // Security headers
   app.use(helmet());
+
+  // Serve static files from the public directory
+  app.use('/public', express.static(path.join(__dirname, '../public')));
 
   // CORS configuration
   app.use(cors({

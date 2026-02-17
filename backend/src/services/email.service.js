@@ -50,28 +50,253 @@ class EmailService {
       const { data, error: resendError } = await this.client.emails.send({
         from: env.EMAIL_FROM,
         to: [to],
-        subject: "Zaxion Protocol: Waitlist Registration Confirmed",
+        subject: "Zaxion Protocol: Registration Verified",
         html: `
-        <div style="background-color: #050505; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; border-radius: 8px; max-width: 600px; margin: 0 auto; border: 1px solid #1a1a1a;">
-          <div style="text-align: center; margin-bottom: 40px;">
-            <h1 style="font-size: 28px; font-weight: 900; letter-spacing: -0.05em; margin: 0;">ZAXION <span style="color: #6366f1;">PROTOCOL</span></h1>
-          </div>
-          
-          <div style="line-height: 1.6; font-size: 16px;">
-            <p><strong>Registration Verified.</strong></p>
-            <p>Your request to join the Zaxion Governance Waitlist has been recorded in the protocol vault.</p>
-            
-            <div style="background-color: #0a0a0a; border: 1px solid #1a1a1a; padding: 20px; border-radius: 4px; margin: 30px 0;">
-              <p style="margin: 0; color: #888; font-size: 14px;">STATUS</p>
-              <p style="margin: 5px 0 0 0; color: #10b981; font-weight: bold; letter-spacing: 1px;">WAITLISTED · PRIORITY ACCESS</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Zaxion</title>
+    <style>
+        /* Base Reset */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #050505; /* Deep Black Background */
+            color: #ffffff; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            -webkit-font-smoothing: antialiased; 
+            line-height: 1.6;
+        }
+        
+        /* Wrapper */
+        .wrapper {
+            width: 100%;
+            background-color: #050505;
+            padding: 60px 0;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #0a0a0a; /* Slightly lighter card */
+            border: 1px solid #262626;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        /* Header with Logo */
+        .header {
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            color: #ffffff;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .logo-img {
+            max-width: 140px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Main Content */
+        .content {
+            padding: 48px;
+        }
+
+        /* Typography */
+        .eyebrow {
+            font-size: 12px;
+            color: #10b981; /* Brand Green */
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 24px 0;
+            text-align: center;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+        
+        p {
+            font-size: 16px;
+            color: #a3a3a3;
+            margin-bottom: 24px;
+            text-align: center;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Feature/Explanation Section */
+        .feature-box {
+            background-color: #111111;
+            border: 1px solid #262626;
+            border-radius: 8px;
+            padding: 32px;
+            margin-top: 40px;
+            text-align: left;
+        }
+        .feature-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .feature-dot {
+            width: 6px;
+            height: 6px;
+            background-color: #10b981; /* Brand Green */
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* List Styles */
+        .feature-item {
+            margin-bottom: 24px;
+        }
+        .feature-item:last-child {
+            margin-bottom: 0;
+        }
+        .feature-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #e5e5e5;
+            display: block;
+            margin-bottom: 6px;
+            font-family: 'Inter', sans-serif;
+        }
+        .feature-text {
+            font-size: 14px;
+            color: #888888;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Signature */
+        .signature {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #d4d4d4;
+            line-height: 1.6;
+        }
+        .signature strong {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 32px;
+            text-align: center;
+            border-top: 1px solid #1a1a1a;
+            background-color: #080808;
+        }
+        .footer-text {
+            font-size: 12px;
+            color: #404040;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wrapper">
+        <div class="container">
+            <!-- Header / Logo -->
+            <div class="header">
+                <!-- Fallback to text if image fails to load in preview -->
+                <img src="https://zaxion-backend.up.railway.app/public/logo.png" alt="ZAXION" class="logo-img">
             </div>
 
-            <p>Zaxion is the first deterministic governance layer for high-risk software delivery. By joining early, you are prioritized for our upcoming beta release.</p>
-            
-            <p style="margin-top: 40px;">Stay secure,</p>
-            <p><strong>The Zaxion Core Team</strong></p>
-          </div>
+            <!-- Content -->
+            <div class="content">
+                <!-- Eyebrow -->
+                <span class="eyebrow">Registration Verified.</span>
+
+                <!-- Headline -->
+                <h1>Welcome to the Protocol.</h1>
+                
+                <p>
+                    Your request to join the Zaxion Waitlist has been confirmed. You have secured a position in our upcoming priority release cohort.
+                </p>
+
+                <!-- What is Zaxion? -->
+                <div class="feature-box">
+                    <div class="feature-title">
+                        <div class="feature-dot"></div>
+                        What is Zaxion?
+                    </div>
+                    
+                    <p class="feature-text" style="margin-bottom: 24px;">
+                        Zaxion is an AI-powered PR Governor that enforces institutional quality standards. We automate test generation and provide cryptographic proof of code integrity before any merge.
+                    </p>
+
+                    <div class="feature-item">
+                        <span class="feature-header">01 // Deterministic Delivery</span>
+                        <p class="feature-text">
+                            We replace manual approvals with cryptographic proofs. Zaxion guarantees that the code you reviewed is bit-for-bit identical to the code running in production.
+                        </p>
+                    </div>
+
+                    <div class="feature-item">
+                        <span class="feature-header">02 // Policy-Driven Execution</span>
+                        <p class="feature-text">
+                            Compliance is compiled, not checked. Security policies are enforced at the pipeline level, preventing non-compliant artifacts from ever reaching your infrastructure.
+                        </p>
+                    </div>
+
+                    <div class="feature-item">
+                        <span class="feature-header">03 // Immutable Audit Trails</span>
+                        <p class="feature-text">
+                            Every deployment action is signed and recorded on a tamper-proof ledger. Eliminate the gap between intent and execution with zero-trust traceability.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Signature -->
+                <div class="signature">
+                    Stay secure,<br>
+                    <strong>The Zaxion Core Team</strong>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-text">
+                    &copy; 2026 Zaxion Inc. <br>
+                    Automated System Notification
+                </div>
+            </div>
         </div>
+    </div>
+
+</body>
+</html>
         `
       });
 
