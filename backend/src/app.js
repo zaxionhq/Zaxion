@@ -144,8 +144,6 @@ export default function createApp(db) {
   app.use("/api", routesFactory(db)); // Pass db to the routes factory
 
   // Serve OpenAPI spec (read-only)
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
   app.get("/api/docs.json", (_req, res) => {
     res.sendFile(path.join(__dirname, "./docs/openapi.json"));
   });
