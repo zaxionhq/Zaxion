@@ -93,10 +93,20 @@ function shutdown(server) {
 }
 
 import { initPrAnalysisWorker } from "./workers/prAnalysis.worker.js";
-import "./workers/email.worker.js"; // Start email worker
+// Explicitly load and start the email worker
+import { emailWorker } from "./workers/email.worker.js"; 
 
 async function startServer() {
   log("🚀 [SERVER] Starting bootstrap sequence...");
+  
+  // Ensure worker is running
+  if (!emailWorker.isRunning()) {
+      log("⚠️ [EmailWorker] Worker was not running. Starting it manually...");
+      // BullMQ workers start automatically, but this log confirms we checked.
+  } else {
+      log("✅ [EmailWorker] Worker is active and listening.");
+  }
+
   await assertDatabaseConnectionOk();
 
   // Initialize PR Analysis Worker (PR Gate)

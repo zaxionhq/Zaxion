@@ -55,6 +55,7 @@ export const joinWaitlist = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Protocol registration initiated. Check your inbox.",
+      data: entry,
     });
   } catch (error) {
     console.error("Waitlist Error:", error);
