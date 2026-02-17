@@ -1,3 +1,5 @@
+const { log, warn } = require('../utils/logger-bridge.cjs');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     try {
@@ -6,10 +8,10 @@ module.exports = {
     } catch (e) {
       // Ignore if the value already exists in the enum
       if (e.original && e.original.code === '42710') { // duplicate_object code for Postgres
-        console.log("Enum value 'SENT' already exists.");
+        log("Enum value 'SENT' already exists.");
       } else {
         // If the enum type name is different or other error, try to inspect or fallback
-        console.warn("Could not add 'SENT' to enum directly. Error:", e.message);
+        warn("Could not add 'SENT' to enum directly. Error:", { error: e.message });
         // Fallback: This might be SQLite or another dialect in dev, but in Prod it is likely Postgres.
         // If it's not Postgres, this query will fail anyway.
       }
