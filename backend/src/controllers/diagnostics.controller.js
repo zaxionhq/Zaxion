@@ -29,11 +29,20 @@ export const getQueueStatus = async (req, res) => {
       stacktrace: job.stacktrace
     }));
 
+    // Get completed jobs to verify success
+    const completedJobs = await emailQueue.getCompleted(0, 5);
+    const completedList = completedJobs.map(job => ({
+      id: job.id,
+      finishedOn: job.finishedOn,
+      returnvalue: job.returnvalue
+    }));
+
     return res.json({
       success: true,
       counts,
       workerStatus: emailWorker.isRunning() ? 'Running' : 'Stopped',
-      failedJobs: failedReasons
+      failedJobs: failedReasons,
+      completedJobs: completedList
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
