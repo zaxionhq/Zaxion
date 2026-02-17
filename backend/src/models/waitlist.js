@@ -24,7 +24,7 @@ export default (sequelize, DataTypes) => {
         },
       },
       status: {
-        type: DataTypes.ENUM("PENDING", "VERIFIED", "UNSUBSCRIBED"),
+        type: DataTypes.ENUM("PENDING", "VERIFIED", "UNSUBSCRIBED", "SENT"),
         defaultValue: "PENDING",
         allowNull: false,
       },

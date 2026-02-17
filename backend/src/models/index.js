@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const SequelizeLib = Sequelize;
 
 // ✅ Object to hold all models
-const db = {};
+export const db = {};
 
 export async function initDb() {
   // ✅ Dynamically import all model files

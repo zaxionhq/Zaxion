@@ -56,7 +56,7 @@ async function assertDatabaseConnectionOk() {
       
       // In dev only, sync models for convenience. In production, use migrations.
       if (NODE_ENV !== "production") {
-        await db.sequelize.sync({ force: false, alter: false });
+        await db.sequelize.sync({ force: false, alter: true });
         log("✅ Sequelize sync completed (dev mode)");
       }
       return; // Success!

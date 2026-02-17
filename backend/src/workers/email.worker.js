@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import env from '../config/env.js';
 import { emailService } from '../services/email.service.js';
+import { db } from '../models/index.js';
 import { log, warn, error } from '../utils/logger.js';
 
 log("[EmailWorker] 🚀 Worker module loaded. Initializing...");
@@ -30,6 +31,17 @@ export const emailWorker = new Worker('email-queue', async (job) => {
     // Call the email service (which handles SMTP timeouts)
     await emailService.sendWaitlistWelcome(email);
     log(`[EmailWorker] 📧 Email successfully delivered to SMTP server for: ${email}`);
+
+    // Update waitlist status to SENT
+    if (db.Waitlist) {
+      await db.Waitlist.update(
+        { status: 'SENT' },
+        { where: { email } }
+      );
+      log(`[EmailWorker] 🔄 Updated waitlist status to SENT for: ${email}`);
+    } else {
+      warn(`[EmailWorker] ⚠️ db.Waitlist not available, skipping status update for: ${email}`);
+    }
 
     const duration = Date.now() - startTime;
     log(`[EmailWorker] ✅ Job completed ${job.id}: ${email} in ${duration}ms`);

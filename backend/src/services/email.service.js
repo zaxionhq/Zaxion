@@ -92,14 +92,14 @@ class EmailService {
         .header {
             padding: 40px;
             text-align: center;
-            background: linear-gradient(180deg, #111111 0%, #0a0a0a 100%);
-            border-bottom: 1px solid #1a1a1a;
+            background-color: #ffffff; /* White background for black logo */
+            border-bottom: 1px solid #e5e5e5;
         }
         .logo-text {
             font-size: 24px;
             font-weight: 800;
             letter-spacing: 0.15em;
-            color: #ffffff;
+            color: #000000; /* Black text for fallback */
             text-transform: uppercase;
             display: inline-block;
         }
@@ -108,6 +108,8 @@ class EmailService {
             height: auto;
             display: block;
             margin: 0 auto;
+            pointer-events: none; /* Prevent interaction/download button on some clients */
+            user-select: none;
         }
 
         /* Main Content */
@@ -229,9 +231,9 @@ class EmailService {
         <div class="container">
             <!-- Header / Logo -->
             <div class="header">
-                <!-- Fallback to text if image fails to load in preview -->
-                <img src="https://zaxion-backend.up.railway.app/public/logo.png" alt="ZAXION" class="logo-img">
-            </div>
+            <!-- Fallback to text if image fails to load in preview -->
+            <img src="https://zaxion-backend.up.railway.app/public/logo.png" alt="ZAXION" class="logo-img" draggable="false">
+        </div>
 
             <!-- Content -->
             <div class="content">
