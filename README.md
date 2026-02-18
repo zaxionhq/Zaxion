@@ -3,12 +3,12 @@
 [![Status](https://img.shields.io/badge/Status-Phase_5_Completed-success)](docs/PHASE_5_LOCK.md)
 [![License](https://img.shields.io/badge/License-Enterprise_SaaS-blue)](LICENSE)
 
-**Zaxion** is an AI-powered GitHub Test Case Generator that has evolved into a comprehensive **Enterprise PR Governance System**. It ensures that high-risk code never reaches production without the required testing, security audits, and policy compliance.
+**Zaxion** is a comprehensive **Enterprise PR Governance System**. It ensures that high-risk code never reaches production without the required security audits, policy compliance, and architectural standards.
 
 ---
 
 ## 🌟 The Core Mission
-**"From Assistant to Governor."** Zaxion doesn't just help you write tests; it enforces your organization's quality standards through deterministic PR gates.
+**"From Assistant to Governor."** Zaxion doesn't just review code; it enforces your organization's quality standards through deterministic PR gates.
 
 ---
 
