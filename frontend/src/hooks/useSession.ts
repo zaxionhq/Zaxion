@@ -33,6 +33,11 @@ export const useSession = () => {
 
   const checkSession = useCallback(async (isRetry = false) => {
     try {
+      // Debug logging to track frequency of session checks
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[useSession] Checking session (retry: ${isRetry}) - ${new Date().toISOString()}`);
+      }
+
       setSession(prev => ({ 
         ...prev, 
         loading: true, 

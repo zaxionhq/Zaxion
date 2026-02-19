@@ -5,52 +5,7 @@ import path from "path";
 import logger from "../logger.js";
 
 const GH_API = "https://api.github.com";
-const CLIENT_ID = process.env.GITHUB_CLIENT_ID || "";
-const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
-const OAUTH_REDIRECT = process.env.GITHUB_REDIRECT_URI || "http://localhost:5000/api/v1/auth/github/callback";
-
-export function getLoginUrl() {
-  const operation = 'getLoginUrl';
-  let status = 'success';
-  try {
-    // Generate a more robust state parameter
-    const state = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-    const scope = "repo";
-    // Return both the URL and state so it can be set as a cookie
-    return {
-      url: `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
-        OAUTH_REDIRECT
-      )}&scope=${encodeURIComponent(scope)}&state=${state}`,
-      state: state
-    };
-  } catch (error) {
-    status = 'failure';
-    throw error;
-  } finally {
-    githubServiceCallCounter.inc({ operation, status });
-  }
-}
-
-export async function exchangeCodeForToken({ code }) {
-  const operation = 'exchangeCodeForToken';
-  let status = 'success';
-  try {
-    // OAuth app token exchange
-    const url = `https://github.com/login/oauth/access` + `_token`;
-    const { data } = await axios.post(
-      url,
-      { client_id: CLIENT_ID, ["client" + "_secret"]: CLIENT_SECRET, code, redirect_uri: OAUTH_REDIRECT },
-      { headers: { Accept: "application/json" } }
-    );
-    if (!data["access" + "_token"]) throw new Error("GitHub token exchange failed");
-    return data["access" + "_token"];
-  } catch (error) {
-    status = 'failure';
-    throw error;
-  } finally {
-    githubServiceCallCounter.inc({ operation, status });
-  }
-}
+// OAuth configuration removed per user request (use GitHub App flow via auth.controller.js)
 
 export async function listBranches(token, owner, repo) {
   const operation = 'listBranches';

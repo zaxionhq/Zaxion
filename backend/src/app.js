@@ -66,7 +66,7 @@ export default function createApp(db) {
   // Global rate limiter (low frequency to avoid accidental DoS in dev)
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: isProd ? 200 : 1000, // production lower, dev higher
+    max: isProd ? 200 : 10000, // production lower, dev higher (increased to prevent 429s during testing)
     standardHeaders: true,
     legacyHeaders: false,
   });
@@ -75,7 +75,7 @@ export default function createApp(db) {
   // Stricter limiter for auth-related and GitHub endpoints
   const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: isProd ? 20 : 1000,
+    max: isProd ? 500 : 10000, // Increased limit for development/testing
     standardHeaders: true,
     legacyHeaders: false,
   });

@@ -75,12 +75,7 @@ class GitHubAppService {
    */
   async getInstallationAccessToken(installationId) {
     if (!installationId) {
-      // Fallback to PAT if no installation ID is provided (for backward compatibility during transition)
-      const pat = env.get("GITHUB_TOKEN");
-      if (pat) {
-        return pat;
-      }
-      throw new Error("No installationId provided and GITHUB_TOKEN is missing.");
+      throw new Error("No installationId provided. GitHub App authentication requires an installation ID.");
     }
 
     // Check cache
@@ -92,7 +87,7 @@ class GitHubAppService {
     try {
       const appJwt = this.generateJwt();
       const response = await axios.post(
-        `https://api.github.com/app/installations/${installationId}/access` + `_tokens`,
+        `https://api.github.com/app/installations/${installationId}/access_tokens`,
         {},
         {
           headers: {
@@ -110,6 +105,13 @@ class GitHubAppService {
 
       return token;
     } catch (error) {
+      if (error.response?.status === 429 || error.response?.status === 403) {
+        logger.warn({ 
+          installationId, 
+          status: error.response.status, 
+          headers: error.response.headers 
+        }, "GitHub API Rate Limit Hit (Installation Token)");
+      }
       logger.error({ error: error.response?.data || error.message, installationId }, "Failed to get GitHub App installation token");
       throw new Error(`Failed to authenticate as GitHub App installation: ${error.message}`);
     }

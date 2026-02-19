@@ -3,18 +3,15 @@ import axios from "axios";
 import env from "../config/env.js";
 import { log, error, warn } from "../utils/logger.js";
 import { generateToken, verifyToken } from "../utils/jwt.js";
-import { parseDuration } from "../utils/time.utils.js"; // Correct import for parseDuration
+import { parseDuration } from "../utils/time.utils.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
-// import db from "../models/index.js"; // Remove direct import
 import generateState from "../utils/generateState.js";
 import { clearAuthCookies, setAuthCookies } from "../utils/cookies.js";
 import { logAuthEvent } from "../services/audit.service.js";
-import crypto from 'crypto'; // Import the crypto module
-
-// export const testExport = "Auth Controller Loaded"; // Remove testExport
+import crypto from 'crypto';
 
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
-const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access" + "_token";
+const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const GITHUB_API_USER = "https://api.github.com/user";
 
 /**
@@ -22,15 +19,17 @@ const GITHUB_API_USER = "https://api.github.com/user";
  */
 const authController = (db) => {
   async function githubLogin(req, res) {
-    const db = req.app.locals.db; // Retrieve db from app.locals
+    const db = req.app.locals.db;
     try {
+      // Use GitHub App's Client ID and Secret for OAuth flow
+      // Note: GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET now refer to the GitHub App credentials
       const clientId = process.env.GITHUB_CLIENT_ID;
       const redirectUri = process.env.GITHUB_REDIRECT_URI;
       const { redirect_url, redirect } = req.query;
       const finalRedirectUrl = redirect_url || redirect;
 
       if (!clientId || !redirectUri) {
-        return res.status(500).json({ error: "GitHub OAuth not configured" });
+        return res.status(500).json({ error: "GitHub App OAuth not configured (Missing Client ID or Redirect URI)" });
       }
 
       // CSRF protection: generate state and store in httpOnly cookie

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { useApiErrorHandler } from '@/components/ErrorToast';
 
@@ -87,8 +87,19 @@ export const usePRGate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { handleError, handleSuccess } = useApiErrorHandler();
+  
+  // Prevent excessive polling
+  const lastFetchRef = useRef<number>(0);
+  const FETCH_COOLDOWN_MS = 2000;
 
   const fetchLatestDecision = useCallback(async (owner: string, repo: string, prNumber: number) => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < FETCH_COOLDOWN_MS) {
+      console.log("Skipping fetchLatestDecision due to cooldown");
+      return null;
+    }
+    lastFetchRef.current = now;
+
     setIsLoading(true);
     setError(null);
     try {
