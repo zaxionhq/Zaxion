@@ -108,7 +108,7 @@
                 height: auto;
                 display: block;
                 margin: 0 auto;
-                pointer-events: none; /* Prevent interaction/download button on some clients */
+                pointer-events: none;
                 user-select: none;
             }
 
