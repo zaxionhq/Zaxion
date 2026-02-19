@@ -232,7 +232,8 @@
                 <!-- Header / Logo -->
                 <div class="header">
                 <!-- Fallback to text if image fails to load in preview -->
-                <img src="https://zaxion-backend.up.railway.app/public/logo.png" alt="ZAXION" class="logo-img" draggable="false">
+<div class="header">
+                <img src="https://api.zaxion.dev/public/logo.png" alt="ZAXION" class="logo-img" draggable="false">
             </div>
 
                 <!-- Content -->
