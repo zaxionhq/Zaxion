@@ -209,7 +209,7 @@ const DocsLayout = () => {
 
         <div className="p-4 border-t border-white/5">
           <a 
-            href="mailto:governance@zaxion.ai" 
+            href="mailto:zaxionhq@gmail.com" 
             className="flex items-center justify-between p-3 rounded-lg bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all group"
           >
             <div className="space-y-0.5">
