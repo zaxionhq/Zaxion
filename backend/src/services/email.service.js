@@ -232,11 +232,10 @@
                 <!-- Header / Logo -->
                 <div class="header">
                 <!-- Fallback to text if image fails to load in preview -->
-<div class="header">
                 <img src="https://api.zaxion.dev/public/logo.png" alt="ZAXION" class="logo-img" draggable="false">
             </div>
 
-                <!-- Content -->
+            <!-- Content -->
                 <div class="content">
                     <!-- Eyebrow -->
                     <span class="eyebrow">Registration Verified.</span>
