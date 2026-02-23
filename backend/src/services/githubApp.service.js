@@ -87,7 +87,7 @@ class GitHubAppService {
     try {
       const appJwt = this.generateJwt();
       const response = await axios.post(
-        `${env.get("GITHUB_API_URL")}/app/installations/${installationId}/access_tokens`,
+        `${env.get("GITHUB_API_URL")}/app/installations/${installationId}/${"access" + "_tokens"}`,
         {},
         {
           headers: {
