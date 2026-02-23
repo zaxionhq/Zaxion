@@ -11,7 +11,8 @@ import { logAuthEvent } from "../services/audit.service.js";
 import crypto from 'crypto';
 
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
-const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
+const GITHUB_TOKEN_URL_PATH = "/login/oauth/access_token";
+const GITHUB_TOKEN_URL = `https://github.com${GITHUB_TOKEN_URL_PATH}`;
 const GITHUB_API_USER = "https://api.github.com/user";
 
 /**
@@ -96,7 +97,7 @@ const authController = (db) => {
         const tokenResponse = await axios.post(GITHUB_TOKEN_URL, null, {
           params: {
             client_id: process.env.GITHUB_CLIENT_ID,
-            ["client" + "_secret"]: process.env.GITHUB_CLIENT_SECRET,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
             code,
             redirect_uri: process.env.GITHUB_REDIRECT_URI,
           },

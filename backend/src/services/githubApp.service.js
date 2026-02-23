@@ -87,7 +87,7 @@ class GitHubAppService {
     try {
       const appJwt = this.generateJwt();
       const response = await axios.post(
-        `https://api.github.com/app/installations/${installationId}/access_tokens`,
+        `${env.get("GITHUB_API_URL")}/app/installations/${installationId}/access_tokens`,
         {},
         {
           headers: {
@@ -124,7 +124,7 @@ class GitHubAppService {
     try {
       const appJwt = this.generateJwt();
       const response = await axios.get(
-        `https://api.github.com/repos/${owner}/${repo}/installation`,
+        `${env.get("GITHUB_API_URL")}/repos/${owner}/${repo}/installation`,
         {
           headers: {
             Authorization: `Bearer ${appJwt}`,
