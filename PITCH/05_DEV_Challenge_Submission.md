@@ -1,6 +1,6 @@
 *This is a submission for the https://dev.to/challenges/weekend-2026-02-28*
 
-# Zaxion: The Autonomous Guardian for Open Source Maintainers 🛡️
+# Zaxion: Empowering the Open Source Community with Autonomous PR Governance 🛡️
 
 ## The Community
 The Open Source (OSS) community is the backbone of modern software. However, it faces a silent crisis: **Maintainer Burnout**. 
@@ -37,7 +37,7 @@ It’s like having a Senior Engineer who never sleeps, ensuring that the standar
 
 ## Code
 <!-- Show us the code! You can embed a GitHub repo directly into your post. -->
-- **GitHub Repository:** [Insert Your GitHub Repo Link here]
+- **GitHub Repository:** [https://github.com/zaxionhq/Zaxion]
 
 ## How I Built It
 Building a tool that handles sensitive code requires a high-performance and secure stack:
