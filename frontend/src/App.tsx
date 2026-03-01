@@ -60,7 +60,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/waitlist" element={<Waitlist />} />
+              {/* <Route path="/waitlist" element={<Waitlist />} /> */}
               <Route path="/pr/:owner/:repo/:prNumber" element={<DecisionResolutionConsole />} />
               <Route path="/workspace" element={<WorkspaceRedirect />} />
               <Route path="/governance" element={<GovernanceDashboard />} />

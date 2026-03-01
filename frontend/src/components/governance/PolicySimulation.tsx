@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
 import logger from '@/lib/logger';
 
 interface Policy {
@@ -76,11 +77,8 @@ export const PolicySimulation: React.FC = () => {
 
   const fetchPolicies = async () => {
     try {
-      const response = await fetch('/api/v1/policies');
-      if (response.ok) {
-        const data = await response.json();
-        setPolicies(data);
-      }
+      const response = await api.get('/v1/policies') as Policy[];
+      setPolicies(response);
     } catch (error) {
       logger.error('Failed to fetch policies:', error);
     }
@@ -89,11 +87,8 @@ export const PolicySimulation: React.FC = () => {
   const fetchRepositories = async () => {
     setIsLoadingRepos(true);
     try {
-      const response = await fetch('/api/v1/github/repos');
-      if (response.ok) {
-        const data = await response.json();
-        setRepositories(data);
-      }
+      const response = await api.get('/v1/github/repos') as Repository[];
+      setRepositories(response);
     } catch (error) {
       logger.error('Failed to fetch repositories:', error);
     } finally {
@@ -106,11 +101,8 @@ export const PolicySimulation: React.FC = () => {
     const [owner, repo] = fullName.split('/');
     setIsLoadingBranches(true);
     try {
-      const response = await fetch(`/api/v1/github/repos/${owner}/${repo}/branches`);
-      if (response.ok) {
-        const data = await response.json();
-        setBranches(data);
-      }
+      const response = await api.get(`/v1/github/repos/${owner}/${repo}/branches`) as Branch[];
+      setBranches(response);
     } catch (error) {
       logger.error('Failed to fetch branches:', error);
     } finally {

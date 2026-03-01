@@ -78,8 +78,8 @@ const LandingPage = () => {
             </a>
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
-            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/waitlist')}>
-              Join Waitlist
+            <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
+              Get Started
             </NeonButton>
           </div>
         </div>
@@ -111,14 +111,14 @@ const LandingPage = () => {
             </p>
 
             <div className="flex flex-col items-center gap-6">
-              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/waitlist')}>
-                Join the Waitlist
+              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
+                Get Started
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               
               <div className="flex flex-col items-center gap-2">
                 <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/20">
-                  Design Partner Cohort: 04/10 Slots Remaining
+                  Institutional Governance Active • 24/7 Monitoring
                 </p>
               </div>
             </div>
@@ -344,8 +344,8 @@ const LandingPage = () => {
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
-              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/waitlist')}>
-                Join Waitlist
+              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/governance')}>
+                Get Started
               </NeonButton>
               
               <a 
@@ -359,7 +359,7 @@ const LandingPage = () => {
             </div>
 
             <p className="mt-16 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-              Early teams get priority • Enterprise support available
+              Instant Setup • Governance v7.0 Ready
             </p>
           </div>
         </section>

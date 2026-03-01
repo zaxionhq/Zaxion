@@ -84,17 +84,17 @@ const LoginPage: React.FC = () => {
             </p>
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => navigate('/waitlist')}
-                className="text-xs font-bold text-white/40 hover:text-neon-cyan transition-colors"
-              >
-                Request Beta Access
-              </button>
-              <span className="text-white/10">•</span>
-              <button 
                 onClick={() => navigate('/')}
                 className="text-xs font-bold text-white/40 hover:text-neon-cyan transition-colors"
               >
                 Protocol Overview
+              </button>
+              <span className="text-white/10">•</span>
+              <button 
+                onClick={() => navigate('/docs')}
+                className="text-xs font-bold text-white/40 hover:text-neon-cyan transition-colors"
+              >
+                Documentation
               </button>
             </div>
           </div>
