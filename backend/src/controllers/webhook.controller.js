@@ -90,3 +90,65 @@ export async function handleGitHubWebhook(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * Handle GitHub Marketplace Webhooks
+ * POST /api/v1/webhooks/marketplace
+ * Phase 7: Ecosystem Surface
+ */
+export async function handleMarketplaceWebhook(req, res, next) {
+  try {
+    const signature = req.headers["x-hub-signature-256"];
+    const secret = env.get("GITHUB_MARKETPLACE_WEBHOOK_SECRET");
+
+    if (secret && signature) {
+      const hmac = crypto.createHmac("sha256", secret);
+      const digest = "sha256=" + hmac.update(JSON.stringify(req.body)).digest("hex");
+      
+      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+        logger.warn("[marketplace-webhook] Invalid signature");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+    }
+
+    const { action, marketplace_purchase } = req.body;
+    const { account, plan } = marketplace_purchase || {};
+
+    logger.log(`[marketplace-webhook] Action: ${action} for ${account?.login} (Plan: ${plan?.name})`);
+
+    // Handle subscription lifecycle
+    switch (action) {
+      case 'purchased':
+        logger.log(`[marketplace-webhook] New subscription for ${account?.login}`);
+        // TODO: Update organization plan in database
+        break;
+      case 'cancelled':
+        logger.log(`[marketplace-webhook] Subscription cancelled for ${account?.login}`);
+        // TODO: Revert organization to free tier
+        break;
+      case 'plan_change':
+        logger.log(`[marketplace-webhook] Plan changed for ${account?.login} to ${plan?.name}`);
+        // TODO: Update tier limits
+        break;
+    }
+
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error("[marketplace-webhook] Error:", err);
+    next(err);
+  }
+}
+
+/**
+ * Handle Stripe Webhooks (Optional for Enterprise billing)
+ * POST /api/v1/webhooks/stripe
+ */
+export async function handleStripeWebhook(req, res, next) {
+  try {
+    // Placeholder for Stripe logic
+    res.status(200).json({ received: true });
+  } catch (err) {
+    logger.error("[stripe-webhook] Error:", err);
+    next(err);
+  }
+}
