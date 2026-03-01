@@ -27,6 +27,7 @@ import DocsPolicyConfiguration from "./pages/docs/implementation/PolicyConfigura
 import DocsOverrideProtocol from "./pages/docs/implementation/OverrideProtocol";
 import DocsAuditTrail from "./pages/docs/AuditTrail";
 import DocsSignedOverrides from "./pages/docs/SignedOverrides";
+import DocsPrivacyPolicy from "./pages/docs/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const WorkspaceRedirect = () => {
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="implementation/override-protocol" element={<DocsOverrideProtocol />} />
                 <Route path="audit-trail" element={<DocsAuditTrail />} />
                 <Route path="signed-overrides" element={<DocsSignedOverrides />} />
+                <Route path="privacy" element={<DocsPrivacyPolicy />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
