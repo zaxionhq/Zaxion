@@ -38,11 +38,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     <div className="flex h-screen w-screen bg-background overflow-hidden">
       {/* Sidebar */}
       <div className="w-64 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col">
-        <div className="p-6 flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <Shield className="h-5 w-5 text-primary-foreground" />
+        <div className="p-6 flex items-center gap-2">
+          <div className="h-12 w-12 flex items-center justify-center">
+            <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-12 w-12 object-contain" />
           </div>
-          <span className="font-bold tracking-tight">Zaxion Governance</span>
+          <span className="text-xl font-bold tracking-tight ml-1">ZAXION<span className="text-primary">.</span></span>
         </div>
 
         <nav className="flex-1 px-4 space-y-1">

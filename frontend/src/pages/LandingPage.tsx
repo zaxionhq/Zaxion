@@ -64,8 +64,18 @@ const LandingPage = () => {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/zaxion-full.png" alt="Zaxion" className="h-20 w-auto object-contain brightness-0 invert" />
+          <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="relative">
+              <div className="absolute -inset-2 bg-neon-cyan/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <img 
+                src="/Zaxion landing page logo.png" 
+                alt="Zaxion" 
+                className="h-12 md:h-14 w-auto object-contain relative z-10 transition-transform duration-500 group-hover:scale-110" 
+              />
+            </div>
+            <span className="text-xl font-black tracking-tighter hidden sm:block ml-1">
+              ZAXION<span className="text-neon-cyan">.</span>
+            </span>
           </div>
           
           <div className="hidden md:flex items-center gap-8">

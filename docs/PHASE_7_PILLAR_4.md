@@ -17,7 +17,14 @@ Before public launch, Zaxion must survive the rigors of production load, system 
     2.  **Read-Only Guarantee**: Replay mode is strictly forbidden from emitting new `Final Decision Records` or mutating any existing governance state. It is a visualization and verification tool only.
     3.  **Authorization & Audit**: Replay execution requires "Admin" role authorization and must be logged as a high-priority security audit event.
 
-### **B. Backfill & Recovery (Resilience)**
+### **B. AST-Driven Diff Analysis (The "Intelligence" Layer)**
+*   **Purpose**: Move beyond filename-based checks to understand actual code logic.
+*   **Capabilities**:
+    1.  **Diff Content Parsing**: Extracting raw `patch` data to identify specific function modifications (e.g., detecting `os.path.abspath` usage).
+    2.  **AST Parsing (Abstract Syntax Tree)**: Understanding the structure of changed code to identify architectural drift (e.g., detecting forbidden imports or insecure state transitions).
+    3.  **Symbolic Dependency Tracking**: Identifying if a change in one file affects a security boundary in another.
+
+### **C. Backfill & Recovery (Resilience)**
 *   **Capability**: Re-processing events from GitHub's webhook history to recover from database or infrastructure outages.
 *   **Operational Rules**:
     1.  **Ordering Guarantee**: Events must be processed in causal order based on GitHub event timestamps.
