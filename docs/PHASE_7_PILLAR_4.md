@@ -17,12 +17,13 @@ Before public launch, Zaxion must survive the rigors of production load, system 
     2.  **Read-Only Guarantee**: Replay mode is strictly forbidden from emitting new `Final Decision Records` or mutating any existing governance state. It is a visualization and verification tool only.
     3.  **Authorization & Audit**: Replay execution requires "Admin" role authorization and must be logged as a high-priority security audit event.
 
-### **B. AST-Driven Diff Analysis (The "Intelligence" Layer)**
-*   **Purpose**: Move beyond filename-based checks to understand actual code logic.
+### **B. AST-Driven Diff Analysis & Core Policy Library**
+*   **Purpose**: Move beyond filename-based checks to understand actual code logic and provide out-of-the-box governance.
 *   **Capabilities**:
     1.  **Diff Content Parsing**: Extracting raw `patch` data to identify specific function modifications (e.g., detecting `os.path.abspath` usage).
     2.  **AST Parsing (Abstract Syntax Tree)**: Understanding the structure of changed code to identify architectural drift (e.g., detecting forbidden imports or insecure state transitions).
     3.  **Symbolic Dependency Tracking**: Identifying if a change in one file affects a security boundary in another.
+    4.  **Zaxion Core Policy Library**: A pre-shipped collection of "Standard Invariants" (e.g., `SEC-FS-01`, `SAFE-INFRA-01`) derived from real-world high-stakes PR failures. See [ZAXION_CORE_POLICIES.md](file:///c:/Users/hamza/OneDrive/Desktop/hamza/Zaxion/docs/ZAXION_CORE_POLICIES.md).
 
 ### **C. Backfill & Recovery (Resilience)**
 *   **Capability**: Re-processing events from GitHub's webhook history to recover from database or infrastructure outages.
