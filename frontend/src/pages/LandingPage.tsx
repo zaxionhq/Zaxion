@@ -87,9 +87,9 @@ const LandingPage = () => {
               Documentation
             </a>
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
-            <a href="#architecture" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Architecture</a>
+            <a href="#use-cases" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Use Cases</a>
             <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
-              Get Started
+              Install GitHub App (Free)
             </NeonButton>
           </div>
         </div>
@@ -100,35 +100,35 @@ const LandingPage = () => {
         <section className="container mx-auto px-6 mb-32">
           <div className="flex flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-black tracking-[0.2em] uppercase mb-8 border-neon-cyan/30 text-neon-cyan shadow-neon-cyan/10 shadow-lg">
-              <Lock className="h-3 w-3" />
-              Constitutional Governance Layer
+              <Zap className="h-3 w-3" />
+              Automated Code Review for Startups
             </div>
             
             <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[0.9]">
-              Deterministic <br />
-              <span className="gradient-text">Governance.</span>
+              Catch Bugs <br />
+              <span className="gradient-text">Before They Ship.</span>
             </h1>
 
             <div className="mb-8">
               <p className="text-lg md:text-2xl font-bold text-white/80">
-                Every PR becomes a verifiable 
-                <span className="text-neon-cyan block md:inline md:ml-2">governance record.</span>
+                Automate Code Review for High-Risk Code. 
+                <span className="text-neon-cyan block md:inline md:ml-2">Block bugs, not velocity.</span>
               </p>
             </div>
     
             <p className="text-lg text-white/40 max-w-2xl mb-12 leading-relaxed font-medium">
-              Zaxion provides a deterministic, auditable framework for enforcing organizational standards and recording immutable intent. Designed for senior engineering and security teams.
+              Automatically blocks risky PRs until they meet your standards. No more bugs. No more tech debt. Ship faster with confidence.
             </p>
 
             <div className="flex flex-col items-center gap-6">
               <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
-                Get Started
+                Install GitHub App (Free)
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               
               <div className="flex flex-col items-center gap-2">
                 <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/20">
-                  Institutional Governance Active • 24/7 Monitoring
+                  Takes 5 Minutes • No Credit Card Required
                 </p>
               </div>
             </div>
@@ -140,16 +140,16 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 2 — The Broken Status Quo */}
+        {/* SECTION 2 — The Problem */}
         <section id="problem" className="py-32 bg-white/[0.01] border-y border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">Why PR Quality Gates Fail</h2>
               <div className="space-y-12">
                 {[
-                  { title: "Rules lack risk-proportionality", desc: "Static analysis blocks everything or nothing, ignoring that a change to Auth logic is 100x higher risk than a CSS update." },
-                  { title: "Overrides create 'Dark Debt'", desc: "Emergency bypasses are common, but they often happen via shadow-IT (like [skip ci]) with zero permanent record of ownership." },
-                  { title: "Decisions lack institutional memory", desc: "Pipelines treat every PR as an isolated event, losing the context of why similar risks were accepted or rejected in the past." }
+                  { title: "Senior engineers are drowning in manual reviews", desc: "Manual code review is a bottleneck. Senior engineers spend hours catching basic logic errors instead of building core architecture." },
+                  { title: "Critical bugs slip through the cracks", desc: "High-risk changes (like payments or auth) often get the same level of scrutiny as simple CSS tweaks, leading to production disasters." },
+                  { title: "Tech debt accumulates silently", desc: "Without automated enforcement, inconsistent patterns and 'quick fixes' become permanent fixtures in your codebase." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-6 items-start group">
                     <div className="w-1 h-12 bg-white/10 group-hover:bg-neon-cyan transition-colors shrink-0 mt-1" />
@@ -164,41 +164,91 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 3 — The Core Insight */}
-        <section className="py-32 container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-6xl font-black mb-12 tracking-tight">Quality Problems Are <br />Governance Problems</h2>
-            <div className="space-y-8 text-xl text-white/60 leading-relaxed font-light">
-              <p>The issue in modern delivery pipelines isn’t a lack of code quality tools.</p>
-              <p className="text-white font-medium italic">It is the lack of decision ownership, traceability, and institutional accountability.</p>
-              <p>Zaxion transforms quality from a "checklist" into a "constitution" by anchoring every evaluation to a verifiable leadership record.</p>
+        {/* SECTION 3 — Start Small (Moved & Renamed) */}
+        <section className="py-32 border-b border-white/5 bg-black/20">
+          <div className="container mx-auto px-6">
+            <div className="max-w-5xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-black mb-8 text-center tracking-tight">Start Small, Scale Gradually</h2>
+              <p className="text-white/40 text-center mb-16 max-w-2xl mx-auto text-sm">
+                Zaxion isn't a "flip the switch" tool. You can introduce it gradually to your team's workflow.
+              </p>
+              <div className="grid md:grid-cols-3 gap-8">
+                {[
+                  { mode: "OBSERVE ONLY", desc: "Passive monitoring. Zaxion records decisions in the background to baseline current architectural compliance without affecting velocity." },
+                  { mode: "WARN ONLY", desc: "Policy socialization. Signals are visible to developers as advisories, allowing teams to adjust to new standards before enforcement." },
+                  { mode: "FULL ENFORCEMENT", desc: "Guaranteed Compliance. Decisions are binding. PRs cannot be merged without meeting your team's defined safety standards." }
+                ].map((item, i) => (
+                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
+                    <div className="text-[10px] font-mono text-neon-cyan font-bold tracking-widest">{item.mode}</div>
+                    <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION 4 — The Governance Model (Institutional Pillars) */}
-        <section id="architecture" className="py-24 md:py-32 bg-white/[0.01]">
+        {/* SECTION 4 — Use Cases (New) */}
+        <section id="use-cases" className="py-32 container mx-auto px-6">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">Built for Real Scenarios</h2>
+            <p className="text-white/40 text-lg">Four ways Zaxion protects your production environment today.</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {[
+              { 
+                title: "Prevent Payment Bugs", 
+                desc: "Automatically block any PR that modifies payment logic without accompanying integration tests or senior approval.",
+                icon: Shield
+              },
+              { 
+                title: "Enforce Architecture", 
+                desc: "Ensure that 'Domain' services never import 'Infrastructure' helpers, keeping your clean architecture clean.",
+                icon: Code2
+              },
+              { 
+                title: "Security Guardrails", 
+                desc: "Instantly flag and block PRs that use insecure patterns like raw SQL queries or unvalidated user input.",
+                icon: Lock
+              },
+              { 
+                title: "API Contract Safety", 
+                desc: "Prevent breaking changes to your public API by enforcing versioning and compatibility checks on every diff.",
+                icon: Zap
+              }
+            ].map((item, i) => (
+              <GlassCard key={i} className="p-8">
+                <item.icon className="h-8 w-8 text-neon-cyan mb-6" />
+                <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+                <p className="text-white/40 leading-relaxed">{item.desc}</p>
+              </GlassCard>
+            ))}
+          </div>
+        </section>
+
+        {/* SECTION 5 — The Zaxion Advantage (Renamed Pillars) */}
+        <section id="advantage" className="py-24 md:py-32 bg-white/[0.01] border-y border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-5xl font-black mb-16 md:mb-24 text-center tracking-tight">Constitutional Pillars</h2>
+              <h2 className="text-3xl md:text-5xl font-black mb-16 md:mb-24 text-center tracking-tight">The Zaxion Advantage</h2>
               <div className="grid md:grid-cols-3 gap-12 md:gap-24">
                 {[
                   {
-                    title: "LAW",
-                    desc: "Policies are versioned, declarative, and immutable. They define the legal boundaries of your architecture."
+                    title: "FASTER REVIEWS",
+                    desc: "Automate the repetitive parts of code review so your team can focus on complex architecture and business logic."
                   },
                   {
-                    title: "JUDGMENT",
-                    desc: "Deterministic evaluation of every PR. Logic is history-blind and context-aware, ensuring absolute consistency."
+                    title: "ZERO REGRESSIONS",
+                    desc: "Ensure every fix stays fixed with automated policy enforcement that never sleeps and never misses a detail."
                   },
                   {
-                    title: "MEMORY",
-                    desc: "Every decision, signal, and override is recorded in a permanent ledger. The system never forgets debt."
+                    title: "CLEAR STANDARDS",
+                    desc: "Turn your engineering handbook into executable code that guides every contributor, from junior to senior."
                   }
                 ].map((pillar, i) => (
                   <div key={i} className="space-y-8 text-center md:text-left">
-                    <div className="text-[10px] font-mono tracking-[0.4em] text-neon-cyan/60 uppercase">Pillar 0{i+1}</div>
-                    <h3 className="text-4xl font-black tracking-tighter">{pillar.title}</h3>
+                    <div className="text-[10px] font-mono tracking-[0.4em] text-neon-cyan/60 uppercase">Benefit 0{i+1}</div>
+                    <h3 className="text-4xl font-black tracking-tighter leading-tight">{pillar.title}</h3>
                     <p className="text-white/40 leading-relaxed font-medium">{pillar.desc}</p>
                   </div>
                 ))}
@@ -247,23 +297,24 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 5 — Adoption Modes */}
-        <section className="py-32 border-t border-white/5">
+        {/* SECTION 6 — How to Get Started (New) */}
+        <section id="onboarding" className="py-32 bg-white/[0.01] border-y border-white/5">
           <div className="container mx-auto px-6">
-            <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-black mb-8 text-center tracking-tight">Adoption Safety Modes</h2>
-              <p className="text-white/40 text-center mb-16 max-w-2xl mx-auto text-sm">
-                Zaxion supports a phased promotion path, allowing teams to socialize policies before they become binding architectural requirements.
-              </p>
-              <div className="grid md:grid-cols-3 gap-8">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-4xl md:text-5xl font-black mb-16 text-center tracking-tight">How to Get Started</h2>
+              <div className="grid md:grid-cols-4 gap-8">
                 {[
-                  { mode: "OBSERVE_ONLY", desc: "Passive monitoring. Zaxion records decisions in the background to baseline current architectural compliance without affecting velocity." },
-                  { mode: "WARN_ONLY", desc: "Policy socialization. Signals are visible to developers as advisories, allowing teams to adjust to new standards before enforcement." },
-                  { mode: "ENFORCE", desc: "Full Governance. Decisions are binding. PRs cannot be merged without meeting constitutional standards or obtaining a signed override." }
+                  { step: "1", title: "Install App", desc: "Add the Zaxion GitHub App to your organization in seconds." },
+                  { step: "2", title: "Select Repos", desc: "Choose the repositories you want Zaxion to monitor." },
+                  { step: "3", title: "Define Policies", desc: "Use our Core Library or define your own custom safety rules." },
+                  { step: "4", title: "Ship Safely", desc: "Zaxion automatically handles reviews for your high-risk code." }
                 ].map((item, i) => (
-                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
-                    <div className="text-[10px] font-mono text-neon-cyan font-bold tracking-widest">{item.mode}</div>
-                    <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
+                  <div key={i} className="text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan font-black mx-auto">
+                      {item.step}
+                    </div>
+                    <h4 className="font-bold text-lg">{item.title}</h4>
+                    <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -271,47 +322,25 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 6 — What Zaxion Is NOT */}
-        <section className="py-32 bg-white/[0.01] border-y border-white/5">
-          <div className="container mx-auto px-6">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">What Zaxion Is Not</h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[
-                  { title: "Not a Copilot", desc: "We don't write code. Zaxion is the Referee, not the Player—ensuring rules are followed, not playing the game." },
-                  { title: "Not a Linter", desc: "We don't care about semicolons. We care about architectural intent and high-risk domain violations." },
-                  { title: "Not a Black Box", desc: "No fuzzy AI scoring. Decisions are binary, deterministic, and traceable to your constitutional source code." },
-                  { title: "Not a Suggestion", desc: "Bypassing a gate requires a cryptographically signed record, not a simple comment or a 'merge anyway' click." }
-                ].map((item, i) => (
-                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01]">
-                    <h4 className="font-bold mb-3 text-sm uppercase tracking-widest text-white/40">{item.title}</h4>
-                    <p className="text-xs text-white/30 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 7 — Visual Feature Highlights */}
+        {/* SECTION 7 — Feature Highlights */}
         <section className="py-32 container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                title: "Deterministic Gating",
-                description: "No black-box decisions. Gates are powered by explicit policies and AST-based code analysis for 100% predictability.",
+                title: "Automated Gating",
+                description: "Block bugs before they merge. Zaxion uses AST-based analysis to ensure your safety standards are met on every PR.",
                 icon: Code2,
                 color: "cyan"
               },
               {
-                title: "Human Accountability",
-                description: "Signed overrides bind justifications to specific actors, ensuring that every exception is tracked and auditable.",
+                title: "Team Accountability",
+                description: "Track every decision. Overrides are logged with clear rationale, ensuring your team stays aligned on technical debt.",
                 icon: Shield,
                 color: "purple"
               },
               {
-                title: "Organizational Memory",
-                description: "A historical ledger of outcomes inform future policy updates, turning raw signals into institutional knowledge.",
+                title: "Knowledge Retention",
+                description: "Turn your PR history into institutional knowledge. Zaxion remembers past decisions to help guide future policy.",
                 icon: History,
                 color: "pink"
               }
@@ -330,32 +359,17 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 8 — Maturity Statement */}
-        <section className="py-32 bg-white/[0.01] border-t border-white/5">
-          <div className="container mx-auto px-6 text-center">
-            <div className="max-w-2xl mx-auto p-12 rounded-xl border border-white/5 bg-white/[0.01]">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-neon-cyan mb-8 uppercase tracking-widest">
-                <Shield className="h-3 w-3" />
-                Maturity Statement
-              </div>
-              <p className="text-white/40 leading-relaxed font-medium text-sm">
-                Zaxion is in a locked architectural state. All governance contracts and decision logic are versioned to ensure longitudinal auditability and institutional stability.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 9 — Final CTA */}
+        {/* SECTION 8 — Simple Call to Action */}
         <section className="container mx-auto px-6 py-24 md:py-32 border-t border-white/5">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-6xl font-black tracking-tight mb-12 leading-tight">
-              Ready to evaluate Zaxion <br />
-              <span className="gradient-text">in your workflow?</span>
+              Ready to ship with <br />
+              <span className="gradient-text">Zero Regressions?</span>
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
               <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/governance')}>
-                Get Started
+                Install GitHub App (Free)
               </NeonButton>
               
               <a 
@@ -369,34 +383,38 @@ const LandingPage = () => {
             </div>
 
             <p className="mt-16 text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-              Instant Setup • Governance v7.0 Ready
+              Instant Setup • No Configuration Required
             </p>
           </div>
         </section>
       </main>
 
-      {/* Institutional Footer */}
+      {/* Simplified Footer */}
       <footer className="py-20 bg-black border-t border-white/5">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-end">
             <div className="space-y-6">
-              <img src="/zaxion-full.png" alt="Zaxion" className="h-12 w-auto brightness-0 invert opacity-40" />
+              <div className="flex items-center gap-2">
+                <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-8 w-auto" />
+                <span className="text-xl font-black tracking-tighter">
+                  ZAXION<span className="text-neon-cyan">.</span>
+                </span>
+              </div>
               <p className="text-xs text-white/20 max-w-sm leading-relaxed">
-                Zaxion is the deterministic governance layer for institutional engineering. 
-                Built for teams where every decision must be verifiable and every override must be signed.
+                Zaxion is the automated code review layer for high-growth engineering teams. 
+                Built to help you ship faster by catching high-risk bugs before they hit production.
               </p>
             </div>
             <div className="text-right space-y-2">
-              <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Zaxion Governance Constitution v7.0.0</div>
-              <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest">Public Registry Interface • Data Retention: 7 Years</div>
-              <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest mt-4">Contact: design-partners@zaxion.gov</div>
+              <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Version 7.0.0-Stable</div>
+              <div className="text-[10px] font-mono text-white/20 uppercase tracking-widest mt-4">Support: support@zaxion.com</div>
             </div>
           </div>
           <div className="mt-20 pt-8 border-t border-white/5 flex justify-between items-center">
-            <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.4em]">© 2026 Zaxion Governance Protocol</span>
+            <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.4em]">© 2026 Zaxion Inc. All Rights Reserved.</span>
             <div className="flex gap-8">
-              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] cursor-help">Status: Operational</span>
-              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em] cursor-help">Latency: 12ms</span>
+              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em]">Privacy Policy</span>
+              <span className="text-[9px] font-mono text-white/10 uppercase tracking-[0.2em]">Terms of Service</span>
             </div>
           </div>
         </div>
@@ -406,4 +424,5 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
 
