@@ -13,6 +13,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
+import { useSession } from '@/hooks/useSession';
+import { cn } from '@/lib/utils';
 
 interface Policy {
   id: number;
@@ -51,6 +53,7 @@ interface SimulationResult {
 }
 
 export const PolicySimulation: React.FC = () => {
+  const { user } = useSession();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -449,6 +452,11 @@ export const PolicySimulation: React.FC = () => {
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-4">
+          {user?.role !== 'admin' && (
+            <div className="p-3 rounded border border-yellow-500/30 bg-yellow-500/5 text-yellow-500 text-xs">
+              Requires Admin permissions to run simulations. Contact your administrator.
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Target Policy</label>
             <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
@@ -492,8 +500,8 @@ export const PolicySimulation: React.FC = () => {
 
           <Button 
             className="w-full" 
-            onClick={runSimulation} 
-            disabled={!selectedPolicyId || isSimulating}
+            onClick={runSimulation}
+            disabled={!selectedPolicyId || isSimulating || user?.role !== 'admin'}
           >
             {isSimulating ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
