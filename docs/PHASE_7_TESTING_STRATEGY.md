@@ -167,9 +167,9 @@ This document defines the rigorous testing standards required to sign off on eac
     *   **Expectation**: PR checks PASS, but Admin Dashboard shows a "Shadow Failure."
 
 ### 📝 Quality Gate Checklist
-- [ ] `OBSERVE_ONLY` mode NEVER blocks a PR
-- [ ] `WARN_ONLY` mode alerts but allows merge
-- [ ] Fail-Open logic works (System outage = `PASS`)
+- [x] `OBSERVE_ONLY` mode NEVER blocks a PR
+- [x] `WARN_ONLY` mode alerts but allows merge
+- [x] Fail-Open logic works (System outage = `PASS`)
 
 ---
 
