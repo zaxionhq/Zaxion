@@ -196,9 +196,9 @@ This document defines the rigorous testing standards required to sign off on eac
     *   **Expectation**: Mock Jira API receives a "Create Issue" request.
 
 ### 📝 Quality Gate Checklist
-- [ ] Async Dispatcher works (Queue -> Worker)
-- [ ] Idempotency prevents duplicate Jira tickets
-- [ ] Critical Alerts are sent < 5s after decision
+- [x] Async Dispatcher works (Queue -> Worker)
+- [x] Idempotency prevents duplicate Jira tickets
+- [x] Critical Alerts are sent < 5s after decision
 
 ---
 
