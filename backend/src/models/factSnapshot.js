@@ -3,7 +3,9 @@ import { Model, DataTypes } from 'sequelize';
 export default (sequelize) => {
   class FactSnapshot extends Model {
     static associate(models) {
-      // Future associations can be added here
+      // Link snapshots to their governance decisions so simulations
+      // can filter by branch or other decision metadata.
+      this.hasMany(models.Decision, { foreignKey: 'fact_id', as: 'decisions' });
     }
   }
 

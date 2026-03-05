@@ -95,7 +95,14 @@ export default function policyControllerFactory(db) {
   async function runSimulation(req, res, next) {
     try {
       const { id: policyId } = req.params;
-      const { draft_rules, sample_strategy, sample_size } = req.body;
+      const {
+        draft_rules,
+        sample_strategy,
+        sample_size,
+        scope_override,
+        target_repo_full_name,
+        target_branch,
+      } = req.body;
       const userId = req.user ? req.user.id : null;
 
       if (!userId) {
@@ -109,7 +116,10 @@ export default function policyControllerFactory(db) {
         draft_rules,
         sample_strategy,
         sample_size,
-        created_by: userId
+        created_by: userId,
+        scope_override,
+        target_repo_full_name,
+        target_branch,
       });
 
       res.status(202).json(simulation);

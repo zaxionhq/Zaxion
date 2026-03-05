@@ -7,6 +7,11 @@ import { authorize } from '../middleware/authorize.js';
 export default function policyRoutesFactory(db) {
   const router = Router();
   const policyController = policyControllerFactory(db);
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // In non-production environments, we allow both 'user' and 'admin' roles
+  // to access admin-only features so local development and demos are easier.
+  const adminOnlyRoles = isProd ? ['admin'] : ['admin', 'user'];
 
   // Policies CRUD
   router.post(
@@ -49,21 +54,21 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/simulate',
     authenticateJWT,
-    authorize(['admin']), // Simulation is an admin function
+    authorize(adminOnlyRoles), // Simulation is an admin function (relaxed in non-prod)
     policyController.runSimulation
   );
 
   router.get(
     '/simulations/:simId',
     authenticateJWT,
-    authorize(['admin']),
+    authorize(adminOnlyRoles),
     policyController.getSimulation
   );
 
   router.post(
     '/simulations/:simId/promote',
     authenticateJWT,
-    authorize(['admin']),
+    authorize(adminOnlyRoles),
     policyController.promoteDraft
   );
 

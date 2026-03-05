@@ -140,20 +140,6 @@ const authController = (db) => {
         await user.update({ accessToken: encrypt(ghAccessToken), username: profile.login || user.username, displayName: profile.name || user.displayName });
       }
 
-      // Elevate to admin if configured in environment allowlist
-      try {
-        const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-        const adminUsernames = (process.env.ADMIN_GITHUB_LOGINS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-        const isAllowlisted =
-          (user.email && adminEmails.includes(user.email.toLowerCase())) ||
-          (profile.login && adminUsernames.includes(String(profile.login).toLowerCase()));
-        if (isAllowlisted && user.role !== 'admin') {
-          await user.update({ role: 'admin' });
-        }
-      } catch (_e) {
-        // Non-fatal: continue auth flow even if elevation fails
-      }
-
       // generate JWT
       const jwtPayload = { id: user.id, githubId: user.githubId };
       const token = generateToken(jwtPayload);

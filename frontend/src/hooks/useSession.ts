@@ -8,7 +8,6 @@ interface User {
   githubId: string;
   username: string;
   login?: string;
-  role?: 'user' | 'admin' | string;
   avatar_url?: string;
   displayName?: string;
   email?: string;

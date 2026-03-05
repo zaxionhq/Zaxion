@@ -13,7 +13,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
-import { useSession } from '@/hooks/useSession';
 import { cn } from '@/lib/utils';
 
 interface Policy {
@@ -45,7 +44,7 @@ interface Branch {
 
 interface SimulationResult {
   id: string;
-  status: 'COMPLETED' | 'FAILED' | 'PENDING';
+  status: 'COMPLETED' | 'FAILED' | 'PENDING' | 'RUNNING';
   total_scanned: number;
   total_blocked: number;
   blast_radius: number;
@@ -53,7 +52,6 @@ interface SimulationResult {
 }
 
 export const PolicySimulation: React.FC = () => {
-  const { user } = useSession();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -66,6 +64,11 @@ export const PolicySimulation: React.FC = () => {
   const [isBranchPopoverOpen, setIsBranchPopoverOpen] = useState(false);
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  // Simulation target overrides (where to replay this policy)
+  const [simulationScope, setSimulationScope] = useState<'GLOBAL' | 'REPO' | 'BRANCH'>('GLOBAL');
+  const [simulationRepo, setSimulationRepo] = useState<string>('');
+  const [simulationBranch, setSimulationBranch] = useState<string>('');
   
   // New Policy Form State
   const [newPolicy, setNewPolicy] = useState({
@@ -118,6 +121,37 @@ export const PolicySimulation: React.FC = () => {
     fetchPolicies();
     fetchRepositories();
   }, []);
+
+  // Whenever a policy is selected, derive a sensible default simulation target
+  useEffect(() => {
+    const policy = policies.find(p => p.id.toString() === selectedPolicyId);
+    if (!policy) {
+      setSimulationScope('GLOBAL');
+      setSimulationRepo('');
+      setSimulationBranch('');
+      return;
+    }
+
+    if (policy.target_id === 'GLOBAL') {
+      setSimulationScope('GLOBAL');
+      setSimulationRepo('');
+      setSimulationBranch('');
+      return;
+    }
+
+    // If target_id encodes repo or repo:branch, use that as default
+    const [repoFullName, branchName] = policy.target_id.split(':');
+    if (branchName) {
+      setSimulationScope('BRANCH');
+      setSimulationRepo(repoFullName);
+      setSimulationBranch(branchName);
+      fetchBranches(repoFullName);
+    } else {
+      setSimulationScope('REPO');
+      setSimulationRepo(repoFullName);
+      setSimulationBranch('');
+    }
+  }, [policies, selectedPolicyId]);
 
   const handleCreatePolicy = async () => {
     if (!newPolicy.name) return;
@@ -212,6 +246,25 @@ export const PolicySimulation: React.FC = () => {
   const runSimulation = async () => {
     if (!selectedPolicyId) return;
 
+    // Guardrails: ensure required simulation target info is present
+    if (simulationScope !== 'GLOBAL' && !simulationRepo) {
+      toast({
+        title: "Missing Simulation Target",
+        description: "Please select a repository to simulate this policy against.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (simulationScope === 'BRANCH' && !simulationBranch) {
+      toast({
+        title: "Missing Branch",
+        description: "Please select a branch to simulate this policy against.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSimulating(true);
     try {
       type SimulationApiResponse = {
@@ -232,7 +285,10 @@ export const PolicySimulation: React.FC = () => {
       const data = await api.post<SimulationApiResponse>(`/v1/policies/${selectedPolicyId}/simulate`, {
         draft_rules: draftRules,
         sample_strategy: 'TIME_BASED',
-        sample_size: 100
+        sample_size: 100,
+        scope_override: simulationScope,
+        target_repo_full_name: simulationScope !== 'GLOBAL' ? simulationRepo : undefined,
+        target_branch: simulationScope === 'BRANCH' ? simulationBranch : undefined,
       });
 
       // Map backend response to UI-friendly shape
@@ -452,11 +508,6 @@ export const PolicySimulation: React.FC = () => {
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-4">
-          {user?.role !== 'admin' && (
-            <div className="p-3 rounded border border-yellow-500/30 bg-yellow-500/5 text-yellow-500 text-xs">
-              Requires Admin permissions to run simulations. Contact your administrator.
-            </div>
-          )}
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Target Policy</label>
             <Select value={selectedPolicyId} onValueChange={setSelectedPolicyId}>
@@ -470,6 +521,72 @@ export const PolicySimulation: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Simulation Target Scope</label>
+            <Select value={simulationScope} onValueChange={(v: 'GLOBAL' | 'REPO' | 'BRANCH') => setSimulationScope(v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select scope for analysis..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GLOBAL">Organization-wide (all repos)</SelectItem>
+                <SelectItem value="REPO">Specific Repository</SelectItem>
+                <SelectItem value="BRANCH">Specific Branch</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {simulationScope !== 'GLOBAL' && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                {simulationScope === 'REPO' ? 'Repository' : 'Repository for Branch'}
+              </label>
+              <Select
+                value={simulationRepo}
+                onValueChange={(value) => {
+                  setSimulationRepo(value);
+                  // If branch-level simulation, refresh branches for the selected repo
+                  if (simulationScope === 'BRANCH') {
+                    fetchBranches(value);
+                    setSimulationBranch('');
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select repository..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {repositories.map((repo) => (
+                    <SelectItem key={repo.full_name} value={repo.full_name}>
+                      {repo.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {simulationScope === 'BRANCH' && (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Branch</label>
+              <Select
+                value={simulationBranch}
+                onValueChange={setSimulationBranch}
+                disabled={!simulationRepo}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={simulationRepo ? "Select branch..." : "Select a repository first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.name} value={branch.name}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {selectedPolicy && (
             <div className="p-3 rounded border border-border/50 bg-muted/20 space-y-2">
@@ -500,8 +617,8 @@ export const PolicySimulation: React.FC = () => {
 
           <Button 
             className="w-full" 
-            onClick={runSimulation}
-            disabled={!selectedPolicyId || isSimulating || user?.role !== 'admin'}
+            onClick={runSimulation} 
+            disabled={!selectedPolicyId || isSimulating}
           >
             {isSimulating ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

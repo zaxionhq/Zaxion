@@ -26,12 +26,26 @@ export class PolicySimulationService {
    * @returns {Promise<object>} The simulation record
    */
   async runSimulation(payload) {
-    const { policy_id, draft_rules, sample_strategy, sample_size, created_by } = payload;
+    const {
+      policy_id,
+      draft_rules,
+      sample_strategy,
+      sample_size,
+      created_by,
+      scope_override,
+      target_repo_full_name,
+      target_branch,
+    } = payload;
 
     logger.info({ policy_id, sample_strategy, sample_size }, "PolicySimulation: Starting simulation");
 
     // 1. Collect Snapshots (Pillar 3.4.A)
-    const snapshots = await this._collectSnapshots(sample_strategy, sample_size, policy_id);
+    const snapshots = await this._collectSnapshots(sample_strategy, sample_size, {
+      policy_id,
+      scope_override,
+      target_repo_full_name,
+      target_branch,
+    });
     if (snapshots.length === 0) {
       throw new Error("No historical snapshots found for simulation");
     }
@@ -78,7 +92,7 @@ export class PolicySimulationService {
     let consistent = 0;
     const impactedPrs = [];
 
-    // Mock applied policy for the simulation
+    // Mock applied policy for the simulation (never persisted to DB)
     const mockAppliedPolicy = {
       policy_id: simulation.policy_id,
       policy_version_id: 'DRAFT', // Simulation identifier
@@ -90,7 +104,9 @@ export class PolicySimulationService {
     for (const snapshot of snapshots) {
       // 1. Get historical decision for this snapshot (if any)
       const historicalDecision = await this.db.Decision.findOne({
-        where: { fact_id: snapshot.id, policy_version_id: { [Op.ne]: 'DRAFT' } },
+        // We only care about the most recent stored decision for this snapshot.
+        // Simulation runs do not persist decisions, so no need for a sentinel filter.
+        where: { fact_id: snapshot.id },
         order: [['createdAt', 'DESC']]
       });
 
@@ -135,20 +151,38 @@ export class PolicySimulationService {
   /**
    * Sampling Strategy (Pillar 3.4.A)
    */
-  async _collectSnapshots(strategy, size, policyId) {
+  async _collectSnapshots(strategy, size, { policy_id, scope_override, target_repo_full_name, target_branch }) {
+    const where = {};
+    const include = [];
+
+    // If caller explicitly targets a repo, scope snapshots to that repo.
+    if (target_repo_full_name) {
+      where.repo_full_name = target_repo_full_name;
+    }
+
+    // If a branch is specified, join Decisions to filter by base_branch.
+    if (target_branch) {
+      include.push({
+        model: this.db.Decision,
+        as: 'decisions',
+        required: true,
+        where: { base_branch: target_branch },
+      });
+    }
+
     const options = {
+      where,
+      include,
       limit: size,
-      order: [['ingested_at', 'DESC']]
+      order: [['ingested_at', 'DESC']],
     };
 
     switch (strategy) {
       case 'TIME_BASED':
-        // Last N snapshots globally or for this policy's target if known
-        return await this.db.FactSnapshot.findAll(options);
       case 'REPO_BASED':
-        // Implementation would filter by repo_full_name if policy is REPO scoped
-        return await this.db.FactSnapshot.findAll(options);
       default:
+        // For now all strategies share the same sampling, but this hook
+        // allows future customizations per strategy.
         return await this.db.FactSnapshot.findAll(options);
     }
   }
