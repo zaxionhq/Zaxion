@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
 
@@ -22,10 +21,12 @@ interface Policy {
   scope: string;
   target_id: string;
   latest_version?: {
+    id?: string;
+    version_number?: number;
+    enforcement_level?: string;
     created_at: string;
-    creator?: {
-      email: string;
-    };
+    rules_logic?: unknown;
+    creator?: { email: string };
   };
 }
 
@@ -132,37 +133,25 @@ export const PolicySimulation: React.FC = () => {
 
     setIsCreating(true);
     try {
+      type CreatedPolicy = { id: string | number };
       // For BRANCH scope, target_id is "repo:branch"
       const finalTargetId = newPolicy.scope === 'BRANCH' 
         ? `${newPolicy.target_id}:${newPolicy.branch_name}`
         : newPolicy.target_id;
 
-      // 1. Create Policy
-      const policyResponse = await fetch('/api/v1/policies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newPolicy.name,
-          scope: newPolicy.scope === 'GLOBAL' ? 'ORG' : 'REPO', // backend uses ORG/REPO
-          target_id: finalTargetId,
-          owning_role: 'admin'
-        })
+      // 1. Create Policy (use centralized API to include CSRF + credentials)
+      const createdPolicy = await api.post<CreatedPolicy>('/v1/policies', {
+        name: newPolicy.name,
+        scope: newPolicy.scope === 'GLOBAL' ? 'ORG' : 'REPO',
+        target_id: finalTargetId,
+        owning_role: 'admin'
       });
-
-      if (!policyResponse.ok) throw new Error('Failed to create policy');
-      const createdPolicy = await policyResponse.json();
 
       // 2. Create Initial Version with rules
-      const versionResponse = await fetch(`/api/v1/policies/${createdPolicy.id}/versions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enforcement_level: 'MANDATORY',
-          rules_logic: parsedRules
-        })
+      await api.post(`/v1/policies/${createdPolicy.id}/versions`, {
+        enforcement_level: 'MANDATORY',
+        rules_logic: parsedRules
       });
-
-      if (!versionResponse.ok) throw new Error('Failed to create policy version');
 
       toast({
         title: "Policy Created",
@@ -222,21 +211,45 @@ export const PolicySimulation: React.FC = () => {
 
     setIsSimulating(true);
     try {
-      const response = await fetch(`/api/v1/policies/${selectedPolicyId}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      type SimulationApiResponse = {
+        id: string;
+        status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+        createdAt?: string;
+        results?: {
+          summary?: {
+            total_snapshots?: number;
+            newly_blocked_count?: number;
+            fail_rate_change?: string;
+          };
+        };
+      };
+      const policy = policies.find(p => p.id.toString() === selectedPolicyId);
+      const draftRules = policy?.latest_version?.rules_logic ?? {};
+
+      const data = await api.post<SimulationApiResponse>(`/v1/policies/${selectedPolicyId}/simulate`, {
+        draft_rules: draftRules,
+        sample_strategy: 'TIME_BASED',
+        sample_size: 100
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setResult(data);
-        toast({
-          title: "Simulation Started",
-          description: "Policy impact analysis is running in the background.",
-        });
-      } else {
-        throw new Error('Simulation failed to start');
-      }
+      // Map backend response to UI-friendly shape
+      const summary = data?.results?.summary || {};
+      const br = typeof summary.fail_rate_change === 'string'
+        ? parseFloat(summary.fail_rate_change.replace('%', '')) / 100
+        : 0;
+      const mapped: SimulationResult = {
+        id: data.id,
+        status: data.status || 'PENDING',
+        total_scanned: summary.total_snapshots ?? 0,
+        total_blocked: summary.newly_blocked_count ?? 0,
+        blast_radius: isNaN(br) ? 0 : br,
+        created_at: data.createdAt || new Date().toISOString()
+      };
+      setResult(mapped);
+      toast({
+        title: "Simulation Started",
+        description: "Policy impact analysis is running.",
+      });
     } catch (error) {
       toast({
         title: "Simulation Failed",
