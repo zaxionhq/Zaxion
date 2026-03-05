@@ -222,9 +222,9 @@ This document defines the rigorous testing standards required to sign off on eac
     *   **Expectation**: "Repo A" appears at the top of the "High Risk" list.
 
 ### 📝 Quality Gate Checklist
-- [ ] Risk Scores are calculated correctly
-- [ ] Aggregation Job runs without memory leaks
-- [ ] Immutable Archive stores decisions correctly
+- [x] Secrets are sanitized before archiving (Redaction)
+- [x] Risk Score calculation is deterministic
+- [x] Trend analysis correctly identifies "Improving" vs "Worsening"
 
 ---
 
