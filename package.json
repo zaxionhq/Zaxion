@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@babel/parser": "^7.29.0",
+    "@babel/traverse": "^7.29.0",
     "@testsprite/testsprite-mcp": "^0.0.13",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "acorn": "^8.16.0",
     "bull": "^4.16.5",
     "bullmq": "^5.69.3",
     "ioredis": "^5.9.3",
