@@ -86,6 +86,7 @@ const LandingPage = () => {
             >
               Documentation
             </a>
+
             <a href="#problem" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">The Problem</a>
             <a href="#use-cases" className="text-sm font-medium text-white/60 hover:text-neon-cyan transition-colors">Use Cases</a>
             <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>

@@ -64,6 +64,10 @@ Phase 7 moves beyond architectural correctness (Phases 1-5) and governance mecha
 - **Purpose**: Transition from ephemeral gates to longitudinal intelligence.
 - **Focus**: Persistent PR history, risk metrics, and admin dashboards.
 
+### **Pillar 7.8 — The Zaxion Simulation Engine & Test Harness**
+- **Purpose**: Provide a "Sandbox" for users to test custom policies against historical data before enforcement.
+- **Focus**: Back-testing, policy playgrounds, and regression test suites.
+
 ---
 
 ## **4. Success Metrics**
