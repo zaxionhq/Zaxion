@@ -12,7 +12,11 @@ import {
   Scale,
   History,
   FileText,
-  ChevronDown
+  ChevronDown,
+  Code2,
+  CheckCircle2,
+  HelpCircle,
+  Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,9 +27,20 @@ const DocsLayout = () => {
 
   const menuGroups = useMemo(() => [
     {
-      label: "Core Layer",
+      label: "Getting Started",
       items: [
-        { title: "Protocol Overview", path: "/docs/overview", icon: Info },
+        { title: "Introduction", path: "/docs/getting-started", icon: Info },
+        { title: "Quick Start (5 min)", path: "/docs/quick-start", icon: Terminal },
+        { title: "Use Cases", path: "/docs/use-cases", icon: CheckCircle2 },
+        { title: "Examples", path: "/docs/examples", icon: Code2 },
+        { title: "FAQ", path: "/docs/faq", icon: HelpCircle },
+        { title: "Troubleshooting", path: "/docs/troubleshooting", icon: Wrench },
+      ]
+    },
+    {
+      label: "Core Concepts",
+      items: [
+        { title: "Protocol Overview", path: "/docs/overview", icon: Shield },
         { 
           title: "Governance Constitution", 
           path: "/docs/constitution", 
@@ -40,7 +55,7 @@ const DocsLayout = () => {
         { 
           title: "Security Model", 
           path: "/docs/security", 
-          icon: Shield,
+          icon: Lock,
           children: [
             { title: "Stateless Pipeline", path: "/docs/security#stateless-pipeline" },
             { title: "Zero-Execution", path: "/docs/security#zero-execution" },
@@ -50,7 +65,7 @@ const DocsLayout = () => {
       ]
     },
     {
-      label: "Technical Layer",
+      label: "Technical",
       items: [
         { title: "Deterministic Evaluation", path: "/docs/deterministic-evaluation", icon: Cpu },
         { title: "AST-Fact Extraction", path: "/docs/ast-analysis", icon: Terminal },

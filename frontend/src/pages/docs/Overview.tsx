@@ -16,12 +16,12 @@ const DocsOverview = () => {
           Protocol Overview
         </h1>
         <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
-          Zaxion is a deterministic governance layer for institutional engineering. It codifies architectural intent into a verifiable protocol, ensuring every change adheres to established institutional standards.
+          Zaxion automatically catches bugs and enforces your team's standards before code ships. Think of it as a senior engineer reviewing every pull request—but faster, more consistent, and never tired.
         </p>
       </div>
 
       <DocsCallout type="security" title="Institutional Mandate">
-        Zaxion is not a linting tool. It is a governance enforcement engine designed to ensure that architectural decisions are deliberate, documented, and compliant with institutional risk models.
+        Zaxion is different from linters. Linters check code style (spaces, semicolons). Zaxion checks code safety and architecture. It catches bugs like missing tests, hardcoded secrets, and architecture violations before they reach production.
       </DocsCallout>
 
       <div className="grid sm:grid-cols-2 gap-12 pt-4">

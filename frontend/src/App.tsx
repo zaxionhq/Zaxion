@@ -15,6 +15,12 @@ import GovernanceAnalytics from "./pages/GovernanceAnalytics";
 import GovernanceSettings from "./pages/GovernanceSettings";
 import DocsLayout from "./components/docs/DocsLayout";
 import DocsOverview from "./pages/docs/Overview";
+import DocsGettingStarted from "./pages/docs/GettingStarted";
+import DocsQuickStart from "./pages/docs/QuickStart";
+import DocsUseCases from "./pages/docs/UseCases";
+import DocsExamples from "./pages/docs/Examples";
+import DocsFAQ from "./pages/docs/FAQ";
+import DocsTroubleshooting from "./pages/docs/Troubleshooting";
 import DocsConstitution from "./pages/docs/Constitution";
 import DocsPolicies from "./pages/docs/Policies";
 import DocsSecurity from "./pages/docs/Security";
@@ -71,7 +77,13 @@ const App = () => (
               
               {/* Documentation Ecosystem */}
               <Route path="/docs" element={<DocsLayout />}>
-                <Route index element={<DocsOverview />} />
+                <Route index element={<DocsGettingStarted />} />
+                <Route path="getting-started" element={<DocsGettingStarted />} />
+                <Route path="quick-start" element={<DocsQuickStart />} />
+                <Route path="use-cases" element={<DocsUseCases />} />
+                <Route path="examples" element={<DocsExamples />} />
+                <Route path="faq" element={<DocsFAQ />} />
+                <Route path="troubleshooting" element={<DocsTroubleshooting />} />
                 <Route path="overview" element={<DocsOverview />} />
                 <Route path="constitution" element={<DocsConstitution />} />
                 <Route path="policies" element={<DocsPolicies />} />

@@ -46,6 +46,45 @@ const DocsPolicies = () => {
         </div>
       </div>
 
+      <section className="space-y-6">
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Custom Policy Creation</h2>
+        <div className="p-6 rounded border border-white/5 bg-white/[0.02] space-y-4">
+          <p className="text-sm text-slate-400 leading-relaxed">
+            You can author organization-specific policies locally using a <code className="bg-white/10 px-1 rounded text-indigo-300">.zaxion.yaml</code> file for fast iteration, or publish through the Institutional Registry for fleet-wide enforcement. Start local in feature branches, then promote to the registry when ready.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-200 uppercase">Local (.zaxion.yaml)</h4>
+              <div className="bg-[#0a0a0a] rounded border border-white/5 p-4 font-mono text-[11px] text-slate-300 overflow-x-auto">
+                <pre>{`version: 1.0.0
+name: local-auth-guard
+rules:
+  - id: require-tests-in-auth
+    type: coverage
+    target: "src/auth/**"
+    min_tests: 1
+    severity: BLOCK`}</pre>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-200 uppercase">Registry (Promote)</h4>
+              <p className="text-[11px] text-slate-500">
+                Use the Policy Simulator to evaluate blast radius, then publish a new immutable version. Repositories pin to an explicit version to avoid “floating” policy changes.
+              </p>
+            </div>
+          </div>
+          <div className="pt-1">
+            <Link 
+              to="/docs/examples" 
+              className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              See More Examples
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <div className="grid lg:grid-cols-2 gap-8">
         <section className="space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">YAML Structure</h2>
