@@ -16,29 +16,27 @@ export class DiffAnalysisService {
     const changes = [];
     const lines = patch.split('\n');
     let currentLine = 0;
-    
-    // Regex to match hunk headers: @@ -oldStart,oldLines +newStart,newLines @@
-    const hunkHeaderRegex = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/;
 
     for (const line of lines) {
-      const match = line.match(hunkHeaderRegex);
-      
-      if (match) {
-        // Start of a new hunk
-        currentLine = parseInt(match[1], 10);
+      if (line.startsWith('@@')) {
+        const plusIndex = line.indexOf(' +');
+        const afterPlus = plusIndex !== -1 ? line.slice(plusIndex + 2) : '';
+        const spaceAfterPlus = afterPlus.indexOf(' ');
+        const newPart = spaceAfterPlus !== -1 ? afterPlus.slice(0, spaceAfterPlus) : afterPlus;
+        const commaIdx = newPart.indexOf(',');
+        const newStart = commaIdx !== -1 ? newPart.slice(0, commaIdx) : newPart;
+        const parsed = parseInt(newStart, 10);
+        if (!Number.isNaN(parsed)) currentLine = parsed;
       } else if (line.startsWith('+') && !line.startsWith('+++')) {
-        // Added line
         changes.push({
           line: currentLine,
           type: 'ADDED',
-          content: line.substring(1) // Remove the '+'
+          content: line.substring(1)
         });
         currentLine++;
       } else if (line.startsWith('-') && !line.startsWith('---')) {
-        // Deleted line (we don't increment currentLine for the new file view)
-        // But we track it for "What was removed" logic
+        continue;
       } else {
-        // Context line
         currentLine++;
       }
     }

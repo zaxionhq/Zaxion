@@ -19,11 +19,11 @@ export class DependencyRiskPolicy extends BasePolicy {
     });
     
     // In a real system, this would come from a DB or external API
-    this.vulnerablePackages = {
-      'lodash': ['<4.17.21'],
-      'axios': ['<0.21.2'],
-      'moment': ['<2.29.2']
-    };
+    this.vulnerablePackages = new Map([
+      ['lodash', ['<4.17.21']],
+      ['axios', ['<0.21.2']],
+      ['moment', ['<2.29.2']],
+    ]);
   }
 
   async evaluate(facts) {
@@ -43,24 +43,18 @@ export class DependencyRiskPolicy extends BasePolicy {
           const match = change.content.match(/"([^"]+)":\s*"([^"]+)"/);
           if (match) {
             const pkg = match[1];
-            const version = match[2].replace(/[\^~]/g, ''); // Strip ^ and ~ for simple comparison
+            const version = match[2].replace(/[\^~]/g, '');
 
-            if (this.vulnerablePackages[pkg]) {
-              // Placeholder semver check: simplistic string comparison
-              // In real implementation, use 'semver' package
-              // Current bug: we are blocking EVERYTHING in the list regardless of version
-              // Fix: check if version matches vulnerable range
-              const vulnerableRange = this.vulnerablePackages[pkg][0]; // e.g. "<4.17.21"
-              
-              // Very dumb check for test pass: if version is "4.17.21", it is safe
-              if (pkg === 'lodash' && version === '4.17.21') {
-                 continue; 
+            const ranges = this.vulnerablePackages.get(pkg);
+            if (ranges) {
+              const vulnerableRange = Array.isArray(ranges) && ranges.length ? ranges[0] : null;
+              const isKnownUnsafe = vulnerableRange ? vulnerableRange.startsWith('<') && version.localeCompare(vulnerableRange.slice(1), undefined, { numeric: true }) < 0 : false;
+              if (isKnownUnsafe) {
+                violations.push(this.createViolation(
+                  `Vulnerable dependency detected: ${pkg}@${version}`,
+                  { file: facts.file, line: change.line, required: '>= Safe Version' }
+                ));
               }
-
-              violations.push(this.createViolation(
-                `Vulnerable dependency detected: ${pkg}@${version}`,
-                { file: facts.file, line: change.line, required: '>= Safe Version' }
-              ));
             }
           }
         }
