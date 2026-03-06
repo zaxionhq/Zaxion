@@ -1,12 +1,16 @@
 // src/controllers/github.controller.js
 import { Octokit } from "@octokit/rest";
 import { decrypt } from "../utils/crypto.js";
-import { getRepoTree as fetchRepoTreeService, listBranches as fetchBranchesService } from "../services/github.service.js";
+import { getRepoTree as fetchRepoTreeService, listBranches as fetchBranchesService, listPulls, fetchPrFilesWithContent } from "../services/github.service.js";
+import { FactIngestorService } from "../services/factIngestor.service.js";
 import { formatPRBody } from "../services/prFormatter.service.js";
 import { GitHubReporterService } from "../services/githubReporter.service.js";
 import githubAppService from "../services/githubApp.service.js";
 import { DecisionDTO } from "../dtos/decision.dto.js";
 import { log, error, warn } from "../utils/logger.js";
+import * as policyService from "../services/policy.service.js";
+import * as codeAnalysis from "../services/codeAnalysis.service.js";
+import { EvaluationEngineService } from "../services/evaluationEngine.service.js";
 
 /**
  * Helper: create Octokit client with token
@@ -776,6 +780,129 @@ export default function githubControllerFactory(db) {
       }
       next(err);
     }
-  }
-};
+  },
+
+    /**
+     * Fetch PRs from GitHub and ingest into FactSnapshots for policy simulation.
+     * POST /api/v1/github/simulation/fetch-prs
+     * Body: { repo_full_name, branch?, limit? }
+     */
+    fetchPrsForSimulation: async (req, res, next) => {
+      try {
+        const token = req.githubToken;
+        if (!token) return res.status(401).json({ error: "GitHub token missing" });
+
+        const { repo_full_name, branch, limit = 20 } = req.body || {};
+        if (!repo_full_name) return res.status(400).json({ error: "repo_full_name is required" });
+
+        const [owner, repo] = repo_full_name.split("/");
+        if (!owner || !repo) return res.status(400).json({ error: "repo_full_name must be owner/repo" });
+
+        const head = branch ? `${owner}:${branch}` : undefined;
+        const prs = await listPulls(token, owner, repo, { state: "all", head, per_page: Math.min(Number(limit) || 20, 100) });
+
+        const ingestor = new FactIngestorService(db, token);
+        let ingested = 0;
+        for (const pr of prs) {
+          try {
+            const sha = pr.head?.sha;
+            if (!sha) continue;
+            await ingestor.ingest(repo_full_name, pr.number, sha, { fetchContent: true });
+            ingested++;
+          } catch (e) {
+            warn("fetchPrsForSimulation: ingest failed for PR", pr.number, e.message);
+          }
+        }
+
+        res.status(200).json({ fetched: prs.length, ingested, repo_full_name, branch: branch || null });
+      } catch (err) {
+        error("fetchPrsForSimulation error", err);
+        if (err.response?.status === 404) return res.status(404).json({ error: "Repository not found" });
+        next(err);
+      }
+    },
+
+    /**
+     * Analyze a single GitHub PR by URL against a policy.
+     * POST /api/v1/github/simulation/analyze-pr
+     * Body: { policy_id, github_pr_url }
+     */
+    analyzePrByUrl: async (req, res, next) => {
+      try {
+        const token = req.githubToken;
+        if (!token) return res.status(401).json({ error: "GitHub token required" });
+
+        const { policy_id, github_pr_url } = req.body || {};
+        if (!policy_id || !github_pr_url) {
+          return res.status(400).json({ error: "policy_id and github_pr_url are required" });
+        }
+
+        const match = github_pr_url.match(/github\.com[/:](\w[-.\w]*)\/([^/]+)\/pull\/(\d+)/i);
+        if (!match) {
+          return res.status(400).json({ error: "Invalid GitHub PR URL. Use format: https://github.com/owner/repo/pull/123" });
+        }
+        const [, owner, repo, prNumberStr] = match;
+        const repoFullName = `${owner}/${repo}`;
+        const prNumber = parseInt(prNumberStr, 10);
+
+        const policy = await policyService.getPolicy(db, policy_id);
+        if (!policy) return res.status(404).json({ error: "Policy not found" });
+        const latestVersion = await policyService.getLatestPolicyVersion(db, policy_id);
+        const draftRules = latestVersion?.rules_logic || {};
+        if (!draftRules || Object.keys(draftRules).length === 0) {
+          return res.status(400).json({ error: "Policy has no rules to evaluate" });
+        }
+
+        const octokit = getOctokit(token);
+        const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
+
+        // Fetch changed files + content for this PR so security + AST rules work.
+        const filesWithContent = await fetchPrFilesWithContent(token, owner, repo, prNumber, { maxFiles: 100 });
+
+        let snapshot;
+        if (filesWithContent.length > 0) {
+          snapshot = codeAnalysis.buildSyntheticSnapshotFromZip(filesWithContent);
+        } else {
+          // Gracefully handle PRs with no analyzable files.
+          snapshot = codeAnalysis.buildSyntheticSnapshot({
+            content: '',
+            fileName: 'empty.ts',
+            extension: '.ts',
+            virtualPath: 'empty.ts',
+          });
+        }
+
+        // Attach PR metadata so results include proper repo / PR / title.
+        snapshot.repo_full_name = repoFullName;
+        snapshot.pr_number = prNumber;
+        snapshot.data = snapshot.data || {};
+        snapshot.data.pull_request = {
+          ...(snapshot.data.pull_request || {}),
+          title: pr.title,
+          base_branch: pr.base?.ref || null,
+          author: {
+            github_user_id: pr.user?.id,
+            username: pr.user?.login,
+          },
+        };
+
+        const evaluationEngine = new EvaluationEngineService();
+        const result = codeAnalysis.runCodeAnalysis(snapshot, draftRules, evaluationEngine);
+
+        res.status(200).json({
+          id: `pr-${repoFullName}-${prNumber}-${Date.now()}`,
+          status: "COMPLETED",
+          ...result,
+          pr_title: pr.title,
+          pr_number: prNumber,
+          repo_full_name: repoFullName,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        error("analyzePrByUrl error", err);
+        if (err.response?.status === 404) return res.status(404).json({ error: "PR or repository not found" });
+        next(err);
+      }
+    },
+  };
 }

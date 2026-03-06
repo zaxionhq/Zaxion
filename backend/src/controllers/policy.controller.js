@@ -2,6 +2,7 @@
 import * as policyService from '../services/policy.service.js';
 import { PolicySimulationService } from '../services/policySimulation.service.js';
 import { EvaluationEngineService } from '../services/evaluationEngine.service.js';
+import * as codeAnalysis from '../services/codeAnalysis.service.js';
 
 export default function policyControllerFactory(db) {
   const evaluationEngine = new EvaluationEngineService();
@@ -46,6 +47,27 @@ export default function policyControllerFactory(db) {
       }
       res.json(policy);
     } catch (error) {
+      next(error);
+    }
+  }
+
+  async function deletePolicy(req, res, next) {
+    try {
+      const { id } = req.params;
+      if (!req.user?.id) {
+        const error = new Error('User not authenticated');
+        error.statusCode = 401;
+        throw error;
+      }
+      const reason = (req.body && req.body.reason) || req.query?.reason || null;
+      const policy = await policyService.deletePolicy(db, id, req.user.id, reason);
+      res.status(200).json({ deleted: true, policy });
+    } catch (error) {
+      if (error.message === 'Policy not found') {
+        error.statusCode = 404;
+      } else if (error.message?.startsWith('Cannot delete system policy')) {
+        error.statusCode = 403;
+      }
       next(error);
     }
   }
@@ -102,6 +124,7 @@ export default function policyControllerFactory(db) {
         scope_override,
         target_repo_full_name,
         target_branch,
+        days_back,
       } = req.body;
       const userId = req.user ? req.user.id : null;
 
@@ -120,6 +143,7 @@ export default function policyControllerFactory(db) {
         scope_override,
         target_repo_full_name,
         target_branch,
+        days_back,
       });
 
       res.status(202).json(simulation);
@@ -161,14 +185,62 @@ export default function policyControllerFactory(db) {
     }
   }
 
+  /**
+   * Analyze uploaded or pasted code against a policy (file upload / code paste).
+   * POST /v1/policies/:id/analyze-code
+   * Body: { mode: 'upload'|'paste', file?: { name, contentBase64 }, paste?: { code, virtualPath? } }
+   */
+  async function analyzeCode(req, res, next) {
+    try {
+      const { id: policyId } = req.params;
+      const { mode, file, paste, zip } = req.body || {};
+      if (!mode || !['upload', 'paste', 'zip'].includes(mode)) {
+        return res.status(400).json({ error: 'mode must be "upload", "paste", or "zip"' });
+      }
+
+      const policy = await policyService.getPolicy(db, policyId);
+      if (!policy) return res.status(404).json({ error: 'Policy not found' });
+      const latestVersion = await policyService.getLatestPolicyVersion(db, policyId);
+      const draftRules = latestVersion?.rules_logic || {};
+      if (!draftRules || Object.keys(draftRules).length === 0) {
+        return res.status(400).json({ error: 'Policy has no rules to evaluate' });
+      }
+
+      let syntheticSnapshot;
+      if (mode === 'upload') {
+        const decoded = codeAnalysis.validateAndDecodeUpload(file?.name, file?.contentBase64);
+        syntheticSnapshot = codeAnalysis.buildSyntheticSnapshot({ ...decoded, fileName: decoded.fileName });
+      } else if (mode === 'paste') {
+        const decoded = codeAnalysis.validatePaste(paste?.code, paste?.virtualPath);
+        syntheticSnapshot = codeAnalysis.buildSyntheticSnapshot({ content: decoded.content, virtualPath: decoded.virtualPath });
+      } else {
+        const decoded = codeAnalysis.validateAndDecodeZip(zip?.contentBase64);
+        syntheticSnapshot = codeAnalysis.buildSyntheticSnapshotFromZip(decoded.files);
+      }
+      const result = codeAnalysis.runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine);
+
+      res.status(200).json({
+        id: `code-${Date.now()}`,
+        status: 'COMPLETED',
+        ...result,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      if (error.statusCode === 400) return res.status(400).json({ error: error.message });
+      next(error);
+    }
+  }
+
   return {
     createPolicy,
     listPolicies,
     getPolicy,
+    deletePolicy,
     createPolicyVersion,
     getPolicyVersion,
     runSimulation,
     getSimulation,
-    promoteDraft
+    promoteDraft,
+    analyzeCode,
   };
 }

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
 import { 
   BarChart3, Shield, Loader2, AlertCircle, BadgeCheck, 
   TrendingUp, Link as LinkIcon, Search, GitBranch, 
   Globe, LayoutGrid, CheckCircle2, ChevronRight,
-  Info
+  Info, Trash2, FolderGit
 } from 'lucide-react';
 import { useSession } from '@/hooks/useSession';
 import { useNavigate, Link } from 'react-router-dom';
@@ -16,8 +16,51 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+/** System policy names that cannot be deleted. */
+const PROTECTED_POLICY_NAMES = ['Zaxion Core Policy', 'Internal Zaxion Policy'];
+
+/** Extract affected paths/files from rules_logic for display. */
+function getAffectedPaths(rulesLogic: PolicyVersion['rules_logic'] | undefined): { security_paths: string[]; allowed_extensions: string[]; pattern?: string } {
+  const result = { security_paths: [] as string[], allowed_extensions: [] as string[], pattern: undefined as string | undefined };
+  if (!rulesLogic) return result;
+
+  const rl = rulesLogic as Record<string, unknown>;
+  if (Array.isArray(rl.security_paths)) result.security_paths = rl.security_paths as string[];
+  else if (rl.security_paths) result.security_paths = [String(rl.security_paths)];
+  if (Array.isArray(rl.allowed_extensions)) result.allowed_extensions = rl.allowed_extensions as string[];
+  else if (rl.allowed_extensions) result.allowed_extensions = [String(rl.allowed_extensions)];
+  if (typeof rl.pattern === 'string') result.pattern = rl.pattern;
+
+  const rules = rl.rules as Array<{ type?: string; parameters?: Record<string, unknown> }> | undefined;
+  if (Array.isArray(rules)) {
+    for (const rule of rules) {
+      const params = rule.parameters || {};
+      if (params.security_paths) {
+        const sp = Array.isArray(params.security_paths) ? params.security_paths : [params.security_paths];
+        result.security_paths = [...new Set([...result.security_paths, ...sp.map(String)])];
+      }
+      if (params.allowed_extensions) {
+        const ae = Array.isArray(params.allowed_extensions) ? params.allowed_extensions : [params.allowed_extensions];
+        result.allowed_extensions = [...new Set([...result.allowed_extensions, ...ae.map(String)])];
+      }
+      if (params.pattern && typeof params.pattern === 'string') result.pattern = params.pattern as string;
+    }
+  }
+  return result;
+}
 
 interface Hotspot {
   repo: string;
@@ -176,6 +219,8 @@ const GovernanceAnalytics: React.FC = () => {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [repoSearch, setRepoSearch] = useState("");
   const [isReposLoading, setIsReposLoading] = useState(false);
+  const [policyToDelete, setPolicyToDelete] = useState<Policy | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -230,39 +275,66 @@ const GovernanceAnalytics: React.FC = () => {
   }, [selectedRepo]);
 
   // Fetch Policies based on scope and target
-  useEffect(() => {
-    const fetchPolicies = async () => {
-      setIsPoliciesLoading(true);
-      try {
-        // scope should be ORG for GLOBAL, and REPO for both REPO and BRANCH tabs
-        const scope = activeTab === 'GLOBAL' ? 'ORG' : 'REPO';
-        let query = `?scope=${scope}`;
-        
-        if ((activeTab === 'REPO' || activeTab === 'BRANCH') && selectedRepo) {
-          query += `&target_id=${selectedRepo}`;
-        } else if (activeTab === 'GLOBAL') {
-          query += `&target_id=GLOBAL`;
-        }
-        
-        if (activeTab === 'BRANCH' && selectedBranch) {
-          query += `&branch=${selectedBranch}`;
-        } else if (activeTab !== 'GLOBAL' && (!selectedRepo || (activeTab === 'BRANCH' && !selectedBranch))) {
-          setPolicies([]);
-          setIsPoliciesLoading(false);
-          return;
-        }
+  const fetchPolicies = useCallback(async () => {
+    setIsPoliciesLoading(true);
+    try {
+      const scope = activeTab === 'GLOBAL' ? 'ORG' : 'REPO';
+      let query = `?scope=${scope}`;
 
-        const data = await api.get<Policy[]>(`/v1/policies${query}`);
-        setPolicies(data);
-      } catch (error) {
-        console.error('Failed to fetch policies:', error);
-      } finally {
-        setIsPoliciesLoading(false);
+      if ((activeTab === 'REPO' || activeTab === 'BRANCH') && selectedRepo) {
+        query += `&target_id=${selectedRepo}`;
+      } else if (activeTab === 'GLOBAL') {
+        query += `&target_id=GLOBAL`;
       }
-    };
 
-    fetchPolicies();
+      if (activeTab === 'BRANCH' && selectedBranch) {
+        query += `&branch=${selectedBranch}`;
+      } else if (activeTab !== 'GLOBAL' && (!selectedRepo || (activeTab === 'BRANCH' && !selectedBranch))) {
+        setPolicies([]);
+        setIsPoliciesLoading(false);
+        return;
+      }
+
+      const data = await api.get<Policy[]>(`/v1/policies${query}`);
+      setPolicies(data);
+    } catch (error) {
+      console.error('Failed to fetch policies:', error);
+    } finally {
+      setIsPoliciesLoading(false);
+    }
   }, [activeTab, selectedRepo, selectedBranch]);
+
+  useEffect(() => {
+    fetchPolicies();
+  }, [fetchPolicies]);
+
+  const handleDeletePolicy = async () => {
+    if (!policyToDelete) return;
+    // Collect an optional human-readable reason (stored in immutable audit trail).
+    const reason = window.prompt(
+      'Optional: Why are you deleting this policy?\nThis note will be stored in the immutable audit log.',
+      ''
+    ) ?? '';
+
+    setIsDeleting(true);
+    try {
+      const encodedReason = reason.trim()
+        ? `?reason=${encodeURIComponent(reason.trim())}`
+        : '';
+      await api.delete(`/v1/policies/${policyToDelete.id}${encodedReason}`);
+      toast({ title: 'Policy deleted', description: `"${policyToDelete.name}" has been removed.` });
+      setPolicyToDelete(null);
+      fetchPolicies();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete failed',
+        description: err instanceof Error ? err.message : 'Could not delete policy.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredRepos = useMemo(() => {
     if (!repoSearch) return repos;
@@ -515,8 +587,8 @@ const GovernanceAnalytics: React.FC = () => {
                             )}
                           </div>
                           <div className="flex flex-col gap-1">
-                            <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
-                              {policy.display_description || "No description provided."}
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                              {policy.description || policy.display_description || "No description provided."}
                             </p>
                             {policy.created_by && (
                               <div className="flex items-center gap-1 mt-1">
@@ -536,6 +608,55 @@ const GovernanceAnalytics: React.FC = () => {
 
                       {/* Rule Breakdown */}
                       <RuleExplainer rules={policy.latest_version?.rules_logic?.rules} />
+
+                      {/* Affected Paths/Files */}
+                      {(() => {
+                        const affected = getAffectedPaths(policy.latest_version?.rules_logic);
+                        const hasPaths = affected.security_paths.length > 0 || affected.allowed_extensions.length > 0 || affected.pattern;
+                        if (!hasPaths) return null;
+                        return (
+                          <div className="mt-4 p-3 rounded-lg bg-muted/10 border border-border/30">
+                            <p className="text-[9px] font-bold uppercase text-primary/60 tracking-widest flex items-center gap-1.5 mb-2">
+                              <FolderGit className="h-3 w-3" />
+                              Affected Paths & Files
+                            </p>
+                            <div className="space-y-2 text-[10px]">
+                              {affected.security_paths.length > 0 && (
+                                <div>
+                                  <span className="text-muted-foreground/80 font-medium">Security paths:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {affected.security_paths.map((p, i) => (
+                                      <Badge key={i} variant="outline" className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                        {p}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {affected.allowed_extensions.length > 0 && (
+                                <div>
+                                  <span className="text-muted-foreground/80 font-medium">Allowed extensions:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {affected.allowed_extensions.map((e, i) => (
+                                      <Badge key={i} variant="outline" className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                                        {e.startsWith('.') ? e : `.${e}`}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {affected.pattern && (
+                                <div>
+                                  <span className="text-muted-foreground/80 font-medium">Glob pattern:</span>
+                                  <code className="block mt-1 p-1.5 rounded bg-black/30 font-mono text-[9px] text-slate-300 break-all">
+                                    {affected.pattern}
+                                  </code>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Version List for Zaxion Core Policy - Only show if there are previous versions */}
                       {policy.versions && policy.versions.length > 1 && (
@@ -587,9 +708,21 @@ const GovernanceAnalytics: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        <span className="text-[9px] font-mono text-slate-500 italic">
-                          ID: POL-{policy.id}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {!PROTECTED_POLICY_NAMES.includes(policy.name) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => setPolicyToDelete(policy)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <span className="text-[9px] font-mono text-slate-500 italic">
+                            ID: POL-{policy.id}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -619,6 +752,27 @@ const GovernanceAnalytics: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={!!policyToDelete} onOpenChange={(open) => !open && setPolicyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete policy</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{policyToDelete?.name}&quot;? This will remove the policy and all its versions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeletePolicy(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

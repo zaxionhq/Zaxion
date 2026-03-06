@@ -50,6 +50,11 @@ export default (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'Description of changes in this version',
       },
+      // Soft delete marker for versions
+      deleted_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       sequelize,

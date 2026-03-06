@@ -35,6 +35,13 @@ export default function policyRoutesFactory(db) {
     policyController.getPolicy
   );
 
+  router.delete(
+    '/:id',
+    authenticateJWT,
+    authorize(['user', 'admin']),
+    policyController.deletePolicy
+  );
+
   // Policy Versions (Immutable)
   router.post(
     '/:id/versions',
@@ -54,8 +61,16 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/simulate',
     authenticateJWT,
-    authorize(adminOnlyRoles), // Simulation is an admin function (relaxed in non-prod)
+    authorize(adminOnlyRoles),
     policyController.runSimulation
+  );
+
+  // Analyze uploaded/pasted code against a policy (no GitHub token required)
+  router.post(
+    '/:id/analyze-code',
+    authenticateJWT,
+    authorize(adminOnlyRoles),
+    policyController.analyzeCode
   );
 
   router.get(

@@ -35,6 +35,7 @@ export class PolicySimulationService {
       scope_override,
       target_repo_full_name,
       target_branch,
+      days_back,
     } = payload;
 
     logger.info({ policy_id, sample_strategy, sample_size }, "PolicySimulation: Starting simulation");
@@ -45,13 +46,38 @@ export class PolicySimulationService {
       scope_override,
       target_repo_full_name,
       target_branch,
+      days_back,
     });
-    if (snapshots.length === 0) {
-      throw new Error("No historical snapshots found for simulation");
-    }
 
     // 2. Generate Simulation Hash (Invariant 3)
     const simulation_hash = this._calculateSimHash(draft_rules, snapshots.map(s => s.id));
+
+    // If no snapshots, return a completed simulation with empty summary (no 500)
+    if (snapshots.length === 0) {
+      const emptyResults = {
+        summary: {
+          total_snapshots: 0,
+          consistent_count: 0,
+          newly_blocked_count: 0,
+          newly_passed_count: 0,
+          fail_rate_change: '0.00%',
+          friction_index: 'LOW',
+        },
+        impacted_prs: [],
+      };
+      const simulation = await this.db.PolicySimulation.create({
+        simulation_hash,
+        policy_id,
+        draft_rules,
+        engine_version: this.ENGINE_VERSION,
+        sample_strategy,
+        sample_size: 0,
+        status: 'COMPLETED',
+        created_by,
+        results: emptyResults,
+      });
+      return simulation.toJSON();
+    }
 
     // 3. Create Simulation Record
     const simulation = await this.db.PolicySimulation.create({
@@ -91,40 +117,61 @@ export class PolicySimulationService {
     let newlyPassed = 0;
     let consistent = 0;
     const impactedPrs = [];
+    const perPrResults = [];
+    const allViolations = [];
+    const severityCounts = { BLOCK: 0, WARN: 0, OBSERVE: 0 };
 
     // Mock applied policy for the simulation (never persisted to DB)
     const mockAppliedPolicy = {
       policy_id: simulation.policy_id,
-      policy_version_id: 'DRAFT', // Simulation identifier
+      policy_version_id: 'DRAFT',
       level: 'MANDATORY',
       rules_logic: draftRules,
       reason: 'Simulation Run'
     };
 
     for (const snapshot of snapshots) {
-      // 1. Get historical decision for this snapshot (if any)
       const historicalDecision = await this.db.Decision.findOne({
-        // We only care about the most recent stored decision for this snapshot.
-        // Simulation runs do not persist decisions, so no need for a sentinel filter.
         where: { fact_id: snapshot.id },
         order: [['createdAt', 'DESC']]
       });
 
-      // 2. Run deterministic evaluation
       const simResult = this.evaluationEngine.evaluate(snapshot, [mockAppliedPolicy]);
-
-      // 3. Compare with history (Blast Radius Reporting)
       const historicalResult = historicalDecision ? historicalDecision.result : 'UNKNOWN';
       const simVerdict = simResult.result;
 
-      if (historicalResult === 'PASS' && simVerdict === 'BLOCK') {
-        newlyBlocked++;
-        impactedPrs.push({
+      const pullRequest = snapshot.data?.pull_request;
+      const violations = simResult.structured_violations || [];
+      const passes = simResult.structured_passes || [];
+
+      for (const v of violations) {
+        severityCounts[v.severity] = (severityCounts[v.severity] || 0) + 1;
+        allViolations.push({
+          ...v,
           pr_number: snapshot.pr_number,
           repo: snapshot.repo_full_name,
-          change: 'PASS -> BLOCK',
-          rationale: simResult.rationale
+          pr_title: pullRequest?.title || historicalDecision?.pr_title || `PR #${snapshot.pr_number}`,
         });
+      }
+
+      const prMeta = {
+        pr_number: snapshot.pr_number,
+        repo: snapshot.repo_full_name,
+        verdict: simVerdict,
+        rationale: simResult.rationale,
+        pr_title: pullRequest?.title || historicalDecision?.pr_title || `PR #${snapshot.pr_number}`,
+        author: pullRequest?.author?.username || historicalDecision?.author_handle || null,
+        base_branch: snapshot.data?.pull_request?.base_branch || historicalDecision?.base_branch || null,
+        historical_result: historicalResult,
+        ingested_at: snapshot.ingested_at,
+        violations,
+        passes,
+      };
+      perPrResults.push(prMeta);
+
+      if (historicalResult === 'PASS' && simVerdict === 'BLOCK') {
+        newlyBlocked++;
+        impactedPrs.push({ ...prMeta, change: 'PASS -> BLOCK' });
       } else if (historicalResult === 'BLOCK' && simVerdict === 'PASS') {
         newlyPassed++;
       } else {
@@ -133,7 +180,8 @@ export class PolicySimulationService {
     }
 
     const total = snapshots.length;
-    const failRateChange = ((newlyBlocked - newlyPassed) / total * 100).toFixed(2);
+    const failRateChange = total > 0 ? ((newlyBlocked - newlyPassed) / total * 100).toFixed(2) : '0.00';
+    const totalViolations = allViolations.length;
 
     return {
       summary: {
@@ -142,22 +190,35 @@ export class PolicySimulationService {
         newly_blocked_count: newlyBlocked,
         newly_passed_count: newlyPassed,
         fail_rate_change: `${failRateChange}%`,
-        friction_index: parseFloat(failRateChange) > 10 ? 'HIGH' : 'LOW'
+        friction_index: parseFloat(failRateChange) > 10 ? 'HIGH' : 'LOW',
+        total_violations: totalViolations,
+        violations_by_severity: severityCounts,
+        policy_would_block: newlyBlocked > 0,
+        policy_would_pass: total === 0 || (newlyBlocked === 0 && consistent + newlyPassed === total),
       },
-      impacted_prs: impactedPrs.slice(0, 50) // Limit detailed reporting
+      violations: allViolations,
+      impacted_prs: impactedPrs.slice(0, 50),
+      per_pr_results: perPrResults,
     };
   }
 
   /**
    * Sampling Strategy (Pillar 3.4.A)
    */
-  async _collectSnapshots(strategy, size, { policy_id, scope_override, target_repo_full_name, target_branch }) {
+  async _collectSnapshots(strategy, size, { policy_id, scope_override, target_repo_full_name, target_branch, days_back }) {
     const where = {};
     const include = [];
 
     // If caller explicitly targets a repo, scope snapshots to that repo.
     if (target_repo_full_name) {
       where.repo_full_name = target_repo_full_name;
+    }
+
+    // Optional: only snapshots from the last N days
+    if (days_back != null && days_back > 0) {
+      const since = new Date();
+      since.setDate(since.getDate() - Number(days_back));
+      where.ingested_at = { [Op.gte]: since };
     }
 
     // If a branch is specified, join Decisions to filter by base_branch.
@@ -173,7 +234,7 @@ export class PolicySimulationService {
     const options = {
       where,
       include,
-      limit: size,
+      limit: Math.min(size || 100, 500),
       order: [['ingested_at', 'DESC']],
     };
 

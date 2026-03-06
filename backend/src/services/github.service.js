@@ -28,6 +28,25 @@ export async function listBranches(token, owner, repo) {
   }
 }
 
+/**
+ * List pull requests for a repository (for simulation PR fetching).
+ * @param {string} token - GitHub token
+ * @param {string} owner - Repo owner
+ * @param {string} repo - Repo name
+ * @param {{ state?: 'open'|'closed'|'all', head?: string, per_page?: number }} opts - state, optional head (owner:branch), per_page
+ */
+export async function listPulls(token, owner, repo, opts = {}) {
+  const { state = 'all', head, per_page = 20 } = opts;
+  if (!token) throw new Error("Authentication token is required.");
+  const params = { state, per_page };
+  if (head) params.head = head;
+  const { data } = await axios.get(
+    `${GH_API}/repos/${owner}/${repo}/pulls?${new URLSearchParams(params).toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return data;
+}
+
 export async function listUserRepos(token) {
   const operation = 'listUserRepos';
   let status = 'success';
@@ -109,6 +128,98 @@ function shouldIncludeFile(path, includeIgnored = false) {
   // But also "Ignore: binary files, images..."
   // It's safer to whitelist for the purpose of test generation to avoid noise.
   return VALID_EXTENSIONS.has(extension);
+}
+
+/**
+ * Fetch changed files for a PR and return text contents for relevant files.
+ * Used for policy simulation on a single GitHub PR (security + AST checks).
+ */
+export async function fetchPrFilesWithContent(token, owner, repo, prNumber, opts = {}) {
+  const operation = 'fetchPrFilesWithContent';
+  let status = 'success';
+  try {
+    if (!token) throw new Error("Authentication token is required.");
+    if (!owner) throw new Error("Repository owner is required.");
+    if (!repo) throw new Error("Repository name is required.");
+    if (!prNumber) throw new Error("PR number is required.");
+
+    const maxFiles = opts.maxFiles && Number.isFinite(opts.maxFiles) ? Math.min(opts.maxFiles, 200) : 100;
+    const url = `${GH_API}/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=${maxFiles}`;
+    logger.info({ owner, repo, prNumber, url }, "Fetching PR files for content analysis");
+
+    const { data: files } = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 15000,
+    });
+
+    const results = [];
+
+    for (const file of files) {
+      const filePath = file.filename;
+      if (!filePath) continue;
+
+      // Skip files we know we don't want (binary, vendor, etc.)
+      if (!shouldIncludeFile(filePath, false)) {
+        continue;
+      }
+
+      const extension = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+      const rawUrl = file.raw_url;
+      if (!rawUrl) continue;
+
+      try {
+        const resp = await axios.get(rawUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'arraybuffer',
+          timeout: 15000,
+          maxContentLength: MAX_SIZE_BYTES,
+        });
+
+        let buffer;
+        if (Buffer.isBuffer(resp.data)) {
+          buffer = resp.data;
+        } else if (typeof resp.data === 'string') {
+          buffer = Buffer.from(resp.data);
+        } else {
+          buffer = Buffer.from(resp.data);
+        }
+
+        if (!buffer || buffer.length === 0) {
+          continue;
+        }
+
+        if (buffer.length > MAX_SIZE_BYTES) {
+          logger.warn({ owner, repo, filePath, size: buffer.length }, "Skipping large file for PR content fetch");
+          continue;
+        }
+
+        if (isBinaryBuffer(buffer)) {
+          logger.warn({ owner, repo, filePath }, "Skipping binary file for PR content fetch");
+          continue;
+        }
+
+        let content = buffer.toString('utf8');
+        if (!content.trim()) continue;
+
+        const lines = content.split('\n');
+        if (lines.length > MAX_LINES) {
+          content = lines.slice(0, MAX_LINES).join('\n');
+        }
+
+        results.push({ path: filePath, content, extension });
+      } catch (err) {
+        logger.warn({ owner, repo, filePath, error: err?.message }, "Error fetching PR file content; skipping");
+      }
+    }
+
+    return results;
+  } catch (error) {
+    status = 'failure';
+    logger.error({ error, owner, repo, prNumber }, "Error fetching PR files with content");
+    throw error;
+  } finally {
+    githubServiceCallCounter.inc({ operation, status });
+  }
 }
 
 export async function getRepoTree(token, owner, repo, branch, includeIgnored = false) {

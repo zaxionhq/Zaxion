@@ -8,6 +8,12 @@ export default (sequelize, DataTypes) => {
         foreignKey: 'policy_id',
         as: 'versions',
       });
+
+      // Optional: user who deleted this policy (for audit)
+      this.belongsTo(models.User, {
+        foreignKey: 'deleted_by_user_id',
+        as: 'deletedBy',
+      });
     }
   }
 
@@ -39,6 +45,19 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'Detailed description of the policy goals',
+      },
+      // Soft delete + audit metadata
+      deleted_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      deleted_by_user_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      deletion_reason: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
     },
     {

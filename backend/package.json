@@ -14,9 +14,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@babel/parser": "^7.29.0",
+    "@babel/traverse": "^7.29.0",
     "@google/generative-ai": "^0.24.1",
     "@octokit/auth-oauth-app": "^9.0.1",
     "@octokit/rest": "^22.0.0",
+    "adm-zip": "^0.5.16",
     "axios": "^1.7.9",
     "bullmq": "^5.66.2",
     "cookie-parser": "^1.4.7",

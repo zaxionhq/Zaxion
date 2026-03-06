@@ -3,6 +3,24 @@ import path from 'path';
 import logger from '../logger.js';
 
 const GH_API = "https://api.github.com";
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_LINES = 2000;
+const VALID_EXTENSIONS = new Set(['.js', '.ts', '.tsx', '.py', '.java', '.go', '.php', '.rb', '.cs', '.json', '.yaml', '.yml']);
+const IGNORED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.zip', '.exe', '.dll', '.lock']);
+const IGNORED_PATHS = ['node_modules', '.git', 'dist', 'build', 'vendor', 'package-lock.json', 'yarn.lock'];
+
+function shouldFetchContent(filePath) {
+  if (IGNORED_PATHS.some(p => filePath.includes(p))) return false;
+  const ext = path.extname(filePath).toLowerCase();
+  if (IGNORED_EXTENSIONS.has(ext)) return false;
+  return VALID_EXTENSIONS.has(ext) || ext === '';
+}
+
+function isBinaryBuffer(buf) {
+  const len = Math.min(buf.length, 1024);
+  for (let i = 0; i < len; i++) if (buf[i] === 0) return true;
+  return false;
+}
 
 /**
  * Phase 5 Pillar 1: Fact Ingestion Service
@@ -25,9 +43,10 @@ export class FactIngestorService {
    * @param {string} repoFullName - e.g. "owner/repo"
    * @param {number} prNumber - PR number
    * @param {string} commitSha - Exact commit SHA being evaluated
+   * @param {{ fetchContent?: boolean }} opts - fetchContent: true to fetch file contents for security/AST analysis
    * @returns {Promise<object>} The created or existing FactSnapshot
    */
-  async ingest(repoFullName, prNumber, commitSha) {
+  async ingest(repoFullName, prNumber, commitSha, opts = {}) {
     // 1. Deduplication check (Unique key: repo_full_name + commit_sha)
     const existingSnapshot = await this.db.FactSnapshot.findOne({
       where: { 
@@ -49,15 +68,27 @@ export class FactIngestorService {
       
       // 3. Fetch PR Files
       const { data: filesData, headers: filesHeaders } = await this._fetchPRFiles(repoFullName, prNumber);
-      
-      const files = filesData.map(f => ({
-        path: f.filename,
-        extension: path.extname(f.filename),
-        status: f.status,
-        additions: f.additions,
-        deletions: f.deletions,
-        is_test_file: this._isTestFile(f.filename)
-      }));
+
+      const files = [];
+      for (const f of filesData) {
+        const fileObj = {
+          path: f.filename,
+          extension: path.extname(f.filename),
+          status: f.status,
+          additions: f.additions,
+          deletions: f.deletions,
+          is_test_file: this._isTestFile(f.filename),
+        };
+        if (opts.fetchContent && shouldFetchContent(f.filename) && f.raw_url) {
+          try {
+            const content = await this._fetchFileContent(f.raw_url);
+            if (content) fileObj.content = content;
+          } catch (err) {
+            logger.warn({ file: f.filename, err: err.message }, 'FactIngestor: Could not fetch file content');
+          }
+        }
+        files.push(fileObj);
+      }
 
       // 4. Extract path prefixes (Deterministic derivation)
       const pathPrefixes = this._extractPathPrefixes(files);
@@ -129,6 +160,26 @@ export class FactIngestorService {
         Accept: "application/vnd.github.v3+json"
       }
     });
+  }
+
+  /**
+   * Fetches raw file content from GitHub (for full-content analysis)
+   */
+  async _fetchFileContent(rawUrl) {
+    const { data } = await axios.get(rawUrl, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      maxContentLength: MAX_FILE_SIZE,
+    });
+    const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+    if (!buf.length || buf.length > MAX_FILE_SIZE) return null;
+    if (isBinaryBuffer(buf)) return null;
+    let content = buf.toString('utf8');
+    if (!content.trim()) return null;
+    const lines = content.split('\n');
+    if (lines.length > MAX_LINES) content = lines.slice(0, MAX_LINES).join('\n');
+    return content;
   }
 
   /**

@@ -72,5 +72,19 @@ export default function githubRoutesFactory(db) {
     githubController.mergePullRequest
   );
 
+  // Fetch PRs from GitHub and ingest as FactSnapshots for policy simulation
+  router.post(
+    "/simulation/fetch-prs",
+    requireGithub,
+    githubController.fetchPrsForSimulation
+  );
+
+  // Analyze a single PR by GitHub URL against a policy
+  router.post(
+    "/simulation/analyze-pr",
+    requireGithub,
+    githubController.analyzePrByUrl
+  );
+
   return router;
 }

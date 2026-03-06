@@ -31,15 +31,15 @@ export async function getPolicy(db, id) {
 }
 
 export async function listPolicies(db, scope, target_id) {
-  const where = {};
+  const where = { deleted_at: null };
   
   // If a specific target_id (like a repo) is requested, we want to show:
   // 1. Policies specifically for that repo
   // 2. Global/Org-level policies (target_id = 'GLOBAL')
   if (target_id && target_id !== 'GLOBAL') {
     where[db.Sequelize.Op.or] = [
-      { target_id: target_id },
-      { target_id: 'GLOBAL' }
+      { target_id: target_id, deleted_at: null },
+      { target_id: 'GLOBAL', deleted_at: null }
     ];
   } else {
     if (scope) where.scope = scope;
@@ -199,4 +199,112 @@ export async function getLatestPolicyVersion(db, policyId) {
     ],
   });
   return version ? version.toJSON() : null;
+}
+
+/** System policy names that cannot be deleted by users. */
+const PROTECTED_POLICY_NAMES = ['Zaxion Core Policy', 'Internal Zaxion Policy'];
+
+/**
+ * Soft-deletes a user/admin-created policy and records an immutable audit trail.
+ * System policies (e.g. Zaxion Core Policy) cannot be deleted.
+ * @param {object} db - Database instance
+ * @param {string} policyId - UUID of the policy
+ * @param {string} deletedByUserId - UUID of the user performing the deletion
+ * @param {string|null} reason - Optional human-readable deletion reason
+ * @returns {Promise<object>} The soft-deleted policy (as JSON with deletion metadata)
+ */
+export async function deletePolicy(db, policyId, deletedByUserId, reason = null) {
+  const policy = await db.Policy.findByPk(policyId, {
+    include: [
+      {
+        model: db.PolicyVersion,
+        as: 'versions',
+      },
+    ],
+  });
+  if (!policy) {
+    throw new Error('Policy not found');
+  }
+  if (PROTECTED_POLICY_NAMES.includes(policy.name)) {
+    throw new Error(`Cannot delete system policy: ${policy.name}`);
+  }
+
+  const { Op } = db.Sequelize;
+  const sequelize = db.sequelize || db.Policy.sequelize;
+
+  return sequelize.transaction(async (t) => {
+    const json = policy.toJSON();
+    const versions = json.versions || [];
+    const versionIds = versions.map((v) => v.id);
+
+    // Compute snapshot metrics for immutable audit record
+    const rulesCount = versions.reduce((acc, v) => {
+      const rl = v.rules_logic || {};
+      const rules = Array.isArray(rl.rules) ? rl.rules : [];
+      return acc + rules.length;
+    }, 0);
+
+    let decisionsCount = 0;
+    let violationsCount = 0;
+    if (versionIds.length > 0 && db.Decision) {
+      decisionsCount = await db.Decision.count({
+        where: { policy_version_id: { [Op.in]: versionIds } },
+        transaction: t,
+      });
+      violationsCount = await db.Decision.count({
+        where: {
+          policy_version_id: { [Op.in]: versionIds },
+          result: { [Op.ne]: 'PASS' },
+        },
+        transaction: t,
+      });
+    }
+
+    const deletedAt = new Date();
+
+    // Immutable audit trail row
+    await db.PolicyDeletionAudit.create(
+      {
+        policy_id: policy.id,
+        deleted_by_user_id: deletedByUserId,
+        deleted_at: deletedAt,
+        deletion_reason: reason,
+        policy_name_snapshot: policy.name,
+        policy_rules_count_snapshot: rulesCount,
+        decisions_count_snapshot: decisionsCount,
+        violations_count_snapshot: violationsCount,
+      },
+      { transaction: t }
+    );
+
+    // Soft-delete policy and its versions (preserve all relations)
+    await db.Policy.update(
+      {
+        deleted_at: deletedAt,
+        deleted_by_user_id: deletedByUserId,
+        deletion_reason: reason,
+      },
+      {
+        where: { id: policyId },
+        transaction: t,
+      }
+    );
+
+    if (versionIds.length > 0) {
+      await db.PolicyVersion.update(
+        { deleted_at: deletedAt },
+        {
+          where: { id: { [Op.in]: versionIds } },
+          transaction: t,
+        }
+      );
+    }
+
+    return {
+      ...json,
+      deleted_at: deletedAt.toISOString(),
+      deleted_by_user_id: deletedByUserId,
+      deletion_reason: reason,
+    };
+  });
 }
