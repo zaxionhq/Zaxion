@@ -16,7 +16,8 @@ import {
   Code2,
   CheckCircle2,
   HelpCircle,
-  Wrench
+  Wrench,
+  List
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,6 +53,7 @@ const DocsLayout = () => {
           ]
         },
         { title: "Canonical Policies", path: "/docs/policies", icon: FileText },
+        { title: "Rule types", path: "/docs/rules", icon: List },
         { 
           title: "Security Model", 
           path: "/docs/security", 

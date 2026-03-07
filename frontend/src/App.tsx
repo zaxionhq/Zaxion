@@ -23,6 +23,7 @@ import DocsFAQ from "./pages/docs/FAQ";
 import DocsTroubleshooting from "./pages/docs/Troubleshooting";
 import DocsConstitution from "./pages/docs/Constitution";
 import DocsPolicies from "./pages/docs/Policies";
+import DocsRuleTypes from "./pages/docs/RuleTypes";
 import DocsSecurity from "./pages/docs/Security";
 import DocsDeterministicEvaluation from "./pages/docs/DeterministicEvaluation";
 import DocsASTAnalysis from "./pages/docs/ASTAnalysis";
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="overview" element={<DocsOverview />} />
                 <Route path="constitution" element={<DocsConstitution />} />
                 <Route path="policies" element={<DocsPolicies />} />
+                <Route path="rules" element={<DocsRuleTypes />} />
                 <Route path="security" element={<DocsSecurity />} />
                 <Route path="deterministic-evaluation" element={<DocsDeterministicEvaluation />} />
                 <Route path="ast-analysis" element={<DocsASTAnalysis />} />

@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -221,6 +222,9 @@ const GovernanceAnalytics: React.FC = () => {
   const [isReposLoading, setIsReposLoading] = useState(false);
   const [policyToDelete, setPolicyToDelete] = useState<Policy | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hotspotTimeFilter, setHotspotTimeFilter] = useState<'7' | '30' | 'all'>('all');
+  const [hotspotSort, setHotspotSort] = useState<'count' | 'repo' | 'policy'>('count');
+  const [hotspotSearch, setHotspotSearch] = useState('');
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -230,8 +234,10 @@ const GovernanceAnalytics: React.FC = () => {
     }
 
     const fetchAnalytics = async () => {
+      setIsLoading(true);
       try {
-        const response = await api.get<AnalyticsData>('/v1/analytics/governance/summary');
+        const params = hotspotTimeFilter !== 'all' ? `?days=${hotspotTimeFilter}` : '';
+        const response = await api.get<AnalyticsData>(`/v1/analytics/governance/summary${params}`);
         setAnalyticsData(response);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -241,7 +247,7 @@ const GovernanceAnalytics: React.FC = () => {
     };
 
     fetchAnalytics();
-  }, [user, sessionLoading, navigate]);
+  }, [user, sessionLoading, navigate, hotspotTimeFilter]);
 
   // Fetch Repositories
   useEffect(() => {
@@ -343,6 +349,21 @@ const GovernanceAnalytics: React.FC = () => {
     );
   }, [repos, repoSearch]);
 
+  const filteredAndSortedHotspots = useMemo(() => {
+    let list = analyticsData?.hotspots ?? [];
+    if (hotspotSearch.trim()) {
+      const q = hotspotSearch.trim().toLowerCase();
+      list = list.filter((h: Hotspot) => (h.repo || '').toLowerCase().includes(q));
+    }
+    const sorted = [...list].sort((a: Hotspot, b: Hotspot) => {
+      if (hotspotSort === 'count') return (b.count ?? 0) - (a.count ?? 0);
+      if (hotspotSort === 'repo') return (a.repo || '').localeCompare(b.repo || '');
+      if (hotspotSort === 'policy') return (a.policy_name || '').localeCompare(b.policy_name || '');
+      return 0;
+    });
+    return sorted;
+  }, [analyticsData?.hotspots, hotspotSearch, hotspotSort]);
+
   if (sessionLoading || !user) {
     return (
       <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
@@ -382,9 +403,39 @@ const GovernanceAnalytics: React.FC = () => {
 
         <div className="grid gap-6">
           <div className="rounded-lg border border-border/50 bg-card/30 p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <h3 className="font-bold tracking-tight text-lg">Violation Hotspots</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h3 className="font-bold tracking-tight text-lg">Violation Hotspots</h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={hotspotTimeFilter} onValueChange={(v: '7' | '30' | 'all') => setHotspotTimeFilter(v)}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="all">All time</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={hotspotSort} onValueChange={(v: 'count' | 'repo' | 'policy') => setHotspotSort(v)}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="count">Violation count</SelectItem>
+                    <SelectItem value="repo">Repository</SelectItem>
+                    <SelectItem value="policy">Policy</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Search repositories..."
+                  className="h-8 w-[160px] text-xs"
+                  value={hotspotSearch}
+                  onChange={(e) => setHotspotSearch(e.target.value)}
+                />
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -392,13 +443,14 @@ const GovernanceAnalytics: React.FC = () => {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
-              ) : analyticsData?.hotspots?.length > 0 ? (
-                analyticsData.hotspots.map((hotspot: Hotspot) => (
-                  <div key={hotspot.repo} className="flex flex-col p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/40 transition-colors gap-3">
+              ) : filteredAndSortedHotspots.length > 0 ? (
+                filteredAndSortedHotspots.map((hotspot: Hotspot) => (
+                  <div key={`${hotspot.repo}-${hotspot.policy_name}`} className="flex flex-col p-4 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/40 transition-colors gap-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                         <span className="font-medium">{hotspot.repo}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono" title="Trend vs previous period">—</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="destructive" className="font-mono">{hotspot.count} Blocks</Badge>
@@ -436,7 +488,7 @@ const GovernanceAnalytics: React.FC = () => {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <BadgeCheck className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                  <p className="text-sm">No violation hotspots detected.</p>
+                  <p className="text-sm">{(hotspotSearch.trim() || hotspotTimeFilter !== 'all') ? 'No violation hotspots match your filters or time range.' : 'No violation hotspots detected.'}</p>
                   <p className="text-xs">Your repositories are currently 100% compliant with all active policies.</p>
                 </div>
               )}

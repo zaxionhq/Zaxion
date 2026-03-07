@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink } from 'lucide-react';
+import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,83 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Link } from 'react-router-dom';
+
+/** Turn rules_logic into plain-language "what this policy does" lines. */
+function describePolicyRules(rulesLogic: unknown): string[] {
+  const lines: string[] = [];
+  if (rulesLogic == null || typeof rulesLogic !== 'object') return lines;
+  const r = rulesLogic as Record<string, unknown>;
+  const type = (r.type as string) || '';
+
+  switch (type) {
+    case 'pr_size': {
+      const max = r.max_files;
+      const n = typeof max === 'number' ? max : 20;
+      lines.push(`Limits PRs to at most ${n} files.`);
+      break;
+    }
+    case 'coverage': {
+      const minTests = r.min_tests;
+      const minRatio = r.min_coverage_ratio;
+      if (typeof minRatio === 'number') {
+        lines.push(`Requires at least ${(minRatio * 100).toFixed(0)}% test coverage (when AST data is available).`);
+      } else {
+        const n = typeof minTests === 'number' ? minTests : 1;
+        lines.push(`Requires at least ${n} test file(s) in the PR.`);
+      }
+      break;
+    }
+    case 'file_extension': {
+      const ext = r.allowed_extensions;
+      const exts = Array.isArray(ext) ? ext.map(String) : ext ? [String(ext)] : [];
+      const pattern = r.pattern ? String(r.pattern) : null;
+      if (exts.length) {
+        lines.push(`Only allows these file types: ${exts.join(', ')}.`);
+        if (pattern) lines.push(`Applies to paths matching: ${pattern}`);
+      } else {
+        lines.push('Restricts allowed file extensions (see rules).');
+      }
+      break;
+    }
+    case 'security_path': {
+      const paths = r.security_paths;
+      const arr = Array.isArray(paths) ? paths.map(String) : paths ? [String(paths)] : [];
+      if (arr.length) {
+        lines.push(`Treats these paths as security-sensitive: ${arr.join(', ')}`);
+      } else {
+        lines.push('Enforces extra scrutiny on security-sensitive paths.');
+      }
+      break;
+    }
+    case 'security_patterns':
+      lines.push('Scans code for hardcoded secrets, eval(), and risky patterns (e.g. XSS).');
+      break;
+    case 'code_quality':
+      lines.push('Blocks console.log and debugger in code.');
+      break;
+    case 'documentation':
+      lines.push('Requires JSDoc on exported functions.');
+      break;
+    case 'architecture':
+      lines.push('Checks for circular dependencies.');
+      break;
+    case 'reliability':
+      lines.push('Enforces error handling (e.g. try/catch) where needed.');
+      break;
+    case 'performance':
+      lines.push('Requires performance or benchmark tests for critical paths.');
+      break;
+    case 'api':
+      lines.push('Guards against breaking API changes.');
+      break;
+    default:
+      if (type) lines.push(`Runs rule type: ${type}.`);
+      else lines.push('Custom or composite rules apply.');
+  }
+  return lines.length ? lines : ['No rule description available.'];
+}
 
 interface Policy {
   id: number;
@@ -774,6 +851,17 @@ export const PolicySimulation: React.FC = () => {
                   </div>
                 )}
 
+                <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 p-3">
+                  <FileJson className="h-4 w-4 text-primary shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Policy rules use JSON. For enterprise examples (PR size, coverage, security paths, content scans), see the{' '}
+                    <Link to="/docs/examples" className="text-primary hover:underline font-medium" onClick={() => setIsCreateModalOpen(false)}>
+                      Policy Rules (JSON) Reference
+                    </Link>
+                    .
+                  </p>
+                </div>
+
                 <div className="grid gap-2">
                   <Label htmlFor="rules">Policy Rules (JSON)</Label>
                   <Textarea 
@@ -813,6 +901,43 @@ export const PolicySimulation: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+            {selectedPolicy && (
+              <div className="group/card p-3 rounded-lg border border-border/50 bg-muted/10 space-y-2 transition-colors hover:border-primary/30 hover:bg-muted/20">
+                <p className="text-[10px] font-bold uppercase text-muted-foreground">Selected policy</p>
+                {selectedPolicy.description && (
+                  <p className="text-xs text-slate-300">{selectedPolicy.description}</p>
+                )}
+                {selectedPolicy.latest_version?.rules_logic && (
+                  <>
+                    <div className="mt-2 pt-2 border-t border-border/30">
+                      <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1.5">What this policy does</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs text-slate-300">
+                        {describePolicyRules(selectedPolicy.latest_version.rules_logic).map((line, i) => (
+                          <li key={i}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground cursor-default rounded px-2 py-1.5 -mx-2 hover:text-primary hover:bg-muted/50 transition-colors">
+                            <FileJson className="h-3.5 w-3.5 shrink-0" />
+                            <span>View policy JSON</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" align="start" className="max-w-[90vw] sm:max-w-md max-h-[60vh] overflow-auto p-3" sideOffset={8}>
+                          <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-left">
+                            {typeof selectedPolicy.latest_version.rules_logic === 'object'
+                              ? JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)
+                              : String(selectedPolicy.latest_version.rules_logic)}
+                          </pre>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -837,7 +962,24 @@ export const PolicySimulation: React.FC = () => {
           {inputMode === 'repository' && (
           <>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Simulation Target Scope</label>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Simulation Target Scope</label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground p-0.5 rounded">
+                      <HelpCircle className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[240px]">
+                    <p className="font-medium mb-1">Scope</p>
+                    <p className="text-xs"><strong>Org-wide:</strong> Run against all repos in the org.</p>
+                    <p className="text-xs mt-1"><strong>Repository:</strong> Run only against the selected repo.</p>
+                    <p className="text-xs mt-1"><strong>Branch:</strong> Run only against the selected branch of a repo.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Select value={simulationScope} onValueChange={(v: 'GLOBAL' | 'REPO' | 'BRANCH') => setSimulationScope(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select scope for analysis..." />
@@ -1059,6 +1201,9 @@ export const PolicySimulation: React.FC = () => {
             )}
             {inputMode === 'repository' ? 'Analyze Policy Impact' : 'Analyze'}
           </Button>
+          <p className="text-[10px] text-muted-foreground text-center">
+            This analysis typically takes 10–15 seconds.
+          </p>
         </CardContent>
       </Card>
 
@@ -1077,7 +1222,13 @@ export const PolicySimulation: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {!result ? (
+          {isSimulating ? (
+            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+              <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
+              <p className="text-sm font-medium">Analyzing...</p>
+              <p className="text-xs mt-1">This typically takes 10–15 seconds.</p>
+            </div>
+          ) : !result ? (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <ShieldCheck className="h-12 w-12 mb-4 opacity-10" />
               <p className="text-sm">No impact data available.</p>
@@ -1241,15 +1392,15 @@ export const PolicySimulation: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>Docs:</span>
-                  <a href="https://zaxion.dev/docs/policies" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
+                  <Link to="/docs/policies" className="inline-flex items-center gap-0.5 text-primary hover:underline">
                     Policy format <ExternalLink className="h-3 w-3" />
-                  </a>
-                  <a href="https://zaxion.dev/docs/rules" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
+                  </Link>
+                  <Link to="/docs/rules" className="inline-flex items-center gap-0.5 text-primary hover:underline">
                     Rule types <ExternalLink className="h-3 w-3" />
-                  </a>
-                  <a href="https://zaxion.dev/docs/examples" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
+                  </Link>
+                  <Link to="/docs/examples" className="inline-flex items-center gap-0.5 text-primary hover:underline">
                     Examples <ExternalLink className="h-3 w-3" />
-                  </a>
+                  </Link>
                 </div>
                 <div className="flex gap-2">
                   {result && (

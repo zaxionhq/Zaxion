@@ -71,7 +71,6 @@ const DocsOverview = () => {
 
       <section className="space-y-8">
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Core Principles</h2>
-        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Core Principles</h2>
         <div className="grid gap-6">
           {[
             {
