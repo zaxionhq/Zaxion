@@ -6,10 +6,12 @@ import * as analyticsService from '../services/governanceAnalytics.service.js';
 export default function analyticsControllerFactory(db) {
   /**
    * GET /api/v1/analytics/governance/summary
+   * Query: days (optional) - limit to last N days (7, 30)
    */
   async function getExecutiveSummary(req, res, next) {
     try {
-      const summary = await analyticsService.getExecutiveSummary(db);
+      const days = req.query.days ? parseInt(req.query.days, 10) : undefined;
+      const summary = await analyticsService.getExecutiveSummary(db, days ? { days } : {});
       res.json(summary);
     } catch (error) {
       next(error);
@@ -37,11 +39,13 @@ export default function analyticsControllerFactory(db) {
 
   /**
    * GET /api/v1/analytics/governance/decisions
+   * Query: limit, offset, from (ISO date), to (ISO date)
    */
   async function listDecisions(req, res, next) {
     try {
-      const { limit = 50, offset = 0 } = req.query;
-      const decisions = await analyticsService.listDecisions(db, parseInt(limit), parseInt(offset));
+      const { limit = 50, offset = 0, from, to } = req.query;
+      const dateRange = (from || to) ? { from: from || undefined, to: to || undefined } : {};
+      const decisions = await analyticsService.listDecisions(db, parseInt(limit, 10) || 50, parseInt(offset, 10) || 0, dateRange);
       res.json(decisions);
     } catch (error) {
       next(error);

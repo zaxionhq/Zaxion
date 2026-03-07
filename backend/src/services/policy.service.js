@@ -21,7 +21,7 @@ export async function getPolicy(db, id) {
       {
         model: db.PolicyVersion,
         as: 'versions',
-        attributes: ['version_number', 'enforcement_level', 'created_at'],
+        attributes: ['version_number', 'enforcement_level', 'createdAt'],
         order: [['version_number', 'DESC']],
         limit: 1, // Just get the latest version info for summary
       },

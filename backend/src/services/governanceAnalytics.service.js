@@ -63,13 +63,23 @@ export async function getRepoMetrics(db, repoFullName) {
 
 /**
  * Get high-level executive summary for all governance activity.
+ * @param {object} db - Database instance
+ * @param {{ days?: number }} opts - Optional. days: limit to last N days (e.g. 7, 30).
  */
-export async function getExecutiveSummary(db) {
+export async function getExecutiveSummary(db, opts = {}) {
   try {
-    const totalDecisions = await db.Decision.count();
-    const totalOverrides = await db.Override.count();
-    const totalBlocks = await db.Decision.count({ where: { result: 'BLOCK' } });
-    const totalPolicies = await db.Policy.count();
+    const { days } = opts;
+    const decisionWhere = {};
+    if (days && days > 0) {
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      decisionWhere.createdAt = { [Op.gte]: since };
+    }
+
+    const totalDecisions = await db.Decision.count({ where: decisionWhere });
+    const totalOverrides = await db.Override.count(); // could be filtered by decision date if needed
+    const totalBlocks = await db.Decision.count({ where: { result: 'BLOCK', ...decisionWhere } });
+    const totalPolicies = await db.Policy.count({ where: { deleted_at: null } });
 
     const globalTrustScore = totalDecisions > 0 ? 1 - (totalOverrides / totalDecisions) : 1.0;
 
@@ -82,7 +92,7 @@ export async function getExecutiveSummary(db) {
         [db.sequelize.col('policyVersion.version_number'), 'version'],
         [db.sequelize.col('policyVersion.creator.username'), 'created_by']
       ],
-      where: { result: 'BLOCK' },
+      where: { result: 'BLOCK', ...decisionWhere },
       include: [
         { model: db.FactSnapshot, as: 'factSnapshot', attributes: [] },
         { 
@@ -126,10 +136,22 @@ export async function getExecutiveSummary(db) {
 
 /**
  * List all governance decisions for exploration.
+ * @param {object} db - Database instance
+ * @param {number} limit - Max records to return (default 50)
+ * @param {number} offset - Offset for pagination (default 0)
+ * @param {{ from?: string; to?: string }} dateRange - Optional ISO date strings for filtering by createdAt
  */
-export async function listDecisions(db, limit = 50, offset = 0) {
+export async function listDecisions(db, limit = 50, offset = 0, dateRange = {}) {
   try {
+    const where = {};
+    if (dateRange.from || dateRange.to) {
+      where.createdAt = {};
+      if (dateRange.from) where.createdAt[Op.gte] = new Date(dateRange.from);
+      if (dateRange.to) where.createdAt[Op.lte] = new Date(dateRange.to);
+    }
+
     const decisions = await db.Decision.findAll({
+      where,
       include: [
         {
           model: db.FactSnapshot,
@@ -181,8 +203,8 @@ export async function listDecisions(db, limit = 50, offset = 0) {
         }
       ],
       order: [['createdAt', 'DESC']],
-      limit,
-      offset
+      limit: Math.min(parseInt(limit, 10) || 50, 200),
+      offset: Math.max(0, parseInt(offset, 10) || 0)
     });
 
     return decisions.map(d => {

@@ -85,7 +85,7 @@ export class PolicyResolverService {
         model: this.db.PolicyVersion,
         as: 'versions',
         where: {
-          created_at: {
+          createdAt: {
             [Op.lte]: timestamp
           }
         },
