@@ -40,7 +40,14 @@ const schema = z.object({
   // --- External Integrations ---
   FRONTEND_URL: z.string().default("http://localhost:8080"),
   FRONTEND_ORIGIN: z.string().optional(),
+  
+  // LLM Providers
+  LLM_PROVIDER: z.enum(["gemini", "claude", "nvidia", "openrouter"]).default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
+  CLAUDE_API_KEY: z.string().optional(),
+  NVIDIA_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
   // --- GitHub App ---
