@@ -3,6 +3,7 @@ import { Shield, Lock, Terminal, History, ArrowRight, GitBranch, Search, CheckCi
 import { Link } from 'react-router-dom';
 import DocsCallout from '../../components/docs/DocsCallout';
 import DocsStep from '../../components/docs/DocsStep';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsOverview = () => {
   return (
@@ -111,6 +112,24 @@ const DocsOverview = () => {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="Overview – FAQ"
+        items={[
+          {
+            question: "How is Zaxion different from a linter like ESLint?",
+            answer: "While linters check for code style and simple syntax errors, Zaxion focuses on architectural and security governance. It can enforce high-level rules like 'no secrets in source code' or 'all new API endpoints must have corresponding integration tests'."
+          },
+          {
+            question: "Does Zaxion execute my code during analysis?",
+            answer: "No. Zaxion uses a zero-execution model. It parses your source code into an Abstract Syntax Tree (AST) to extract structural facts. This means it can analyze code safely without ever running potentially untrusted scripts."
+          },
+          {
+            question: "Can Zaxion be integrated into any existing CI/CD pipeline?",
+            answer: "Yes. While Zaxion is optimized for GitHub, its deterministic evaluation engine can be triggered by any CI/CD system via our API, providing consistent governance across your entire development lifecycle."
+          }
+        ]}
+      />
     </div>
   );
 };

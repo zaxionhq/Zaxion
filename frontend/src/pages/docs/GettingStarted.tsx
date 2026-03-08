@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, Terminal, CheckCircle2, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DocsStep from '../../components/docs/DocsStep';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsGettingStarted = () => {
   return (
@@ -71,6 +72,27 @@ const DocsGettingStarted = () => {
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      <DocsInlineFAQ
+        title="Getting started – FAQ"
+        items={[
+          {
+            question: 'Do I need to install anything in my repo to try Zaxion?',
+            answer:
+              'No. You can start by using the Policy Impact Simulator in observe mode with uploaded code, pasted snippets, or GitHub PR URLs. Installing the GitHub App is only required once you want Zaxion to enforce checks on real PRs.',
+          },
+          {
+            question: 'Can non-admin developers create and test policies?',
+            answer:
+              'Yes. Any user with access to the Governance Dashboard can create draft policies and run simulations. Only admins/owners should be able to actually enable a policy on real branches; everyone else submits the policy for approval instead of toggling enforcement themselves.',
+          },
+          {
+            question: 'Will Zaxion slow down our existing CI/CD pipeline?',
+            answer:
+              'Evaluations are AST-based and deterministic. For most teams, a check completes in seconds and is comparable to a lightweight unit-test step—far faster than end-to-end suites or full builds.',
+          },
+        ]}
+      />
     </div>
   );
 };

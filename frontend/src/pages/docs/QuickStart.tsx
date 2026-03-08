@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, Terminal, LogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DocsStep from '../../components/docs/DocsStep';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsQuickStart = () => {
   return (
@@ -87,6 +88,27 @@ const DocsQuickStart = () => {
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      <DocsInlineFAQ
+        title="Quick start – FAQ"
+        items={[
+          {
+            question: 'What is the fastest way to see Zaxion in action?',
+            answer:
+              'Use the Policy Impact Simulator with a GitHub PR URL or a small code sample. Pick a simple rule (like PR size or minimum tests), click Analyze, and review the violations and remediation hints.',
+          },
+          {
+            question: 'Do I have to understand every rule type before creating a policy?',
+            answer:
+              'No. Start with a single, simple rule type (for example “pr_size” or “coverage”). You can iterate in draft mode, then expand to file-extension and security rules once you are comfortable.',
+          },
+          {
+            question: 'What happens if a draft policy blocks too many PRs during testing?',
+            answer:
+              'Nothing breaks in production while you are in simulation mode. The simulator will show a high projected block rate so you can relax thresholds or narrow the scope before enabling the policy.',
+          },
+        ]}
+      />
     </div>
   );
 };

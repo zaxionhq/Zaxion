@@ -1,6 +1,7 @@
 import React from 'react';
 import { History, ArrowRight, ShieldCheck, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsAuditTrail = () => {
   return (
@@ -85,6 +86,24 @@ const DocsAuditTrail = () => {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="Audit Trail – FAQ"
+        items={[
+          {
+            question: "How long are audit logs stored?",
+            answer: "By default, Zaxion stores audit logs for 12 months. Enterprise customers can configure custom retention policies or export logs to their own data warehouse for long-term storage and compliance reporting."
+          },
+          {
+            question: "Can audit entries be deleted or modified?",
+            answer: "No. The audit trail is immutable. Once a decision event is recorded and signed, it cannot be altered. This ensures a tamper-proof record of all governance activity, which is critical for security and regulatory compliance."
+          },
+          {
+            question: "Who can access the audit trail?",
+            answer: "Access to the audit trail is restricted to users with administrative or audit-level roles. Permissions are managed through Zaxion's RBAC system, and all access to audit data is itself logged for security purposes."
+          }
+        ]}
+      />
     </div>
   );
 };

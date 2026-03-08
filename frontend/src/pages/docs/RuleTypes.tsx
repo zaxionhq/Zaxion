@@ -83,6 +83,24 @@ const DocsRuleTypes = () => {
       description: 'Guards against breaking API changes.',
       params: [],
     },
+    {
+      type: 'complexity_metrics',
+      title: 'Complexity metrics',
+      description: 'Enforces limits on cyclomatic complexity, function length, and file length using AST analysis.',
+      params: [],
+    },
+    {
+      type: 'dependency_scan',
+      title: 'Dependency scan',
+      description: 'Scans package.json for known vulnerabilities using security advisory databases.',
+      params: [],
+    },
+    {
+      type: 'testing_best_practices',
+      title: 'Testing best practices',
+      description: 'Blocks skipped tests (.skip, xit) and empty test cases to ensure suite integrity.',
+      params: [],
+    },
   ];
 
   return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText, ArrowRight, ShieldCheck, GitBranch } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsPolicies = () => {
   return (
@@ -179,6 +180,24 @@ rules:
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="Policies – FAQ"
+        items={[
+          {
+            question: "Can I have different policies for different repositories?",
+            answer: "Yes. Zaxion supports both Global and Repository-specific policies. Global policies apply across your entire organization, while Repository policies allow you to define rules specific to a particular project's architecture or security needs."
+          },
+          {
+            question: "What is the difference between a Local and Registry policy?",
+            answer: "Local policies are defined in a .zaxion.yaml file within your repository, ideal for rapid iteration. Registry policies are published to Zaxion's central dashboard and can be enforced across multiple repositories with strict version control."
+          },
+          {
+            question: "How do I version my policies?",
+            answer: "Policies use semantic versioning (e.g., v1.0.0). When you update a Registry policy, a new version is created. Repositories can then be pinned to a specific version, ensuring that governance rules don't change unexpectedly."
+          }
+        ]}
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Terminal, ArrowRight, Cpu, Zap, Code2, Binary } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DocsAccordion from '../../components/docs/DocsAccordion';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsDeterministicEvaluation = () => {
   return (
@@ -98,6 +99,24 @@ const DocsDeterministicEvaluation = () => {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="Deterministic Evaluation – FAQ"
+        items={[
+          {
+            question: "What does 'deterministic' mean in the context of Zaxion?",
+            answer: "In Zaxion, 'deterministic' means that given the same input (source code diff and policy version), the evaluation engine will always produce the exact same result. There are no random variables or 'fuzzy' logic involved in the decision process."
+          },
+          {
+            question: "Why is repeatability important for governance?",
+            answer: "Repeatability is crucial for audits and legal compliance. It allows you to prove why a particular decision was made at any point in the past by re-running the same analysis on the same code state, ensuring that your governance process is transparent and verifiable."
+          },
+          {
+            question: "Does the evaluation engine use AI to make decisions?",
+            answer: "No. Zaxion avoids using AI for the core evaluation process to ensure 100% reliability and explainability. Instead, we use formal logic and AST-based fact extraction to verify rules, which guarantees that every 'BLOCK' or 'PASS' verdict can be traced back to a specific line of code and a specific policy rule."
+          }
+        ]}
+      />
     </div>
   );
 };

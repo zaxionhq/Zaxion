@@ -2,6 +2,7 @@ import React from 'react';
 import { Shield, Lock, Eye, CheckCircle2, ArrowRight, Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DocsAccordion from '../../components/docs/DocsAccordion';
+import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsSecurity = () => {
   return (
@@ -130,6 +131,24 @@ const DocsSecurity = () => {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="Security – FAQ"
+        items={[
+          {
+            question: "Does Zaxion store my GitHub access tokens?",
+            answer: "No. Zaxion uses scoped, temporary installation tokens for repository access. We do not store long-lived user access tokens. For additional security, you can use our Enterprise edition, which supports self-hosted runners and identity providers."
+          },
+          {
+            question: "Is my source code encrypted?",
+            answer: "While Zaxion doesn't store your source code (due to our zero-retention model), all communication between your repositories and our evaluation engine is encrypted using TLS 1.3. Any metadata or decision logs we do store are encrypted at rest using AES-256."
+          },
+          {
+            question: "How is my data isolated from other organizations?",
+            answer: "Zaxion uses a multi-tenant architecture with strict logical isolation. Each organization's data, policies, and audit logs are physically separated at the database level, ensuring that no cross-tenant data access is possible."
+          }
+        ]}
+      />
     </div>
   );
 };

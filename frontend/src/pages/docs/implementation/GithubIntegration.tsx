@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, ArrowRight, Github, Key } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DocsInlineFAQ from '../../../components/docs/DocsInlineFAQ';
 
 const DocsGithubIntegration = () => {
   return (
@@ -68,6 +69,24 @@ const DocsGithubIntegration = () => {
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+
+      <DocsInlineFAQ 
+        title="GitHub Integration – FAQ"
+        items={[
+          {
+            question: "Why does Zaxion need 'Write' access to checks?",
+            answer: "Zaxion uses the GitHub Checks API to report the outcome of its analysis. 'Write' access is required to create and update these checks, which allows us to block the merge button if a PR violates your governance policies."
+          },
+          {
+            question: "Can I use Zaxion with GitHub Enterprise (Self-Hosted)?",
+            answer: "Yes. Zaxion is designed to be compatible with both GitHub.com and GitHub Enterprise Server. For self-hosted instances, you'll need to configure a custom endpoint for webhooks and ensure your network allows communication with the Zaxion protocol."
+          },
+          {
+            question: "What happens if Zaxion's webhook is down?",
+            answer: "GitHub will automatically retry failed webhook deliveries. Once the Zaxion service is back online, it will process the queued events. Additionally, you can manually re-run a Zaxion check from the GitHub PR interface at any time."
+          }
+        ]}
+      />
     </div>
   );
 };
