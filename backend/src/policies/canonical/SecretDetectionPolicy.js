@@ -1,5 +1,5 @@
 import { BasePolicy } from '../core/BasePolicy.js';
-import { PatternMatchingEngine } from '../../services/patterns/patternMatcher.service.js';
+import { PatternMatcherService } from '../../services/patternMatcher.service.js';
 
 export class SecretDetectionPolicy extends BasePolicy {
   constructor(config = {}) {
@@ -18,24 +18,40 @@ export class SecretDetectionPolicy extends BasePolicy {
       },
       ...config
     });
-    this.engine = new PatternMatchingEngine();
+    this.matcher = new PatternMatcherService();
   }
 
   async evaluate(facts) {
     const violations = [];
     
-    // 1. Check for Pattern Engine findings (Pillar 4)
-    // Assuming facts.patterns contains pre-scanned patterns from AST analysis
-    if (facts.patterns && facts.patterns.length > 0) {
-      for (const pattern of facts.patterns) {
-        if (pattern.id === 'HARDCODED_SECRET') {
-          violations.push(this.createViolation(
-            'Hardcoded secret detected', 
-            { file: facts.file, line: pattern.line }
-          ));
-        }
-      }
+    // Use PatternMatcherService to analyze file content if available
+    if (facts.file_content) {
+        const matches = this.matcher.analyzeCode(facts.file_content, facts.file || 'unknown');
+        // Filter for secrets
+        const secrets = matches.filter(m => m.policy === 'no-hardcoded-secrets');
+        
+        secrets.forEach(s => {
+             violations.push(this.createViolation(
+                s.pattern, 
+                { file: facts.file, line: s.line, severity: s.severity }
+             ));
+        });
     }
+
+    // 2. Fallback: Scan diff content directly if AST patterns missed it
+    // (This handles non-code files like .env or config.json)
+    if (facts.diff) {
+       // ... existing diff logic ...
+       // Actually, analyzeCode can handle diff content if we pass it as string?
+       // But diff is usually line by line or chunks.
+       // Let's keep the existing diff logic for now or update it to use matcher regexes.
+       // But matcher works on full content usually for context.
+       // Let's just keep the original diff logic as fallback or remove it if analyzeCode covers it.
+       // The original diff logic used hardcoded regexes. The new matcher uses YAML config.
+       // It is better to use the matcher config.
+    }
+    
+    // ... rest of the file ...
 
     // 2. Fallback: Scan diff content directly if AST patterns missed it
     // (This handles non-code files like .env or config.json)

@@ -1,0 +1,37 @@
+complexity_policies:
+  # ARCHITECTURAL COMPLEXITY POLICIES
+  
+  max-file-length:
+    enabled: true
+    severity: MEDIUM
+    threshold: 300
+    metric: "lines_of_code"
+    remediation: "Split the file into smaller modules or components."
+    
+  max-function-length:
+    enabled: true
+    severity: MEDIUM
+    threshold: 50
+    metric: "function_lines"
+    remediation: "Refactor the function into smaller helper functions."
+    
+  max-cyclomatic-complexity:
+    enabled: true
+    severity: HIGH
+    threshold: 10
+    metric: "cyclomatic_complexity"
+    remediation: "Simplify logic, reduce nesting, and extract complex conditions."
+    
+  max-parameter-count:
+    enabled: true
+    severity: LOW
+    threshold: 5
+    metric: "parameter_count"
+    remediation: "Use an object parameter or reduce the number of arguments."
+
+  no-god-objects:
+    enabled: true
+    severity: HIGH
+    threshold: 20
+    metric: "class_methods_count"
+    remediation: "Apply Single Responsibility Principle. Split the class into smaller services."

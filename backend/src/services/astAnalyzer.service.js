@@ -37,6 +37,8 @@ export function analyzeFile(content, filePath = '') {
     hasConsoleLog: false,
     hasDebugger: false,
     hasJSDocOnExport: false,
+    hasSkippedTest: false,
+    hasEmptyTest: false,
     imports: [],
     exports: [],
     error: null,
@@ -56,14 +58,45 @@ export function analyzeFile(content, filePath = '') {
     ArrowFunctionExpression(path) {
       result.functionCount++;
     },
+    ClassMethod(path) {
+      result.functionCount++;
+    },
+    ClassPrivateMethod(path) {
+      result.functionCount++;
+    },
     CallExpression(path) {
       const callee = path.node.callee;
       const name = callee.name || (callee.object?.name && callee.property?.name ? `${callee.object.name}.${callee.property.name}` : null);
       if (name === 'describe' || name === 'it' || name === 'test' || name === 'fit' || name === 'xit') result.testCount++;
       if (name === 'console.log' || (callee.object?.name === 'console' && callee.property?.name === 'log')) result.hasConsoleLog = true;
+      
+      // Wave 3: Detect skipped tests
+      if (callee.type === 'MemberExpression' && callee.property.name === 'skip') {
+        const objName = callee.object.name;
+        if (objName === 'describe' || objName === 'it' || objName === 'test') {
+           result.hasSkippedTest = true;
+        }
+      }
     },
     DebuggerStatement() {
       result.hasDebugger = true;
+    },
+    // Wave 3: Detect empty test cases
+    ExpressionStatement(path) {
+        const expr = path.node.expression;
+        if (expr.type === 'CallExpression') {
+            const callee = expr.callee;
+            const name = callee.name || (callee.object?.name && callee.property?.name ? `${callee.object.name}.${callee.property.name}` : null);
+            if (name === 'it' || name === 'test') {
+                const args = expr.arguments;
+                if (args.length >= 2 && (args[1].type === 'ArrowFunctionExpression' || args[1].type === 'FunctionExpression')) {
+                    const body = args[1].body;
+                    if (body.type === 'BlockStatement' && body.body.length === 0) {
+                        result.hasEmptyTest = true;
+                    }
+                }
+            }
+        }
     },
     ImportDeclaration(path) {
       result.importCount++;
@@ -187,7 +220,7 @@ export function enrichSnapshotWithAst(factData) {
   let totalFunctions = 0;
   let totalTests = 0;
   const allImports = [];
-  const astByPath = {};
+  const astMap = new Map();
 
   for (const f of files) {
     const content = f.content || factData.file_content;
@@ -197,7 +230,7 @@ export function enrichSnapshotWithAst(factData) {
     if (!['.js', '.jsx', '.ts', '.tsx'].includes(ext)) continue;
     const metrics = analyzeFile(content, path);
     f.ast = metrics;
-    astByPath[path] = metrics;
+    astMap.set(path, metrics);
     totalFunctions += metrics.functionCount;
     totalTests += metrics.testCount;
     metrics.imports.forEach(imp => allImports.push({ from: path, to: imp }));
@@ -209,7 +242,7 @@ export function enrichSnapshotWithAst(factData) {
     ast_function_count: totalFunctions,
     ast_test_count: totalTests,
     ast_coverage_ratio: totalFunctions > 0 ? totalTests / totalFunctions : (totalTests > 0 ? 1 : 0),
-    ast_by_path: astByPath,
+    ast_by_path: Object.assign(Object.create(null), Object.fromEntries(astMap)),
   };
   factData.ast_import_edges = allImports;
   return factData;

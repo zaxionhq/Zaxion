@@ -2,13 +2,16 @@ import crypto from 'crypto';
 import { minimatch } from 'minimatch';
 import { buildImportGraph, findCircularDependencies } from './astAnalyzer.service.js';
 import logger from '../logger.js';
+import { PatternMatcherService } from './patternMatcher.service.js';
+import { ComplexityMetricsService } from './complexityMetrics.service.js';
+import { DependencyScannerService } from './dependencyScanner.service.js';
 
 /** Documentation base (production). */
 const DOCS_BASE = 'https://zaxion.dev/docs';
 
 /** Per-rule explanations and remediation for simulation results (spec-aligned). */
-const RULE_REMEDIATIONS = {
-  coverage: {
+const RULE_REMEDIATIONS = new Map([
+  ['coverage', {
     explanation: 'Code changes should include or update tests. Without test coverage, regressions are harder to catch before merge.',
     remediation: {
       steps: [
@@ -19,8 +22,8 @@ const RULE_REMEDIATIONS = {
       example: "describe('myModule', () => {\n  it('should behave as expected', () => {\n    expect(myFn()).toEqual(expected);\n  });\n});",
     },
     documentation_link: `${DOCS_BASE}/policies`,
-  },
-  security_path: {
+  }],
+  ['security_path', {
     explanation: 'Changes to security-sensitive paths (e.g. auth, config) require extra scrutiny. Unauthorized changes can introduce vulnerabilities.',
     remediation: {
       steps: [
@@ -30,8 +33,8 @@ const RULE_REMEDIATIONS = {
       example: 'Move non-sensitive code out of auth/ or request an exception with justification.',
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  file_extension: {
+  }],
+  ['file_extension', {
     explanation: 'This policy restricts which file types may be changed to keep the codebase consistent and safe.',
     remediation: {
       steps: [
@@ -41,8 +44,8 @@ const RULE_REMEDIATIONS = {
       example: 'Use .ts instead of .js if TypeScript is required, or update the policy to allow the extension.',
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  pr_size: {
+  }],
+  ['pr_size', {
     explanation: 'Very large PRs are hard to review and increase the risk of bugs. Splitting changes helps reviewers and keeps history clear.',
     remediation: {
       steps: [
@@ -52,8 +55,8 @@ const RULE_REMEDIATIONS = {
       example: 'Aim for under 20 files per PR when possible; use multiple PRs for large refactors.',
     },
     documentation_link: `${DOCS_BASE}/policies`,
-  },
-  security_patterns: {
+  }],
+  ['security_patterns', {
     explanation: 'Code may contain hardcoded secrets, unsafe eval(), or other security-sensitive patterns that can lead to vulnerabilities.',
     remediation: {
       steps: [
@@ -64,56 +67,68 @@ const RULE_REMEDIATIONS = {
       example: "// Use env: process.env.API_KEY\n// Avoid: eval(userInput)",
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  code_quality: {
+  }],
+  ['code_quality', {
     explanation: 'console.log and debugger statements should not be committed; they can leak information and block execution.',
     remediation: {
       steps: ['Remove console.log and debugger before committing.', 'Use a proper logger or remove in production builds.'],
       example: "// Use: logger.debug('message') or remove entirely",
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  documentation: {
+  }],
+  ['documentation', {
     explanation: 'Exported functions and public APIs should have JSDoc comments for maintainability and IDE support.',
     remediation: {
       steps: ['Add JSDoc comments above exported functions.', 'Include @param, @returns, and a brief description.'],
       example: '/**\\n * Computes the result.\\n * @param {number} x - Input\\n * @returns {number}\\n */',
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  architecture: {
+  }],
+  ['architecture', {
     explanation: 'Circular dependencies make code hard to maintain and can cause runtime errors.',
     remediation: {
       steps: ['Break the cycle by extracting shared code to a separate module.', 'Restructure layers so dependencies flow in one direction.'],
       example: 'A -> B -> C -> A should become A -> common, B -> common, C -> common',
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  reliability: {
+  }],
+  ['reliability', {
     explanation: 'Async code and operations that can throw should have proper error handling.',
     remediation: {
       steps: ['Wrap async operations in try/catch or use .catch().', 'Handle and log errors appropriately.'],
       example: "try { await risky(); } catch (e) { logger.error(e); throw e; }",
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  performance: {
+  }],
+  ['performance', {
     explanation: 'Performance-critical paths should have corresponding performance or benchmark tests.',
     remediation: {
       steps: ['Add performance tests for critical paths.', 'Use benchmark suites (e.g. vitest bench, jest-bench).'],
       example: "describe.perf('critical path', () => { ... })",
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-  api: {
+  }],
+  ['api', {
     explanation: 'Breaking API changes should be avoided or explicitly versioned.',
     remediation: {
       steps: ['Avoid removing or changing public exports without a major version bump.', 'Document breaking changes.'],
       example: 'Deprecate first, then remove in next major',
     },
     documentation_link: `${DOCS_BASE}/rules`,
-  },
-};
+  }],
+  ['testing_best_practices', {
+    explanation: 'Skipped tests and empty test cases reduce the reliability of the test suite and provide a false sense of security.',
+    remediation: {
+      steps: [
+        'Remove .skip, xit, or xdescribe markers from tests.',
+        'Implement test logic and assertions for all test cases.',
+        'If a test is no longer needed, remove it entirely rather than skipping.',
+      ],
+      example: "// Avoid: it.skip('should work', () => {})\n// Use: it('should work', () => { expect(actual).toBe(expected); })",
+    },
+    documentation_link: `${DOCS_BASE}/policies`,
+  }],
+]);
 
 /** Security pattern definitions: { pattern: RegExp, message: string, severity: 'BLOCK'|'WARN' } */
 const SECURITY_PATTERNS = [
@@ -133,6 +148,9 @@ const SECURITY_PATTERNS = [
 export class EvaluationEngineService {
   constructor() {
     this.ENGINE_VERSION = '1.0.0';
+    this.patternMatcher = new PatternMatcherService();
+    this.complexityMetrics = new ComplexityMetricsService();
+    this.dependencyScanner = new DependencyScannerService();
     // Registry of deterministic checkers
     this.checkers = new Map([
       ['coverage', this._checkCoverage.bind(this)],
@@ -140,42 +158,78 @@ export class EvaluationEngineService {
       ['file_extension', this._checkFileExtension.bind(this)],
       ['pr_size', this._checkPRSize.bind(this)],
       ['security_patterns', this._checkSecurityPatterns.bind(this)],
+      ['complexity_metrics', this._checkComplexityMetrics.bind(this)],
+      ['dependency_scan', this._checkDependencyScan.bind(this)],
       ['code_quality', this._checkCodeQuality.bind(this)],
       ['documentation', this._checkDocumentation.bind(this)],
       ['architecture', this._checkArchitecture.bind(this)],
       ['reliability', this._checkReliability.bind(this)],
       ['performance', this._checkPerformance.bind(this)],
       ['api', this._checkApi.bind(this)],
+      ['testing_best_practices', this._checkTestingBestPractices.bind(this)],
     ]);
   }
 
+  /** Priority order for resolving policy conflicts (Higher value = Higher priority) */
+  static POLICY_PRIORITY = new Map([
+    ['security_patterns', 100],
+    ['api', 90],
+    ['architecture', 80],
+    ['testing_best_practices', 70],
+    ['complexity_metrics', 60],
+    ['documentation', 50],
+    ['performance', 40],
+    ['code_quality', 30],
+  ]);
+
   /**
-   * Pure evaluation function: Evaluation(Facts, Policies, EngineVersion) -> Outcome
-   * Invariant 1: Strict Determinism
-   * Invariant 7: Closed-World Evaluation
-   * 
-   * @param {object} factSnapshot - The frozen facts from Pillar 5.1
-   * @param {object[]} appliedPolicies - The resolved policies from Pillar 5.2
+   * Evaluate a Fact Snapshot against applied policies
+   * @param {object} factSnapshot - The fact snapshot to evaluate
+   * @param {Array} appliedPolicies - The policies to apply
    * @returns {object} Evaluation Result
    */
   evaluate(factSnapshot, appliedPolicies) {
-    const startTime = new Date();
     const factData = factSnapshot?.data ?? {};
     const violatedPolicies = [];
     const policyResults = [];
 
+    // 1. Detect Escape Hatches (@zaxion-bypass)
+    const bypassMap = this._detectBypasses(factData);
+
     logger.info({ 
       snapshotId: factSnapshot.id, 
       policyCount: appliedPolicies.length,
-      engineVersion: this.ENGINE_VERSION 
+      engineVersion: this.ENGINE_VERSION,
+      bypassesDetected: bypassMap.size
     }, "EvaluationEngine: Starting deterministic evaluation");
 
-    // 1. Execute Checkers for each applied policy
-    for (const policy of appliedPolicies) {
+    // 2. Sort policies by priority for conflict resolution
+    const sortedPolicies = [...appliedPolicies].sort((a, b) => {
+      const pA = EvaluationEngineService.POLICY_PRIORITY.get(a.rules_logic?.type) || 0;
+      const pB = EvaluationEngineService.POLICY_PRIORITY.get(b.rules_logic?.type) || 0;
+      return pB - pA;
+    });
+
+    // 3. Execute Checkers for each applied policy
+    for (const policy of sortedPolicies) {
       const rules = policy.rules_logic || {};
       const policyType = rules.type || 'unknown';
-      const checker = this.checkers.get(policyType);
 
+      // Check for escape hatch bypass
+      if (bypassMap.has(policyType)) {
+        logger.info({ policyType, reason: bypassMap.get(policyType) }, "EvaluationEngine: Policy bypassed via escape hatch");
+        policyResults.push({
+          policy_version_id: policy.policy_version_id,
+          level: policy.level,
+          policy_type: policyType,
+          verdict: 'PASS',
+          message: `Bypassed via escape hatch: ${bypassMap.get(policyType)}`,
+          details: { bypassed: true, reason: bypassMap.get(policyType) }
+        });
+        continue;
+      }
+
+      const checker = this.checkers.get(policyType);
       let result = { verdict: 'PASS', message: 'Policy satisfied.' };
 
       if (checker) {
@@ -190,7 +244,7 @@ export class EvaluationEngineService {
         policy_type: policyType,
         verdict: result.verdict,
         message: result.message,
-        details: result.details // Specifics like expected/actual
+        details: result.details
       };
 
       policyResults.push(policyResult);
@@ -205,7 +259,7 @@ export class EvaluationEngineService {
       }
     }
 
-    // 2. Outcome Aggregator (Invariant 6 & Step 3.2)
+    // 4. Outcome Aggregator (Invariant 6 & Step 3.2)
     let finalResult = 'PASS';
     if (policyResults.some(p => p.verdict === 'BLOCK' && p.level === 'MANDATORY')) {
       finalResult = 'BLOCK';
@@ -216,16 +270,16 @@ export class EvaluationEngineService {
       finalResult = 'OBSERVE';
     }
 
-    // 3. Rationale Generator (Step 3.3)
+    // 5. Rationale Generator (Step 3.3)
     const rationale = this._generateRationale(finalResult, policyResults);
 
-    // 4. Structured violations/passes for simulation UI (spec-aligned)
+    // 6. Structured violations/passes for simulation UI (spec-aligned)
     const structuredViolations = [];
     const structuredPasses = [];
     const files = factData?.changes?.files || [];
     for (const pr of policyResults) {
       const ruleId = pr.policy_type;
-      const meta = RULE_REMEDIATIONS[ruleId] || {
+      const meta = RULE_REMEDIATIONS.get(ruleId) || {
         explanation: 'Rule failed.',
         remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
         documentation_link: DOCS_BASE,
@@ -263,8 +317,6 @@ export class EvaluationEngineService {
             severity: pr.verdict,
             message: pr.message,
             file: file || undefined,
-            line: undefined,
-            column: undefined,
             current_value: details.actual,
             required_value: details.expected,
             explanation: meta.explanation,
@@ -273,36 +325,50 @@ export class EvaluationEngineService {
           });
         }
       } else {
-        structuredPasses.push({
-          rule_id: ruleId,
-          file: files.length ? files.map(f => f.path).slice(0, 3).join(', ') : undefined,
-          status: 'PASS',
-          message: pr.message,
-        });
+        structuredPasses.push({ rule_id: ruleId, message: pr.message });
       }
     }
 
-    // 5. Evaluation Hash (Invariant 1)
-    const evaluationHash = this._calculateHash(factSnapshot, appliedPolicies);
-
     return {
-      fact_snapshot_id: factSnapshot.id,
-      applied_policies: appliedPolicies.map(p => ({
-        policy_version_id: p.policy_version_id,
-        level: p.level,
-        policy_type: p.rules_logic?.type,
-        parameters: p.rules_logic,
-        resolution_reason: p.reason
-      })),
-      result: finalResult,
+      final_verdict: finalResult,
       rationale,
-      violated_policies: violatedPolicies,
-      structured_violations: structuredViolations,
-      structured_passes: structuredPasses,
-      evaluation_hash: evaluationHash,
-      engine_version: this.ENGINE_VERSION,
-      timestamp: new Date().toISOString()
+      policy_results: policyResults,
+      violations: structuredViolations,
+      passes: structuredPasses,
+      metadata: {
+        evaluated_at: new Date().toISOString(),
+        engine_version: this.ENGINE_VERSION,
+        policy_count: appliedPolicies.length,
+        bypasses: Array.from(bypassMap.keys()),
+      },
     };
+  }
+
+  /**
+   * Scan for escape hatches in the code.
+   * Format: // @zaxion-bypass: <policy-type> [reason]
+   */
+  _detectBypasses(factData) {
+    const bypassMap = new Map();
+    const files = factData.changes?.files || [];
+    const content = factData.file_content || '';
+
+    const scanContent = (text) => {
+      const lines = text.split('\n');
+      for (const line of lines) {
+        const match = line.match(/\/\/ @zaxion-bypass:\s*([a-zA-Z0-9_-]+)\s*(.*)/);
+        if (match) {
+          bypassMap.set(match[1], match[2] || 'No reason provided');
+        }
+      }
+    };
+
+    if (content) scanContent(content);
+    for (const f of files) {
+      if (f.content) scanContent(f.content);
+    }
+
+    return bypassMap;
   }
 
   /**
@@ -440,7 +506,7 @@ export class EvaluationEngineService {
   }
 
   /**
-   * Security pattern checker: scans all file content for secrets, eval(), XSS patterns.
+   * Security pattern checker: scans all file content for secrets, eval(), XSS patterns using PatternMatcherService.
    * Returns violations with line numbers and file path.
    */
   _checkSecurityPatterns(facts, rules) {
@@ -455,23 +521,17 @@ export class EvaluationEngineService {
     for (const file of toScan) {
       const content = typeof file.content === 'string' ? file.content : '';
       const path = file.path || file.filePath || 'file';
-      const lines = content.split(/\r?\n/);
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        for (const { pattern, message, severity } of SECURITY_PATTERNS) {
-          pattern.lastIndex = 0;
-          if (pattern.test(line)) {
-            violations.push({ line: i + 1, column: 1, message, severity, file: path });
-            break;
-          }
-        }
-      }
+      
+      // Use PatternMatcherService
+      const matches = this.patternMatcher.analyzeCode(content, path);
+      violations.push(...matches);
     }
+
     if (violations.length === 0) return { verdict: 'PASS', message: 'No security patterns detected.' };
-    const hasBlock = violations.some(v => v.severity === 'BLOCK');
-    const hasWarn = violations.some(v => v.severity === 'WARN');
+    const hasBlock = violations.some(v => v.severity === 'BLOCK' || v.severity === 'HIGH');
+    const hasWarn = violations.some(v => v.severity === 'WARN' || v.severity === 'MEDIUM');
     const verdict = hasBlock ? 'BLOCK' : hasWarn ? 'WARN' : 'OBSERVE';
-    const summary = violations.slice(0, 5).map(v => `${v.file}:${v.line} ${v.message}`).join('; ');
+    const summary = violations.slice(0, 5).map(v => `${v.file}:${v.line} [${v.policy}] ${v.pattern}`).join('; ');
     return {
       verdict,
       message: `${violations.length} security pattern(s) found. ${summary}${violations.length > 5 ? '...' : ''}`,
@@ -479,51 +539,175 @@ export class EvaluationEngineService {
         fact_path: 'file_content',
         expected: 'No hardcoded secrets or unsafe patterns',
         actual: summary,
-        violations,
+        violations: violations.map(v => ({
+            line: v.line,
+            column: v.column,
+            message: v.pattern, // Mapping pattern name to message for UI
+            severity: v.severity === 'HIGH' ? 'BLOCK' : (v.severity === 'MEDIUM' ? 'WARN' : 'INFO'),
+            file: v.file,
+            code: v.code
+        })),
       },
     };
   }
 
+  /**
+   * Complexity metrics checker: uses ComplexityMetricsService.
+   */
+  _checkComplexityMetrics(facts, rules) {
+    const files = facts.changes?.files || [];
+    const singleContent = facts.file_content;
+    const toScan = files.filter(f => f.content).length
+      ? files
+      : singleContent ? [{ path: facts.file_path || 'file', content: singleContent }] : [];
+    
+    if (!toScan.length) return { verdict: 'PASS', message: 'No file content to scan for complexity.' };
+
+    const violations = [];
+    for (const file of toScan) {
+        const content = typeof file.content === 'string' ? file.content : '';
+        const path = file.path || file.filePath || 'file';
+        const fileViolations = this.complexityMetrics.analyzeCode(content, path);
+        violations.push(...fileViolations);
+    }
+
+    if (violations.length === 0) return { verdict: 'PASS', message: 'No complexity issues detected.' };
+
+    const hasBlock = violations.some(v => v.severity === 'HIGH' || v.severity === 'BLOCK');
+    return {
+        verdict: hasBlock ? 'BLOCK' : 'WARN',
+        message: `${violations.length} complexity issue(s) found.`,
+        details: {
+            fact_path: 'complexity_metrics',
+            expected: 'Code within complexity limits',
+            actual: violations.length,
+            violations: violations.map(v => ({
+                line: v.line,
+                file: v.file,
+                message: v.message,
+                severity: v.severity === 'HIGH' ? 'BLOCK' : 'WARN'
+            }))
+        }
+    };
+  }
+
+  /**
+   * Dependency scanner checker: scans package.json
+   */
+  async _checkDependencyScan(facts, rules) {
+    const files = facts.changes?.files || [];
+    // Handle both single file_content and files array
+    const singleContent = facts.file_content;
+    const packageJsonFiles = files.filter(f => f.path && f.path.endsWith('package.json'));
+    
+    // Avoid duplication if single file is already in files array
+    if (singleContent && facts.file_path && facts.file_path.endsWith('package.json')) {
+        const alreadyExists = packageJsonFiles.some(f => f.path === facts.file_path);
+        if (!alreadyExists) {
+            packageJsonFiles.push({ path: facts.file_path, content: singleContent });
+        }
+    }
+    
+    if (!packageJsonFiles.length) return { verdict: 'PASS', message: 'No package.json changes detected.' };
+
+    const violations = [];
+    for (const file of packageJsonFiles) {
+        const content = typeof file.content === 'string' ? file.content : '';
+        const path = file.path || 'package.json';
+        const fileViolations = await this.dependencyScanner.scanPackageJson(content, path);
+        violations.push(...fileViolations);
+    }
+
+    if (violations.length === 0) return { verdict: 'PASS', message: 'No vulnerable dependencies detected.' };
+
+    return {
+        verdict: 'BLOCK', // Usually dependencies are critical
+        message: `${violations.length} vulnerable dependency(ies) found.`,
+        details: {
+            fact_path: 'dependency_scan',
+            expected: 'No vulnerable dependencies',
+            actual: violations.length,
+            violations: violations
+        }
+    };
+  }
+
+  /**
+   * Code quality checker: uses PatternMatcherService for console logs, debugging etc.
+   */
   _checkCodeQuality(facts, rules) {
     const files = facts.changes?.files || [];
     const singleContent = facts.file_content;
     const toScan = files.filter(f => f.content).length
       ? files
       : singleContent ? [{ path: facts.file_path || 'file', content: singleContent, ast: null }] : [];
-    const astByPath = facts.metadata?.ast_by_path || {};
+    
+    // We can reuse PatternMatcherService here too if we define the patterns in yaml
+    // For now, let's keep the existing logic OR switch to PatternMatcher if we added console-logs patterns.
+    // We DID add no-console-logs-production to yaml.
+    
     const violations = [];
     for (const file of toScan) {
+      const content = typeof file.content === 'string' ? file.content : '';
       const path = file.path || file.filePath || 'file';
-      const ast = file.ast || astByPath[path];
-      if (ast) {
-        if (ast.hasConsoleLog) violations.push({ line: null, file: path, message: 'console.log found', severity: 'WARN' });
-        if (ast.hasDebugger) violations.push({ line: null, file: path, message: 'debugger statement found', severity: 'BLOCK' });
-      } else {
-        const content = typeof file.content === 'string' ? file.content : '';
-        if (/console\.log\s*\(/m.test(content)) violations.push({ line: null, file: path, message: 'console.log found', severity: 'WARN' });
-        if (/\bdebugger\s*;/m.test(content)) violations.push({ line: null, file: path, message: 'debugger statement found', severity: 'BLOCK' });
-      }
+      
+      // Use PatternMatcherService for code quality patterns
+      // Note: analyzeCode runs ALL enabled patterns. 
+      // Ideally we would want to run only specific patterns.
+      // But running all is fine, we just filter the results for the current checker.
+      
+      const allMatches = this.patternMatcher.analyzeCode(content, path);
+      
+      // Filter for code quality policies
+      const qualityMatches = allMatches.filter(m => 
+          m.policy === 'no-console-logs-production' || 
+          m.policy === 'no-magic-numbers' || 
+          m.policy === 'no-deprecated-apis' ||
+          m.policy === 'no-debug-mode-production'
+      );
+      
+      violations.push(...qualityMatches);
     }
+
     if (violations.length === 0) return { verdict: 'PASS', message: 'No code quality issues detected.' };
-    const hasBlock = violations.some(v => v.severity === 'BLOCK');
+    
+    const hasBlock = violations.some(v => v.severity === 'HIGH' || v.severity === 'BLOCK');
     return {
       verdict: hasBlock ? 'BLOCK' : 'WARN',
-      message: violations.map(v => `${v.file}: ${v.message}`).join('; '),
-      details: { fact_path: 'code_quality', expected: 'No console.log or debugger', actual: violations.length, violations },
+      message: violations.map(v => `${v.file}: ${v.pattern}`).join('; '),
+      details: { 
+          fact_path: 'code_quality', 
+          expected: 'Clean code', 
+          actual: violations.length, 
+          violations: violations.map(v => ({
+            line: v.line,
+            file: v.file,
+            message: v.pattern,
+            severity: v.severity === 'HIGH' ? 'BLOCK' : 'WARN'
+          })) 
+      },
     };
   }
 
   _checkDocumentation(facts, rules) {
     const requireJSDoc = rules.require_jsdoc_on_exports !== false;
     if (!requireJSDoc) return { verdict: 'PASS', message: 'JSDoc not required.' };
-    const astByPath = facts.metadata?.ast_by_path || {};
+    
+    // Security: Use Map for safe lookup
+    const astByPath = facts.metadata?.ast_by_path;
+    if (!astByPath || typeof astByPath !== 'object') {
+       return { verdict: 'PASS', message: 'No AST data available.' };
+    }
+
+    const astLookup = new Map(Object.entries(astByPath));
     const files = facts.changes?.files || [];
     const missing = [];
     for (const f of files) {
-      const path = f.path || f.filePath;
-      if (!path || !['.ts', '.tsx', '.js', '.jsx'].includes((f.extension || '').toLowerCase())) continue;
-      const ast = f.ast || astByPath[path];
-      if (ast && ast.exports?.length && !ast.hasJSDocOnExport) missing.push(path);
+      const pathKey = f.path || f.filePath;
+      if (!pathKey || !['.ts', '.tsx', '.js', '.jsx'].includes((f.extension || '').toLowerCase())) continue;
+      
+      const ast = f.ast || astLookup.get(pathKey);
+      if (ast && ast.exports?.length && !ast.hasJSDocOnExport) missing.push(pathKey);
     }
     if (missing.length === 0) return { verdict: 'PASS', message: 'Exports have JSDoc where required.' };
     return {
@@ -590,6 +774,50 @@ export class EvaluationEngineService {
     const disallowBreakingChanges = rules.disallow_breaking_changes === true;
     if (!disallowBreakingChanges) return { verdict: 'PASS', message: 'API breaking changes not checked.' };
     return { verdict: 'PASS', message: 'API compatibility check (no diff available in this context).' };
+  }
+
+  /**
+   * Checker: Testing Best Practices (Wave 3)
+   * Detects skipped tests and empty test cases via AST.
+   */
+  _checkTestingBestPractices(facts, rules) {
+    const astByPathMap = new Map(Object.entries(facts.metadata?.ast_by_path || {}));
+    const violations = [];
+    
+    for (const [path, ast] of astByPathMap.entries()) {
+      if (ast.hasSkippedTest) {
+        violations.push({
+          policy: 'no-skipped-tests',
+          severity: 'HIGH',
+          message: `Skipped test found in ${path}. Use of .skip or xit is blocked.`,
+          file: path,
+          line: 1
+        });
+      }
+      if (ast.hasEmptyTest) {
+        violations.push({
+          policy: 'no-empty-test-suites',
+          severity: 'MEDIUM',
+          message: `Empty test case found in ${path}. All tests must have implementation and assertions.`,
+          file: path,
+          line: 1
+        });
+      }
+    }
+
+    if (violations.length === 0) return { verdict: 'PASS', message: 'Testing best practices followed.' };
+
+    const hasHigh = violations.some(v => v.severity === 'HIGH');
+    return {
+      verdict: hasHigh ? 'BLOCK' : 'WARN',
+      message: `${violations.length} testing violation(s) found.`,
+      details: {
+        fact_path: 'metadata.ast_by_path',
+        expected: 'No skipped or empty tests',
+        actual: violations.length,
+        violations: violations
+      }
+    };
   }
 
   _generateRationale(result, policyResults) {

@@ -1,0 +1,168 @@
+policies:
+  # SECURITY POLICIES
+  no-hardcoded-secrets:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - name: "AWS Access Key"
+        regex: "AKIA[0-9A-Z]{16}"
+        context: "code"
+      - name: "AWS Secret Key"
+        regex: "aws_secret_access_key\\s*=\\s*[\"']([A-Za-z0-9/+=]{40})[\"']"
+        context: "code"
+      - name: "Stripe API Key"
+        regex: "sk_(live|test)_[a-zA-Z0-9]{24,}"
+        context: "code"
+      - name: "GitHub Token"
+        regex: "ghp_[A-Za-z0-9_]{36,255}"
+        context: "code"
+      - name: "JWT Token"
+        regex: "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
+        context: "code"
+      - name: "Database Password"
+        regex: "(password|passwd|pwd)\\s*=\\s*[\"']([^\"']+)[\"']"
+        context: "code"
+      - name: "Private Key"
+        regex: "-----BEGIN (RSA|DSA|EC|PGP) PRIVATE KEY-----"
+        context: "code"
+      - name: "OAuth Token"
+        regex: "oauth_token\\s*=\\s*[\"']([a-zA-Z0-9_-]{20,})[\"']"
+        context: "code"
+    remediation: "Use environment variables or secrets management system (AWS Secrets Manager, HashiCorp Vault, GitHub Secrets)"
+    false_positive_whitelist:
+      - "test_"
+      - "example_"
+      - "mock_"
+
+  no-sql-injection:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - name: "String Concatenation in Query"
+        regex: "(query|sql|execute)\\s*\\(\\s*[\"`].*\\$\\{.*\\}.*[\"`]"
+        context: "code"
+      - name: "Unparameterized Query with Variables"
+        regex: "(query|sql|execute)\\s*\\(\\s*[\"`].*\\+.*[\"`]"
+        context: "code"
+      - name: "Dynamic SQL Construction"
+        regex: "let\\s+\\w+\\s*=\\s*[\"`].*[\"`]\\s*\\+\\s*\\w+"
+        context: "code"
+      - name: "Raw SQL with User Input"
+        regex: "(SELECT|INSERT|UPDATE|DELETE).*WHERE.*\\$\\{.*\\}"
+        context: "code"
+    remediation: "Use parameterized queries or prepared statements. Example: db.query('SELECT * FROM users WHERE id = ?', [userId])"
+
+  no-unencrypted-data-transit:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - name: "HTTP Request for Sensitive Data"
+        regex: "fetch\\s*\\(\\s*[\"`]http://.*auth.*[\"`]"
+        context: "code"
+      - name: "Unencrypted Database Connection"
+        regex: "(mysql|postgres|mongodb)://.*:.*@"
+        context: "code"
+      - name: "Unencrypted WebSocket"
+        regex: "ws://.*"
+        context: "code"
+    remediation: "Use HTTPS for all sensitive endpoints. Use encrypted database connections (mysql+ssl://, postgresql+ssl://)"
+
+  no-insecure-cryptography:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - name: "MD5 Hashing"
+        regex: "(md5|MD5)\\s*\\("
+        context: "code"
+      - name: "SHA1 Hashing"
+        regex: "(sha1|SHA1)\\s*\\("
+        context: "code"
+      - name: "DES Encryption"
+        regex: "(des|DES)\\s*\\("
+        context: "code"
+      - name: "RC4 Encryption"
+        regex: "(rc4|RC4)\\s*\\("
+        context: "code"
+      - name: "Weak Random Generation"
+        regex: "Math\\.random\\s*\\(\\)"
+        context: "code"
+    remediation: "Use modern cryptographic algorithms: bcrypt for hashing, AES-256 for encryption, crypto.randomBytes() for randomness"
+
+  no-exposed-admin-endpoints:
+    enabled: true
+    severity: HIGH
+    patterns:
+      - name: "Admin Endpoint Without Auth"
+        regex: "app\\.(get|post|put|delete)\\s*\\(\\s*[\"`]/admin/.*[\"`]\\s*,\\s*\\([^)]*\\)\\s*=>\\s*\\{"
+        context: "code"
+      - name: "Internal Endpoint Without Auth"
+        regex: "app\\.(get|post|put|delete)\\s*\\(\\s*[\"`]/(internal|private)/.*[\"`]\\s*,\\s*\\([^)]*\\)\\s*=>\\s*\\{"
+        context: "code"
+    remediation: "Require authentication middleware on all admin/internal endpoints. Example: app.get('/admin/users', requireAuth, requireAdmin, handler)"
+
+  no-debug-mode-production:
+    enabled: true
+    severity: MEDIUM
+    patterns:
+      - name: "Debug Flag Enabled in Production"
+        regex: "if\\s*\\(\\s*process\\.env\\.NODE_ENV\\s*===\\s*[\"`]production[\"`]\\s*\\)\\s*\\{[^}]*debug\\s*:\\s*true"
+        context: "code"
+      - name: "Verbose Logging in Production"
+        regex: "if\\s*\\(\\s*process\\.env\\.NODE_ENV\\s*===\\s*[\"`]production[\"`]\\s*\\)\\s*\\{[^}]*console\\.(log|error|warn)"
+        context: "code"
+    remediation: "Disable debug mode and verbose logging in production. Use structured logging instead of console.log"
+
+  # CODE QUALITY POLICIES
+  no-magic-numbers:
+    enabled: true
+    severity: LOW
+    # AST-based check (implemented in PatternMatcherService)
+    # patterns:
+    #   - name: "Numeric Literal Outside Constant"
+    #     regex: "(?<!const\\s+\\w+\\s*=\\s*)(?<![A-Z_]*\\s*=\\s*)\\b\\d{2,}\\b(?!\\s*[,;)])"
+    #     context: "code"
+    remediation: "Extract magic numbers into named constants. Example: const MAX_RETRIES = 3;"
+
+  no-hardcoded-configuration:
+    enabled: true
+    severity: MEDIUM
+    patterns:
+      - name: "Hardcoded URL"
+        regex: "[\"`](https?://[^\"'\\s]+)[\"`]"
+        context: "code"
+        exclude_patterns:
+          - "example.com"
+          - "localhost"
+          - "127.0.0.1"
+      - name: "Hardcoded Timeout"
+        regex: "(timeout|delay|interval)\\s*:\\s*\\d{4,}"
+        context: "code"
+      - name: "Hardcoded Port"
+        regex: ":\\d{4,}"
+        context: "code"
+    remediation: "Use environment variables for configuration. Example: const apiUrl = process.env.API_URL;"
+
+  no-deprecated-apis:
+    enabled: true
+    severity: MEDIUM
+    patterns:
+      - name: "Deprecated Node API"
+        regex: "(Buffer\\.from|util\\.isArray|util\\.isError)"
+        context: "code"
+      - name: "Deprecated DOM API"
+        regex: "(innerHTML|eval|with\\s*\\()"
+        context: "code"
+    remediation: "Use current APIs. Check documentation for recommended alternatives."
+
+  no-console-logs-production:
+    enabled: true
+    severity: MEDIUM
+    patterns:
+      - name: "Console Log in Production Code"
+        regex: "console\\.(log|error|warn|info|debug)\\s*\\("
+        context: "code"
+        exclude_patterns:
+          - "test"
+          - "spec"
+          - "mock"
+    remediation: "Use proper logging framework (winston, pino, bunyan) instead of console.log"
