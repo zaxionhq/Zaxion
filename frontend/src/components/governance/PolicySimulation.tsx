@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle } from 'lucide-react';
+import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -211,8 +211,66 @@ export const PolicySimulation: React.FC = () => {
     rules_logic: '{\n  "type": "mandatory_review",\n  "count": 1\n}'
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [aiDescription, setAiDescription] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const { toast } = useToast();
+
+  const handleAiTranslate = async () => {
+    if (!aiDescription.trim()) return;
+    setIsTranslating(true);
+    try {
+      const result = await api.post<Record<string, unknown>>('/v1/policies/translate-natural-language', {
+        description: aiDescription
+      });
+      setNewPolicy({
+        ...newPolicy,
+        rules_logic: JSON.stringify(result, null, 2)
+      });
+      toast({
+        title: "Policy Generated",
+        description: "AI has translated your description into Zaxion rules.",
+      });
+    } catch (error) {
+      toast({
+        title: "Translation Failed",
+        description: error instanceof Error ? error.message : "AI could not parse your description.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleMdUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.md')) {
+      toast({ title: "Invalid File", description: "Please upload a Markdown (.md) file.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+      setIsTranslating(true);
+      try {
+        const result = await api.post<Record<string, unknown>>('/v1/policies/translate-natural-language', {
+          description: `Analyze this Markdown policy file and extract the governance rules into Zaxion JSON schema:\n\n${content}`
+        });
+        setNewPolicy({
+          ...newPolicy,
+          rules_logic: JSON.stringify(result, null, 2)
+        });
+        toast({ title: "Policy Uploaded", description: "Rules extracted from Markdown file." });
+      } catch (error) {
+        toast({ title: "Upload Failed", description: "Could not extract rules from Markdown.", variant: "destructive" });
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const fetchPolicies = async () => {
     try {
@@ -864,12 +922,53 @@ export const PolicySimulation: React.FC = () => {
 
                 <div className="grid gap-2">
                   <Label htmlFor="rules">Policy Rules (JSON)</Label>
-                  <Textarea 
-                    id="rules" 
-                    className="font-mono text-xs h-32"
-                    value={newPolicy.rules_logic}
-                    onChange={e => setNewPolicy({...newPolicy, rules_logic: e.target.value})}
-                  />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Describe policy in plain English (e.g., 'Block PRs over 20 files')" 
+                        value={aiDescription}
+                        onChange={e => setAiDescription(e.target.value)}
+                        className="text-xs"
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="secondary" 
+                        onClick={handleAiTranslate}
+                        disabled={isTranslating || !aiDescription.trim()}
+                        className="shrink-0"
+                      >
+                        {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
+                        AI Translate
+                      </Button>
+                      <div className="relative">
+                        <Input
+                          type="file"
+                          accept=".md"
+                          className="hidden"
+                          id="md-upload"
+                          onChange={handleMdUpload}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          className="shrink-0 cursor-pointer"
+                          disabled={isTranslating}
+                        >
+                          <label htmlFor="md-upload">
+                            <Upload className="h-3 w-3 mr-1" />
+                            Upload .md
+                          </label>
+                        </Button>
+                      </div>
+                    </div>
+                    <Textarea 
+                      id="rules" 
+                      className="font-mono text-xs h-32"
+                      value={newPolicy.rules_logic}
+                      onChange={e => setNewPolicy({...newPolicy, rules_logic: e.target.value})}
+                    />
+                  </div>
                   <p className="text-[10px] text-muted-foreground">
                     Define the conditions that must be met for this policy to pass.
                   </p>

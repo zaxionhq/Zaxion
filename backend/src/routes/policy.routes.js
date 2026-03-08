@@ -73,6 +73,14 @@ export default function policyRoutesFactory(db) {
     policyController.analyzeCode
   );
 
+  // Phase 7: AI-powered policy translation (Natural Language -> JSON)
+  router.post(
+    '/translate-natural-language',
+    authenticateJWT,
+    authorize(adminOnlyRoles),
+    policyController.translateNaturalLanguage
+  );
+
   router.get(
     '/simulations/:simId',
     authenticateJWT,
