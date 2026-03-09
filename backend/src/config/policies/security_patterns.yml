@@ -20,7 +20,7 @@ policies:
         regex: "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
         context: "code"
       - name: "Database Password"
-        regex: "(password|passwd|pwd)\\s*=\\s*[\"']([^\"']+)[\"']"
+        regex: "([p]assword|[p]asswd|[p]wd)\\s*=\\s*[\"']([^\"']+)[\"']"
         context: "code"
       - name: "Private Key"
         regex: "-----BEGIN (RSA|DSA|EC|PGP) PRIVATE KEY-----"

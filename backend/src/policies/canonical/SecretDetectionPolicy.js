@@ -7,7 +7,7 @@ export class SecretDetectionPolicy extends BasePolicy {
       id: 'SEC-001',
       name: 'Secret Detection Policy',
       severity: 'CRITICAL',
-      description: 'Detects hardcoded secrets (API keys, tokens, passwords) in code.',
+      description: 'Detects hardcoded secrets (API keys, tokens, credentials) in code.',
       remediation: {
         steps: [
           'Remove the hardcoded secret immediately.',

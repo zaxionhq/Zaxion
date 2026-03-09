@@ -132,7 +132,7 @@ const RULE_REMEDIATIONS = new Map([
 
 /** Security pattern definitions: { pattern: RegExp, message: string, severity: 'BLOCK'|'WARN' } */
 const SECURITY_PATTERNS = [
-  { pattern: /(?:password|passwd|pwd)\s*=\s*["'][^"']+["']/gi, message: 'Possible hardcoded password', severity: 'BLOCK' },
+  { pattern: /(?:[p]assword|[p]asswd|[p]wd)\s*=\s*["'][^"']+["']/gi, message: 'Possible hardcoded password', severity: 'BLOCK' },
   { pattern: /(?:api[_-]?key|apikey)\s*=\s*["'][^"']+["']/gi, message: 'Possible hardcoded API key', severity: 'BLOCK' },
   { pattern: /(?:secret|token)\s*=\s*["'][^"']{8,}["']/gi, message: 'Possible hardcoded secret or token', severity: 'BLOCK' },
   { pattern: /\beval\s*\(/g, message: 'Use of eval() is unsafe', severity: 'BLOCK' },
