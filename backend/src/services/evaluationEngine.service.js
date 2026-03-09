@@ -330,11 +330,18 @@ export class EvaluationEngineService {
     }
 
     return {
+      result: finalResult, // Alias for backward compatibility / tests
       final_verdict: finalResult,
       rationale,
       policy_results: policyResults,
       violations: structuredViolations,
+      violated_policies: structuredViolations.map(v => ({
+        ...v,
+        expected: v.required_value,
+        actual: v.current_value
+      })), // Alias for tests
       passes: structuredPasses,
+      evaluation_hash: this._calculateHash(factSnapshot, appliedPolicies),
       metadata: {
         evaluated_at: new Date().toISOString(),
         engine_version: this.ENGINE_VERSION,

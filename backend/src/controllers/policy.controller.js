@@ -104,16 +104,34 @@ export default function policyControllerFactory(db) {
 
   async function createPolicy(req, res, next) {
     try {
-      const { name, scope, target_id, owning_role } = req.body;
+      const { name, scope, target_id, owning_role, rules_logic, description, status } = req.body;
+      const user = req.user;
 
       // Basic validation
-      if (!name || !scope || !target_id || !owning_role) {
-        const error = new Error('Missing required fields: name, scope, target_id, owning_role');
+      if (!name || !scope || !target_id || !owning_role || !rules_logic) {
+        const error = new Error('Missing required fields: name, scope, target_id, owning_role, rules_logic');
         error.statusCode = 400;
         throw error;
       }
 
-      const policy = await policyService.createPolicy(db, { name, scope, target_id, owning_role });
+      // 1. Create the base policy
+      const policy = await policyService.createPolicy(db, { 
+        name, 
+        scope, 
+        target_id, 
+        owning_role,
+        created_by: user ? user.id : null,
+        status: status || 'DRAFT',
+        description: description || name
+      });
+
+      // 2. Create the first version (v1)
+      await policyService.createPolicyVersion(db, policy.id, {
+        enforcement_level: 'MANDATORY', // Default enforcement level
+        rules_logic: typeof rules_logic === 'string' ? JSON.parse(rules_logic) : rules_logic,
+        description: 'Initial version'
+      }, user ? user.id : null);
+
       res.status(201).json(policy);
     } catch (error) {
       next(error);
@@ -122,9 +140,119 @@ export default function policyControllerFactory(db) {
 
   async function listPolicies(req, res, next) {
     try {
-      const { scope, target_id } = req.query;
+      const { scope, target_id, status, deleted } = req.query;
+      
+      if (deleted === 'true') {
+        const policies = await policyService.listDeletedPolicies(db);
+        return res.json(policies);
+      }
+
       const policies = await policyService.listPolicies(db, scope, target_id);
+      // Filter by status if provided (in memory for now as listPolicies service doesn't support it yet, or update service)
+      // Updating service is better but for now filter here is okay if dataset is small.
+      // But listPolicies in service uses `where` clause. I should probably pass status to service.
+      // For now, let's filter in memory if status is passed.
+      if (status) {
+        const filtered = policies.filter(p => p.status === status);
+        return res.json(filtered);
+      }
       res.json(policies);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function submitPolicy(req, res, next) {
+    try {
+      const { id } = req.params;
+      // Move to PENDING_APPROVAL
+      await policyService.updatePolicy(db, id, { status: 'PENDING_APPROVAL' });
+      res.json({ message: 'Policy submitted for approval' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function approvePolicy(req, res, next) {
+    try {
+      const { id } = req.params;
+      const user = req.user;
+
+      if (!user || (user.role !== 'admin' && user.role !== 'maintain' && user.role !== 'maintainer')) {
+        const error = new Error('Only administrators or maintainers can approve policies.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const policy = await policyService.getPolicy(db, id);
+      if (!policy) {
+        const error = new Error('Policy not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Check for self-approval (only if creator is set)
+      if (policy.created_by && policy.created_by === user.id) {
+        const error = new Error('Self-approval not allowed. Another administrator must approve this policy.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const updated = await policyService.updatePolicy(db, id, {
+        status: 'APPROVED',
+        approved_by: user.id,
+        approved_at: new Date()
+      });
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function enablePolicy(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { scope, target_id } = req.body;
+      const user = req.user;
+
+      if (!user || (user.role !== 'admin' && user.role !== 'maintain' && user.role !== 'maintainer')) {
+        const error = new Error('Only administrators or maintainers can enable policies.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const policy = await policyService.getPolicy(db, id);
+      if (!policy) {
+        const error = new Error('Policy not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Rule: Only Approved policies can be enabled
+      // If policy is not approved yet, check if we can auto-approve it (if user is admin/maintainer AND not creator)
+      if (policy.status !== 'APPROVED') {
+        if (policy.created_by === user.id) {
+          const error = new Error('Self-approval not allowed. Please have another admin approve this policy first.');
+          error.statusCode = 403;
+          throw error;
+        }
+        // Auto-approve since this user has rights
+        await policyService.updatePolicy(db, id, {
+          status: 'APPROVED',
+          approved_by: user.id,
+          approved_at: new Date()
+        });
+      }
+
+      const updates = { 
+        is_enabled: true
+      };
+      
+      if (scope) updates.scope = scope;
+      if (target_id) updates.target_id = target_id;
+
+      const updated = await policyService.updatePolicy(db, id, updates);
+      res.json(updated);
     } catch (error) {
       next(error);
     }
@@ -337,5 +465,8 @@ export default function policyControllerFactory(db) {
     promoteDraft,
     analyzeCode,
     translateNaturalLanguage,
+    submitPolicy,
+    approvePolicy,
+    enablePolicy,
   };
 }

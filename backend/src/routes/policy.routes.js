@@ -42,6 +42,28 @@ export default function policyRoutesFactory(db) {
     policyController.deletePolicy
   );
 
+  // Approval Workflow
+  router.post(
+    '/:id/submit',
+    authenticateJWT,
+    authorize(['user', 'admin']),
+    policyController.submitPolicy
+  );
+
+  router.post(
+    '/:id/approve',
+    authenticateJWT,
+    authorize(adminOnlyRoles),
+    policyController.approvePolicy
+  );
+
+  router.post(
+    '/:id/enable',
+    authenticateJWT,
+    authorize(adminOnlyRoles),
+    policyController.enablePolicy
+  );
+
   // Policy Versions (Immutable)
   router.post(
     '/:id/versions',

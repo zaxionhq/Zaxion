@@ -14,6 +14,16 @@ export default (sequelize, DataTypes) => {
         foreignKey: 'deleted_by_user_id',
         as: 'deletedBy',
       });
+
+      this.belongsTo(models.User, {
+        foreignKey: 'created_by',
+        as: 'creator',
+      });
+
+      this.belongsTo(models.User, {
+        foreignKey: 'approved_by',
+        as: 'approver',
+      });
     }
   }
 
@@ -40,6 +50,28 @@ export default (sequelize, DataTypes) => {
       owning_role: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      status: {
+        type: DataTypes.ENUM('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'),
+        defaultValue: 'DRAFT',
+        allowNull: false,
+      },
+      is_enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      },
+      created_by: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      approved_by: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      approved_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
       description: {
         type: DataTypes.TEXT,

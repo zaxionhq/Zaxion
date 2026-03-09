@@ -1,17 +1,42 @@
-// src/services/policy.service.js
+
+
+export async function listDeletedPolicies(db) {
+  const policies = await db.Policy.findAll({
+    where: {
+      deleted_at: { [db.Sequelize.Op.ne]: null }
+    },
+    include: [
+      {
+        model: db.User,
+        as: 'deletedBy',
+        attributes: ['id', 'username', 'role']
+      }
+    ],
+    order: [['deleted_at', 'DESC']]
+  });
+  return policies.map(p => p.toJSON());
+}
 
 export async function createPolicy(db, payload) {
-  // Payload: { name, scope, target_id, owning_role }
+  // Payload: { name, scope, target_id, owning_role, created_by, status, description }
   
-  // If we are creating a policy that would effectively be a "System Policy" 
-  // but with a better name, we can do it here. 
-  // However, for now we just follow the standard creation.
   const policy = await db.Policy.create({
     name: payload.name === 'Internal Zaxion Policy' ? 'Zaxion Core Policy' : payload.name,
     scope: payload.scope,
     target_id: payload.target_id,
     owning_role: payload.owning_role,
+    created_by: payload.created_by,
+    status: payload.status || 'DRAFT',
+    is_enabled: false,
+    description: payload.description,
   });
+  return policy.toJSON();
+}
+
+export async function updatePolicy(db, id, updates) {
+  const policy = await db.Policy.findByPk(id);
+  if (!policy) throw new Error('Policy not found');
+  await policy.update(updates);
   return policy.toJSON();
 }
 
@@ -50,6 +75,16 @@ export async function listPolicies(db, scope, target_id) {
     where,
     include: [
       {
+        model: db.User,
+        as: 'creator',
+        attributes: ['id', 'username', 'role']
+      },
+      {
+        model: db.User,
+        as: 'approver',
+        attributes: ['id', 'username']
+      },
+      {
         model: db.PolicyVersion,
         as: 'versions',
         attributes: ['id', 'version_number', 'enforcement_level', 'rules_logic', 'description', 'createdAt'],
@@ -71,7 +106,10 @@ export async function listPolicies(db, scope, target_id) {
     if (policy.versions && policy.versions.length > 0) {
       // For the inventory list, we might want the latest version's details at the top level
       policy.latest_version = policy.versions[0];
-      policy.created_by = policy.versions[0].creator;
+      // Use policy creator if available, else fallback to version creator
+      policy.created_by = policy.creator || policy.versions[0].creator;
+      // Use policy approver
+      policy.approved_by = policy.approver;
       // Use version description if policy description is missing
       policy.display_description = policy.description || policy.versions[0].description;
     }
