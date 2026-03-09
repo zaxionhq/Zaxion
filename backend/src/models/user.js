@@ -45,7 +45,7 @@ export default (sequelize, DataTypes) => {
         defaultValue: "github",
       },
       role: {
-        type: DataTypes.ENUM("user", "admin"),
+        type: DataTypes.ENUM("user", "admin", "maintainer"),
         defaultValue: "user",
         allowNull: false,
       },

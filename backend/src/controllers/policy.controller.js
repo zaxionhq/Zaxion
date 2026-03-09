@@ -349,11 +349,45 @@ export default function policyControllerFactory(db) {
         days_back,
       } = req.body;
       const userId = req.user ? req.user.id : null;
+      const userRole = req.user ? req.user.role : null;
 
       if (!userId) {
         const error = new Error('User not authenticated');
         error.statusCode = 401;
         throw error;
+      }
+
+      // Repository Scope Validation for Maintainers
+      if (userRole === 'maintainer') {
+        if (!target_repo_full_name) {
+          const error = new Error('Maintainers must specify a target repository for simulation.');
+          error.statusCode = 403;
+          throw error;
+        }
+
+        const [owner, name] = target_repo_full_name.split('/');
+        if (!owner || !name) {
+          const error = new Error('Invalid repository name format. Expected "owner/name".');
+          error.statusCode = 400;
+          throw error;
+        }
+
+        const repo = await db.Repository.findOne({ where: { owner, name } });
+        if (!repo) {
+          const error = new Error(`Repository ${target_repo_full_name} not registered or not found.`);
+          error.statusCode = 404;
+          throw error;
+        }
+
+        const mapping = await db.RepositoryMaintainerMapping.findOne({
+          where: { userId, repositoryId: repo.id }
+        });
+
+        if (!mapping) {
+          const error = new Error(`Access denied: You are not a maintainer of ${target_repo_full_name}.`);
+          error.statusCode = 403;
+          throw error;
+        }
       }
 
       const simulation = await simulationService.runSimulation({

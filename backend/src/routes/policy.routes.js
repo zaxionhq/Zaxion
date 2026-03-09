@@ -11,34 +11,35 @@ export default function policyRoutesFactory(db) {
 
   // In non-production environments, we allow both 'user' and 'admin' roles
   // to access admin-only features so local development and demos are easier.
-  const adminOnlyRoles = isProd ? ['admin'] : ['admin', 'user'];
+  const adminOnlyRoles = isProd ? ['admin'] : ['admin', 'user', 'maintainer'];
+  const maintainerRoles = isProd ? ['admin', 'maintainer'] : ['admin', 'user', 'maintainer'];
 
   // Policies CRUD
   router.post(
     '/',
     authenticateJWT,
-    authorize(['user', 'admin']), // Assuming users can create policies for now, restrict later
+    authorize(['user', 'admin', 'maintainer']), // Assuming users can create policies for now, restrict later
     policyController.createPolicy
   );
 
   router.get(
     '/',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.listPolicies
   );
 
   router.get(
     '/:id',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.getPolicy
   );
 
   router.delete(
     '/:id',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.deletePolicy
   );
 
@@ -46,21 +47,21 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/submit',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.submitPolicy
   );
 
   router.post(
     '/:id/approve',
     authenticateJWT,
-    authorize(adminOnlyRoles),
+    authorize(maintainerRoles),
     policyController.approvePolicy
   );
 
   router.post(
     '/:id/enable',
     authenticateJWT,
-    authorize(adminOnlyRoles),
+    authorize(maintainerRoles),
     policyController.enablePolicy
   );
 
@@ -68,14 +69,14 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/versions',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.createPolicyVersion
   );
 
   router.get(
     '/:id/versions/:version',
     authenticateJWT,
-    authorize(['user', 'admin']),
+    authorize(['user', 'admin', 'maintainer']),
     policyController.getPolicyVersion
   );
 
@@ -83,7 +84,7 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/simulate',
     authenticateJWT,
-    authorize(adminOnlyRoles),
+    authorize(maintainerRoles),
     policyController.runSimulation
   );
 
@@ -91,7 +92,7 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/:id/analyze-code',
     authenticateJWT,
-    authorize(adminOnlyRoles),
+    authorize(maintainerRoles),
     policyController.analyzeCode
   );
 
