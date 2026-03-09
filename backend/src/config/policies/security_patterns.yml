@@ -19,7 +19,7 @@ policies:
       - name: "JWT Token"
         regex: "eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}"
         context: "code"
-      - name: "Database Password"
+      - name: "Database Credential"
         regex: "([p]assword|[p]asswd|[p]wd)\\s*=\\s*[\"']([^\"']+)[\"']"
         context: "code"
       - name: "Private Key"
