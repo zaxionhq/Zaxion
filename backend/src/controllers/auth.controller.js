@@ -119,29 +119,106 @@ const authController = (db) => {
         });
       }
 
-      // Fetch GitHub profile
+      // Fetch GitHub profile and update user
       const profileRes = await axios.get(GITHUB_API_USER, {
-        headers: { Authorization: `token ${ghAccessToken}`, Accept: "application/vnd.github.v3+json" },
+        headers: { Authorization: `token ${ghAccessToken}` },
       });
       const profile = profileRes.data;
 
       // Upsert user
       let user = await db.User.findOne({ where: { githubId: String(profile.id) } });
+      
       if (!user) {
         user = await db.User.create({
           githubId: String(profile.id),
-          username: profile.login || profile.name || `gh_${profile.id}`,
-          displayName: profile.name || null,
-          email: (profile.email || null),
-          provider: "github",
+          username: profile.login,
+          displayName: profile.name || profile.login,
+          email: profile.email || null,
+          authProvider: "github",
           accessToken: encrypt(ghAccessToken),
+          role: "user" // Default role
         });
       } else {
-        await user.update({ accessToken: encrypt(ghAccessToken), username: profile.login || user.username, displayName: profile.name || user.displayName });
+        await user.update({ 
+          accessToken: encrypt(ghAccessToken), 
+          username: profile.login, 
+          displayName: profile.name || user.displayName 
+        });
       }
 
-      // generate JWT
-      const jwtPayload = { id: user.id, githubId: user.githubId };
+      // Permission Synchronization Logic
+      try {
+        // Only run sync if user is not already an admin
+        if (user.role !== 'admin') {
+          const { listUserReposWithPermissions } = await import('../services/github.service.js');
+          const repos = await listUserReposWithPermissions(ghAccessToken);
+          
+          let hasMaintainerRights = false;
+          const mappingsToCreate = [];
+          const repoRecordsToCreate = [];
+
+          for (const repo of repos) {
+            // Check if user has admin or write permissions
+            if (repo.permissions.admin || repo.permissions.push) {
+              hasMaintainerRights = true;
+              
+              // Prepare repository record
+              repoRecordsToCreate.push({
+                githubRepoId: repo.github_id,
+                name: repo.name,
+                owner: repo.owner,
+                // installationId can be synced via webhooks later or separate API
+              });
+
+              // Prepare mapping record
+              mappingsToCreate.push({
+                userId: user.id,
+                githubRepoId: repo.github_id, // Temporary store for mapping
+                githubPermissionLevel: repo.permissions.admin ? 'admin' : 'write'
+              });
+            }
+          }
+
+          if (hasMaintainerRights) {
+            // 1. Upsert Repositories
+            for (const repoData of repoRecordsToCreate) {
+              const [repo] = await db.Repository.findOrCreate({
+                where: { githubRepoId: repoData.githubRepoId },
+                defaults: repoData
+              });
+              
+              // 2. Upsert Mappings
+              const mappingData = mappingsToCreate.find(m => m.githubRepoId === repoData.githubRepoId);
+              if (mappingData) {
+                await db.RepositoryMaintainerMapping.upsert({
+                  userId: user.id,
+                  repositoryId: repo.id,
+                  githubPermissionLevel: mappingData.githubPermissionLevel
+                });
+              }
+            }
+
+            // 3. Update User Role to Maintainer if not already
+            if (user.role === 'user') {
+              await user.update({ role: 'maintainer' });
+              logAuthEvent(user.id, 'ROLE_UPDATE', 'SUCCESS', { 
+                previousRole: 'user', 
+                newRole: 'maintainer',
+                reason: 'GitHub permissions sync'
+              });
+            }
+          } else {
+            // If user was maintainer but lost all rights, downgrade (optional, maybe too aggressive for login)
+            // For now, we only promote. Demotion can happen via scheduled sync or webhooks.
+          }
+        }
+      } catch (syncError) {
+        // Log but don't fail login
+        error("Permission sync failed during login:", syncError);
+      }
+
+      // generate JWT with updated role
+      const jwtPayload = { id: user.id, githubId: user.githubId, role: user.role };
       const token = generateToken(jwtPayload);
 
       const isProd = (process.env.NODE_ENV === "production");

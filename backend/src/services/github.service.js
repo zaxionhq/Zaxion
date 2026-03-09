@@ -47,6 +47,68 @@ export async function listPulls(token, owner, repo, opts = {}) {
   return data;
 }
 
+/**
+ * List all repositories for the authenticated user with their permissions.
+ * Used for permission synchronization.
+ * @param {string} token - GitHub OAuth access token
+ * @returns {Promise<Array<{id: number, name: string, full_name: string, owner: string, permissions: {admin: boolean, push: boolean, pull: boolean}}>>}
+ */
+export async function listUserReposWithPermissions(token) {
+  const operation = 'listUserReposWithPermissions';
+  let status = 'success';
+  try {
+    // We need to fetch all pages to ensure we get all repos
+    // GitHub API defaults to 30 per page, max 100
+    let page = 1;
+    let repos = [];
+    let hasNextPage = true;
+
+    while (hasNextPage) {
+      const response = await axios.get(`${GH_API}/user/repos`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          per_page: 100,
+          page,
+          // We want all repos the user has access to (owned, collaborator, organization member)
+          visibility: 'all',
+          affiliation: 'owner,collaborator,organization_member'
+        }
+      });
+      
+      const { data, headers } = response;
+
+      if (data.length === 0) {
+        hasNextPage = false;
+      } else {
+        repos = repos.concat(data.map(r => ({
+          id: r.id,
+          github_id: r.id.toString(),
+          name: r.name,
+          full_name: r.full_name,
+          owner: r.owner.login,
+          private: r.private,
+          permissions: r.permissions // { admin: bool, maintain: bool, push: bool, triage: bool, pull: bool }
+        })));
+        
+        // Check Link header for next page
+        const linkHeader = headers.link;
+        if (linkHeader && linkHeader.includes('rel="next"')) {
+          page++;
+        } else {
+          hasNextPage = false;
+        }
+      }
+    }
+    return repos;
+  } catch (error) {
+    status = 'failure';
+    logger.error({ error }, "Error listing user repos with permissions");
+    throw error;
+  } finally {
+    githubServiceCallCounter.inc({ operation, status });
+  }
+}
+
 export async function listUserRepos(token) {
   const operation = 'listUserRepos';
   let status = 'success';

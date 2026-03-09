@@ -17,6 +17,22 @@ export function logAuthEvent(userId, eventType, outcome, details = {}) {
     outcome,
     ...details,
   }, `Auth Event: ${eventType} - ${outcome} for user ${userId || 'N/A'}`);
+  
+  // Also save to database
+  try {
+    const { db } = await import('../models/index.js');
+    if (db && db.AuditEvent) {
+      db.AuditEvent.create({
+        eventType: 'AUTH',
+        action: eventType,
+        actorId: userId,
+        targetId: userId,
+        metadata: { outcome, ...details }
+      }).catch(err => auditLogger.error({ err }, 'Failed to save auth event to DB'));
+    }
+  } catch (err) {
+    // Ignore db import errors in tests
+  }
 }
 
 /**
@@ -36,6 +52,21 @@ export function logAuthorizationEvent(userId, role, requiredRoles, outcome, deta
     outcome,
     ...details,
   }, `Authorization Event: User ${userId} with role ${role} ${outcome} access to resource (required: ${requiredRoles.join(', ')})`);
+
+  // Also save to database
+  try {
+    const { db } = await import('../models/index.js');
+    if (db && db.AuditEvent) {
+      db.AuditEvent.create({
+        eventType: 'AUTHORIZATION',
+        action: 'ACCESS_CHECK',
+        actorId: userId,
+        metadata: { role, requiredRoles, outcome, ...details }
+      }).catch(err => auditLogger.error({ err }, 'Failed to save authorization event to DB'));
+    }
+  } catch (err) {
+    // Ignore db import errors in tests
+  }
 }
 
 /**
@@ -57,5 +88,21 @@ export function logResourceEvent(userId, eventType, resourceType, resourceId = n
     outcome,
     ...details,
   }, `Resource Event: ${eventType} ${resourceType} ${resourceId || 'N/A'} - ${outcome} by user ${userId}`);
+
+  // Also save to database
+  try {
+    const { db } = await import('../models/index.js');
+    if (db && db.AuditEvent) {
+      db.AuditEvent.create({
+        eventType: 'RESOURCE',
+        action: eventType,
+        actorId: userId,
+        targetId: resourceId,
+        metadata: { resourceType, outcome, ...details }
+      }).catch(err => auditLogger.error({ err }, 'Failed to save resource event to DB'));
+    }
+  } catch (err) {
+    // Ignore db import errors in tests
+  }
 }
 
