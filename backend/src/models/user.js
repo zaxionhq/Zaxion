@@ -12,6 +12,13 @@ export default (sequelize, DataTypes) => {
         foreignKey: "userId",
         as: "refreshTokens",
       });
+      // Add association for RepositoryMaintainerMapping if it exists in models
+      if (models.RepositoryMaintainerMapping) {
+        this.hasMany(models.RepositoryMaintainerMapping, {
+          foreignKey: 'userId',
+          as: 'repositoryMappings'
+        });
+      }
     }
   }
 
