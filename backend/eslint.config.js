@@ -76,9 +76,11 @@ export default [
     files: [
       "src/parsers/pythonAST.parser.js",
       "src/services/codeAnalyzer.service.js",
+      "src/services/patternMatcher.service.js",
     ],
     rules: {
       "security/detect-unsafe-regex": "off",
+      "security/detect-non-literal-regexp": "off",
     },
   },
 
@@ -94,6 +96,12 @@ export default [
   },
   {
     files: ["src/services/githubApp.service.js"],
+    rules: {
+      "security/detect-non-literal-fs-filename": "off",
+    },
+  },
+  {
+    files: ["src/services/complexityMetrics.service.js", "src/services/patternMatcher.service.js"],
     rules: {
       "security/detect-non-literal-fs-filename": "off",
     },

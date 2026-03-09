@@ -18,7 +18,7 @@ export class ComplexityMetricsService {
 
     try {
       // Security: Validate that the path is within the current working directory to prevent path traversal
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // Exception handled in eslint.config.js for this service
       const fileContents = fs.readFileSync(resolvedPath, 'utf8');
       const loaded = yaml.load(fileContents);
       this.policies = new Map(Object.entries(loaded.complexity_policies || {}));

@@ -18,7 +18,7 @@ export class PatternMatcherService {
 
     try {
       // Security: Validate that the path is within the current working directory to prevent path traversal
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      // Exception handled in eslint.config.js for this service
       const fileContents = fs.readFileSync(resolvedPath, 'utf8');
       const loaded = yaml.load(fileContents);
       this.policies = new Map(Object.entries(loaded.policies || {}));
@@ -83,7 +83,7 @@ export class PatternMatcherService {
   matchPattern(code, filePath, policyName, policy, pattern) {
     try {
       // Security: regex comes from trusted policy configuration
-      // eslint-disable-next-line security/detect-non-literal-regexp
+      // Exception handled in eslint.config.js for this service
       const regex = new RegExp(pattern.regex, 'gm');
       let match;
 
