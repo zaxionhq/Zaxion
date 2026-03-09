@@ -9,7 +9,7 @@ import { auditLogger } from '../logger.js';
  * @param {string} outcome - The outcome of the event (e.g., 'SUCCESS', 'FAILURE').
  * @param {object} [details={}] - Additional details relevant to the event (e.g., 'ipAddress', 'userAgent').
  */
-export function logAuthEvent(userId, eventType, outcome, details = {}) {
+export async function logAuthEvent(userId, eventType, outcome, details = {}) {
   auditLogger.info({
     category: 'auth',
     userId,
@@ -22,16 +22,16 @@ export function logAuthEvent(userId, eventType, outcome, details = {}) {
   try {
     const { db } = await import('../models/index.js');
     if (db && db.AuditEvent) {
-      db.AuditEvent.create({
+      await db.AuditEvent.create({
         eventType: 'AUTH',
         action: eventType,
         actorId: userId,
         targetId: userId,
         metadata: { outcome, ...details }
-      }).catch(err => auditLogger.error({ err }, 'Failed to save auth event to DB'));
+      });
     }
   } catch (err) {
-    // Ignore db import errors in tests
+    auditLogger.error({ err }, 'Failed to save auth event to DB');
   }
 }
 
@@ -43,7 +43,7 @@ export function logAuthEvent(userId, eventType, outcome, details = {}) {
  * @param {string} outcome - The outcome of the authorization (e.g., 'GRANTED', 'DENIED').
  * @param {object} [details={}] - Additional details relevant to the event.
  */
-export function logAuthorizationEvent(userId, role, requiredRoles, outcome, details = {}) {
+export async function logAuthorizationEvent(userId, role, requiredRoles, outcome, details = {}) {
   auditLogger.info({
     category: 'authorization',
     userId,
@@ -57,15 +57,15 @@ export function logAuthorizationEvent(userId, role, requiredRoles, outcome, deta
   try {
     const { db } = await import('../models/index.js');
     if (db && db.AuditEvent) {
-      db.AuditEvent.create({
+      await db.AuditEvent.create({
         eventType: 'AUTHORIZATION',
         action: 'ACCESS_CHECK',
         actorId: userId,
         metadata: { role, requiredRoles, outcome, ...details }
-      }).catch(err => auditLogger.error({ err }, 'Failed to save authorization event to DB'));
+      });
     }
   } catch (err) {
-    // Ignore db import errors in tests
+    auditLogger.error({ err }, 'Failed to save authorization event to DB');
   }
 }
 
@@ -78,7 +78,7 @@ export function logAuthorizationEvent(userId, role, requiredRoles, outcome, deta
  * @param {string} outcome - The outcome of the event (e.g., 'SUCCESS', 'FAILURE').
  * @param {object} [details={}] - Additional details (e.g., old values, new values).
  */
-export function logResourceEvent(userId, eventType, resourceType, resourceId = null, outcome, details = {}) {
+export async function logResourceEvent(userId, eventType, resourceType, resourceId = null, outcome, details = {}) {
   auditLogger.info({
     category: 'resource',
     userId,
@@ -93,16 +93,16 @@ export function logResourceEvent(userId, eventType, resourceType, resourceId = n
   try {
     const { db } = await import('../models/index.js');
     if (db && db.AuditEvent) {
-      db.AuditEvent.create({
+      await db.AuditEvent.create({
         eventType: 'RESOURCE',
         action: eventType,
         actorId: userId,
         targetId: resourceId,
         metadata: { resourceType, outcome, ...details }
-      }).catch(err => auditLogger.error({ err }, 'Failed to save resource event to DB'));
+      });
     }
   } catch (err) {
-    // Ignore db import errors in tests
+    auditLogger.error({ err }, 'Failed to save resource event to DB');
   }
 }
 
