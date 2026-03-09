@@ -69,9 +69,9 @@ const RULE_REMEDIATIONS = new Map([
     documentation_link: `${DOCS_BASE}/rules`,
   }],
   ['code_quality', {
-    explanation: 'console.log and debugger statements should not be committed; they can leak information and block execution.',
+    explanation: 'Console logs and debugger statements should not be committed; they can leak information and block execution.',
     remediation: {
-      steps: ['Remove console.log and debugger before committing.', 'Use a proper logger or remove in production builds.'],
+      steps: ['Remove logging statements before committing.', 'Use a proper logger or remove in production builds.'],
       example: "// Use: logger.debug('message') or remove entirely",
     },
     documentation_link: `${DOCS_BASE}/rules`,

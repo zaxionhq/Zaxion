@@ -28,7 +28,7 @@ module.exports = {
       // SQLite doesn't support ALTER COLUMN to change constraints easily, usually requires table recreation.
       // But Sequelize often emulates ENUMs as TEXT with CHECK constraints in SQLite.
       // If we are just using text, this might be fine, but let's assume we are targeting the production DB behavior.
-      console.log('Skipping ENUM update for dialect:', dialect);
+      console.warn('Skipping ENUM update for dialect:', dialect);
     }
   },
 

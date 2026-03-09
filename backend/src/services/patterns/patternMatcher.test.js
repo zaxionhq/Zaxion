@@ -26,7 +26,7 @@ describe('PatternMatchingEngine', () => {
   });
 
   it('should ignore safe code', () => {
-    const code = `const x = "safe string"; console.log(x);`;
+    const code = `const x = "safe string"; logger.debug(x);`;
     const ast = parser.parseCode(code, 'test.js');
     const violations = engine.scan(ast);
     

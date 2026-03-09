@@ -20,7 +20,7 @@ describe('ASTParserService Performance', () => {
 
     // 3. Assertions
     expect(ast.type).toBe('File');
-    console.log(`Parsed 5000 lines in ${duration.toFixed(2)}ms`);
+    // logger.info(`Parsed 5000 lines in ${duration.toFixed(2)}ms`);
     expect(duration).toBeLessThan(200);
   });
 });

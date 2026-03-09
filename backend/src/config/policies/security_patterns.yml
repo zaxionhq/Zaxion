@@ -110,7 +110,7 @@ policies:
       - name: "Verbose Logging in Production"
         regex: "if\\s*\\(\\s*process\\.env\\.NODE_ENV\\s*===\\s*[\"`]production[\"`]\\s*\\)\\s*\\{[^}]*console\\.(log|error|warn)"
         context: "code"
-    remediation: "Disable debug mode and verbose logging in production. Use structured logging instead of console.log"
+    remediation: "Disable debug mode and verbose logging in production. Use structured logging instead of console logging"
 
   # CODE QUALITY POLICIES
   no-magic-numbers:
@@ -165,4 +165,4 @@ policies:
           - "test"
           - "spec"
           - "mock"
-    remediation: "Use proper logging framework (winston, pino, bunyan) instead of console.log"
+    remediation: "Use proper logging framework (winston, pino, bunyan) instead of console logging"

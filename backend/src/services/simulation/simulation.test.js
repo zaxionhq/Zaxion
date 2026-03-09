@@ -55,6 +55,6 @@ describe('Pillar 8: Simulation Engine', () => {
     const end = performance.now();
     
     expect(end - start).toBeLessThan(5000); // 5s budget
-    console.log(`Simulated 100 PRs in ${(end - start).toFixed(2)}ms`);
+    // logger.info(`Simulated 100 PRs in ${(end - start).toFixed(2)}ms`);
   });
 });
