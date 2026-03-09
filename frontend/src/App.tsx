@@ -13,6 +13,7 @@ import GovernanceDashboard from "./pages/GovernanceDashboard";
 import GovernanceDecisions from "./pages/GovernanceDecisions";
 import GovernanceAnalytics from "./pages/GovernanceAnalytics";
 import GovernanceSettings from "./pages/GovernanceSettings";
+import GovernancePolicyLibrary from "./pages/GovernancePolicyLibrary";
 import DocsLayout from "./components/docs/DocsLayout";
 import DocsOverview from "./pages/docs/Overview";
 import DocsGettingStarted from "./pages/docs/GettingStarted";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="/governance" element={<GovernanceDashboard />} />
               <Route path="/governance/decisions" element={<GovernanceDecisions />} />
               <Route path="/governance/analytics" element={<GovernanceAnalytics />} />
+              <Route path="/governance/policy-library" element={<GovernancePolicyLibrary />} />
               <Route path="/governance/settings" element={<GovernanceSettings />} />
               
               {/* Documentation Ecosystem */}

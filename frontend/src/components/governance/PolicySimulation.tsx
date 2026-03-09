@@ -16,6 +16,7 @@ import logger from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
+import { CreatePolicyModal } from '@/components/governance/CreatePolicyModal';
 
 /** Turn rules_logic into plain-language "what this policy does" lines. */
 function describePolicyRules(rulesLogic: unknown): string[] {
@@ -93,7 +94,7 @@ function describePolicyRules(rulesLogic: unknown): string[] {
 }
 
 interface Policy {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   scope: string;
@@ -102,7 +103,7 @@ interface Policy {
     id?: string;
     version_number?: number;
     enforcement_level?: string;
-    created_at: string;
+    createdAt: string;
     rules_logic?: unknown;
     creator?: { email: string };
   };
@@ -749,7 +750,7 @@ export const PolicySimulation: React.FC = () => {
   };
 
   const selectedPolicy = useMemo(() => 
-    policies.find(p => p.id.toString() === selectedPolicyId),
+    policies.find(p => p.id === selectedPolicyId),
   [policies, selectedPolicyId]);
 
   return (
@@ -758,234 +759,16 @@ export const PolicySimulation: React.FC = () => {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="space-y-1">
             <CardTitle className="text-sm font-bold uppercase tracking-wider">Simulation Configuration</CardTitle>
-            <CardDescription>Select or create a policy to test. Test on repo/branch or org-wide; optionally fetch PRs from GitHub.</CardDescription>
+            <CardDescription>Select or create a policy to test.</CardDescription>
           </div>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button size="icon" variant="outline" className="h-8 w-8">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Create New Policy</DialogTitle>
-                <DialogDescription>
-                  Define a new governance policy and its scope.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Policy Name</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="e.g., Mandatory Review Policy" 
-                    value={newPolicy.name}
-                    onChange={e => setNewPolicy({...newPolicy, name: e.target.value})}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="scope">Scope</Label>
-                  <Select 
-                    value={newPolicy.scope} 
-                    onValueChange={v => {
-                      setNewPolicy({
-                        ...newPolicy, 
-                        scope: v, 
-                        target_id: v === 'GLOBAL' ? 'GLOBAL' : '',
-                        branch_name: ''
-                      });
-                    }}
-                  >
-                    <SelectTrigger id="scope">
-                      <SelectValue placeholder="Select scope" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="GLOBAL">Global (Org-wide)</SelectItem>
-                      <SelectItem value="REPO">Repository</SelectItem>
-                      <SelectItem value="BRANCH">Branch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(newPolicy.scope === 'REPO' || newPolicy.scope === 'BRANCH') && (
-                  <div className="grid gap-2">
-                    <Label>Target Repository</Label>
-                    <Popover open={isRepoPopoverOpen} onOpenChange={setIsRepoPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={isRepoPopoverOpen}
-                          className="w-full justify-between font-normal"
-                        >
-                          {newPolicy.target_id || "Search repository..."}
-                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[450px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Type repository name..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {isLoadingRepos ? "Fetching repositories..." : "No repository found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {repositories.map((repo) => (
-                                <CommandItem
-                                  key={repo.full_name}
-                                  value={repo.full_name}
-                                  onSelect={(currentValue) => {
-                                    setNewPolicy({ ...newPolicy, target_id: currentValue });
-                                    setIsRepoPopoverOpen(false);
-                                    if (newPolicy.scope === 'BRANCH') {
-                                      fetchBranches(currentValue);
-                                    }
-                                  }}
-                                >
-                                  <CheckCircle2
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      newPolicy.target_id === repo.full_name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {repo.full_name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
-                {newPolicy.scope === 'BRANCH' && (
-                  <div className="grid gap-2">
-                    <Label>Target Branch</Label>
-                    <Popover open={isBranchPopoverOpen} onOpenChange={setIsBranchPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          disabled={!newPolicy.target_id}
-                          aria-expanded={isBranchPopoverOpen}
-                          className="w-full justify-between font-normal"
-                        >
-                          {newPolicy.branch_name || "Search branch..."}
-                          <GitBranch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[450px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Type branch name..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              {isLoadingBranches ? "Fetching branches..." : "No branch found."}
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {branches.map((branch) => (
-                                <CommandItem
-                                  key={branch.name}
-                                  value={branch.name}
-                                  onSelect={(currentValue) => {
-                                    setNewPolicy({ ...newPolicy, branch_name: currentValue });
-                                    setIsBranchPopoverOpen(false);
-                                  }}
-                                >
-                                  <CheckCircle2
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      newPolicy.branch_name === branch.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {branch.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 p-3">
-                  <FileJson className="h-4 w-4 text-primary shrink-0" />
-                  <p className="text-xs text-muted-foreground">
-                    Policy rules use JSON. For enterprise examples (PR size, coverage, security paths, content scans), see the{' '}
-                    <Link to="/docs/examples" className="text-primary hover:underline font-medium" onClick={() => setIsCreateModalOpen(false)}>
-                      Policy Rules (JSON) Reference
-                    </Link>
-                    .
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="rules">Policy Rules (JSON)</Label>
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input 
-                        placeholder="Describe policy in plain English (e.g., 'Block PRs over 20 files')" 
-                        value={aiDescription}
-                        onChange={e => setAiDescription(e.target.value)}
-                        className="text-xs"
-                      />
-                      <Button 
-                        size="sm" 
-                        variant="secondary" 
-                        onClick={handleAiTranslate}
-                        disabled={isTranslating || !aiDescription.trim()}
-                        className="shrink-0"
-                      >
-                        {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
-                        AI Translate
-                      </Button>
-                      <div className="relative">
-                        <Input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          id="md-upload"
-                          onChange={handleMdUpload}
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          asChild
-                          className="shrink-0 cursor-pointer"
-                          disabled={isTranslating}
-                        >
-                          <label htmlFor="md-upload">
-                            <Upload className="h-3 w-3 mr-1" />
-                            Upload .md
-                          </label>
-                        </Button>
-                      </div>
-                    </div>
-                    <Textarea 
-                      id="rules" 
-                      className="font-mono text-xs h-32"
-                      value={newPolicy.rules_logic}
-                      onChange={e => setNewPolicy({...newPolicy, rules_logic: e.target.value})}
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Define the conditions that must be met for this policy to pass.
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-                <Button 
-                  onClick={handleCreatePolicy} 
-                  disabled={isCreating || !newPolicy.name || (newPolicy.scope !== 'GLOBAL' && !newPolicy.target_id) || (newPolicy.scope === 'BRANCH' && !newPolicy.branch_name)}
-                >
-                  {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Save as Draft
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> New Policy
+          </Button>
+          <CreatePolicyModal 
+            open={isCreateModalOpen} 
+            onOpenChange={setIsCreateModalOpen} 
+            onPolicyCreated={() => { fetchPolicies(); }} 
+          />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -996,7 +779,7 @@ export const PolicySimulation: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {policies.map(p => (
-                  <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1187,8 +970,8 @@ export const PolicySimulation: React.FC = () => {
                 <div className="flex justify-between text-[10px]">
                   <span className="text-slate-500">Timestamp:</span>
                   <span className="font-mono text-slate-300">
-                    {selectedPolicy.latest_version?.created_at 
-                      ? new Date(selectedPolicy.latest_version.created_at).toLocaleString() 
+                    {selectedPolicy.latest_version?.createdAt 
+                      ? new Date(selectedPolicy.latest_version.createdAt).toLocaleString() 
                       : new Date().toLocaleString()}
                   </span>
                 </div>

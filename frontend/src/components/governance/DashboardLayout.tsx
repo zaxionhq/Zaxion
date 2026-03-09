@@ -31,6 +31,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     { label: 'Dashboard', icon: LayoutDashboard, path: '/governance' },
     { label: 'Decisions', icon: History, path: '/governance/decisions' },
     { label: 'Analytics', icon: BarChart3, path: '/governance/analytics' },
+    { label: 'Policy Library', icon: Shield, path: '/governance/policy-library' },
     // { label: 'Settings', icon: Settings, path: '/governance/settings' },
   ];
 
