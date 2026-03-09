@@ -206,7 +206,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
               </div>
               <div className="space-y-2">
                 <Label>Scope</Label>
-                <Select value={scope} onValueChange={(val: string) => setScope(val)}>
+                <Select value={scope} onValueChange={(val: string) => setScope(val as "GLOBAL" | "REPO" | "BRANCH")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="GLOBAL">Global (Org-wide)</SelectItem>
