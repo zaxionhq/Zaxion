@@ -284,33 +284,38 @@ export const PolicySimulation: React.FC = () => {
     try {
       const [dbPolicies, corePolicies] = await Promise.all([
         api.get<Policy[]>('/v1/policies'),
-        api.get<unknown[]>('/v1/policies/core')
+        api.get<Array<Record<string, unknown>>>('/v1/policies/core')
       ]);
 
-      const formattedCorePolicies = corePolicies.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        scope: 'ORG',
-        target_id: 'ORG',
-        latest_version: {
-          version_number: 1,
-          createdAt: new Date().toISOString(),
-          rules_logic: {
-             type: "core_enforcement",
-             severity: p.severity,
-             category: p.category,
-             remediation: p.remediation
-          }
-        }
-      }));
+      const formattedCorePolicies: Policy[] = corePolicies.map((p) => {
+        const name = String(p.name ?? 'Core Policy');
+        const id = (typeof p.id === 'string' && p.id.length > 0) ? p.id : `core-${name}`;
+
+        return {
+          id,
+          name,
+          description: typeof p.description === 'string' ? p.description : undefined,
+          scope: 'ORG',
+          target_id: 'ORG',
+          latest_version: {
+            version_number: 1,
+            createdAt: new Date().toISOString(),
+            rules_logic: {
+              type: 'core_enforcement',
+              severity: p.severity,
+              category: p.category,
+              remediation: p.remediation,
+            },
+          },
+        };
+      });
 
       // Merge, prioritizing DB policies if they override core ones (by name or ID if shared)
       // For now, just append core policies that aren't in DB (by name)
-      const uniquePolicies = [...dbPolicies];
-      formattedCorePolicies.forEach(cp => {
+      const uniquePolicies: Policy[] = [...dbPolicies];
+      formattedCorePolicies.forEach((cp) => {
         if (!uniquePolicies.some(dbp => dbp.name === cp.name)) {
-          uniquePolicies.push(cp as Policy);
+          uniquePolicies.push(cp);
         }
       });
 

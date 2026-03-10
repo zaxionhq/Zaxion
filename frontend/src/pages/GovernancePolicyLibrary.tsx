@@ -56,7 +56,7 @@ export default function GovernancePolicyLibrary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<unknown>({
     staleTime: Infinity,
     queryKey: ['user'],
     queryFn: () => api.get<unknown>('/v1/auth/me'),
@@ -77,12 +77,12 @@ export default function GovernancePolicyLibrary() {
     queryKey: ['core-policies'],
     staleTime: Infinity,
     queryFn: async () => {
-      const response = await api.get<unknown[]>('/v1/policies/core');
-      return response.map((p: any) => ({
+      const response = await api.get<Array<Record<string, unknown>>>('/v1/policies/core');
+      return response.map((p) => ({
         ...p,
-        display_description: p.description,
+        display_description: p.description as string | undefined,
         createdAt: new Date().toISOString(),
-        id: p.id || `core-${p.name}`,
+        id: (p.id as string | undefined) || `core-${String(p.name ?? 'policy')}`,
         is_enabled: false
       })) as Policy[];
     }

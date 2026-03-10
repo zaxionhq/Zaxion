@@ -32,7 +32,7 @@ export const initMonitoring = () => {
 };
 
 // Track Error
-export const trackError = (error: Error, context?: Record<string, any>) => {
+export const trackError = (error: Error, context?: Record<string, unknown>) => {
   console.error("Tracked Error:", error, context);
   if (import.meta.env.VITE_SENTRY_DSN) {
     Sentry.captureException(error, { extra: context });
