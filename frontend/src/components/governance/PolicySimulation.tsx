@@ -17,12 +17,19 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Link } from 'react-router-dom';
 import { CreatePolicyModal } from '@/components/governance/CreatePolicyModal';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface RulesLogic {
+  type?: string;
+  [key: string]: unknown;
+}
 
 /** Turn rules_logic into plain-language "what this policy does" lines. */
 function describePolicyRules(rulesLogic: unknown): string[] {
   const lines: string[] = [];
   if (rulesLogic == null || typeof rulesLogic !== 'object') return lines;
-  const r = rulesLogic as Record<string, unknown>;
+  const r = rulesLogic as RulesLogic;
   const type = (r.type as string) || '';
 
   switch (type) {
@@ -275,8 +282,39 @@ export const PolicySimulation: React.FC = () => {
 
   const fetchPolicies = async () => {
     try {
-      const response = await api.get('/v1/policies') as Policy[];
-      setPolicies(response);
+      const [dbPolicies, corePolicies] = await Promise.all([
+        api.get<Policy[]>('/v1/policies'),
+        api.get<unknown[]>('/v1/policies/core')
+      ]);
+
+      const formattedCorePolicies = corePolicies.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        scope: 'ORG',
+        target_id: 'ORG',
+        latest_version: {
+          version_number: 1,
+          createdAt: new Date().toISOString(),
+          rules_logic: {
+             type: "core_enforcement",
+             severity: p.severity,
+             category: p.category,
+             remediation: p.remediation
+          }
+        }
+      }));
+
+      // Merge, prioritizing DB policies if they override core ones (by name or ID if shared)
+      // For now, just append core policies that aren't in DB (by name)
+      const uniquePolicies = [...dbPolicies];
+      formattedCorePolicies.forEach(cp => {
+        if (!uniquePolicies.some(dbp => dbp.name === cp.name)) {
+          uniquePolicies.push(cp as Policy);
+        }
+      });
+
+      setPolicies(uniquePolicies);
     } catch (error) {
       logger.error('Failed to fetch policies:', error);
     }
@@ -799,23 +837,27 @@ export const PolicySimulation: React.FC = () => {
                         ))}
                       </ul>
                     </div>
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground cursor-default rounded px-2 py-1.5 -mx-2 hover:text-primary hover:bg-muted/50 transition-colors">
+                    
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer rounded px-2 py-1.5 -mx-2 hover:text-primary hover:bg-muted/50 transition-colors">
                             <FileJson className="h-3.5 w-3.5 shrink-0" />
                             <span>View policy JSON</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" align="start" className="max-w-[90vw] sm:max-w-md max-h-[60vh] overflow-auto p-3" sideOffset={8}>
-                          <pre className="text-[11px] font-mono whitespace-pre-wrap break-words text-left">
-                            {typeof selectedPolicy.latest_version.rules_logic === 'object'
-                              ? JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)
-                              : String(selectedPolicy.latest_version.rules_logic)}
-                          </pre>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-96" align="start">
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold">Policy Configuration</h4>
+                          <ScrollArea className="h-[300px] w-full rounded-md border bg-slate-950 p-2">
+                             <pre className="text-xs text-slate-50 font-mono whitespace-pre-wrap break-words">
+                               {typeof selectedPolicy.latest_version.rules_logic === 'object'
+                                 ? JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)
+                                 : String(selectedPolicy.latest_version.rules_logic)}
+                             </pre>
+                          </ScrollArea>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   </>
                 )}
               </div>

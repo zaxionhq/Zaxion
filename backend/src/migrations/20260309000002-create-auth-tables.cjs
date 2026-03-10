@@ -3,8 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1. Create Repositories Table
-    await queryInterface.createTable('repositories', {
+    // 1. Create Repositories Table (only if it does not already exist)
+    const [repoTableExists] = await queryInterface.sequelize.query(
+      "SELECT to_regclass('repositories') as regclass;"
+    );
+    if (!repoTableExists[0].regclass) {
+      await queryInterface.createTable('repositories', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -37,10 +41,15 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
-    });
+      });
+    }
 
-    // 2. Create RepositoryMaintainerMappings Table
-    await queryInterface.createTable('repository_maintainer_mappings', {
+    // 2. Create RepositoryMaintainerMappings Table (guarded for existing schemas)
+    const [mappingTableExists] = await queryInterface.sequelize.query(
+      "SELECT to_regclass('repository_maintainer_mappings') as regclass;"
+    );
+    if (!mappingTableExists[0].regclass) {
+      await queryInterface.createTable('repository_maintainer_mappings', {
       user_id: {
         type: Sequelize.UUID,
         allowNull: false,
@@ -75,14 +84,15 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
-    });
+      });
 
-    // Add composite primary key for mappings
-    await queryInterface.addConstraint('repository_maintainer_mappings', {
-      fields: ['user_id', 'repository_id'],
-      type: 'primary key',
-      name: 'pk_repository_maintainer_mappings'
-    });
+      // Add composite primary key for mappings
+      await queryInterface.addConstraint('repository_maintainer_mappings', {
+        fields: ['user_id', 'repository_id'],
+        type: 'primary key',
+        name: 'pk_repository_maintainer_mappings'
+      });
+    }
 
     // 3. Create RefreshTokens Table (if not exists - check existing migrations)
     // There is already a RefreshToken model/migration mentioned in file list: 20250902184440-create-refresh-tokens.cjs
@@ -92,60 +102,65 @@ module.exports = {
     // Let's check if we need to add columns to existing table.
     // For now, I'll assume the existing one is sufficient or I'll check it later.
     
-    // 4. Create AuditEvents Table
-    await queryInterface.createTable('audit_events', {
-      id: {
-        type: Sequelize.UUID,
-        defaultValue: Sequelize.UUIDV4,
-        primaryKey: true,
-      },
-      event_type: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      actor_id: {
-        type: Sequelize.UUID,
-        allowNull: true, // System events might not have actor
-        references: {
-          model: 'users',
-          key: 'id'
+    // 4. Create AuditEvents Table (if it does not already exist)
+    const [auditTableExists] = await queryInterface.sequelize.query(
+      "SELECT to_regclass('audit_events') as regclass;"
+    );
+    if (!auditTableExists[0].regclass) {
+      await queryInterface.createTable('audit_events', {
+        id: {
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
+          primaryKey: true,
         },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
-      target_id: {
-        type: Sequelize.STRING, // Can be user UUID, repo UUID, or other resource ID
-        allowNull: true,
-      },
-      action: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      metadata: {
-        type: Sequelize.JSON,
-        allowNull: true,
-      },
-      timestamp: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      },
-      created_at: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      },
-      updated_at: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-      }
-    });
+        event_type: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
+        actor_id: {
+          type: Sequelize.UUID,
+          allowNull: true, // System events might not have actor
+          references: {
+            model: 'users',
+            key: 'id'
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'SET NULL'
+        },
+        target_id: {
+          type: Sequelize.STRING, // Can be user UUID, repo UUID, or other resource ID
+          allowNull: true,
+        },
+        action: {
+          type: Sequelize.STRING,
+          allowNull: false,
+        },
+        metadata: {
+          type: Sequelize.JSON,
+          allowNull: true,
+        },
+        timestamp: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        },
+        created_at: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        },
+        updated_at: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        }
+      });
 
-    // Add indexes
-    await queryInterface.addIndex('audit_events', ['event_type']);
-    await queryInterface.addIndex('audit_events', ['actor_id']);
-    await queryInterface.addIndex('audit_events', ['timestamp']);
+      // Add indexes
+      await queryInterface.addIndex('audit_events', ['event_type']);
+      await queryInterface.addIndex('audit_events', ['actor_id']);
+      await queryInterface.addIndex('audit_events', ['timestamp']);
+    }
   },
 
   async down(queryInterface, Sequelize) {

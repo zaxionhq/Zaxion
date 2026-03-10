@@ -19,6 +19,8 @@
     "@google/generative-ai": "^0.24.1",
     "@octokit/auth-oauth-app": "^9.0.1",
     "@octokit/rest": "^22.0.0",
+    "@sentry/node": "^10.43.0",
+    "@sentry/tracing": "^7.120.4",
     "adm-zip": "^0.5.16",
     "axios": "^1.13.6",
     "bullmq": "^5.66.2",

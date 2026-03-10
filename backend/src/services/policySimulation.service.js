@@ -36,9 +36,17 @@ export class PolicySimulationService {
       target_repo_full_name,
       target_branch,
       days_back,
+      is_sandbox = false // Default to false, but should be enforced by controller
     } = payload;
 
-    logger.info({ policy_id, sample_strategy, sample_size }, "PolicySimulation: Starting simulation");
+    // SANDBOX ENFORCEMENT
+    if (!is_sandbox && process.env.NODE_ENV === 'production') {
+       logger.warn("Attempted to run simulation in production without sandbox flag.");
+       // In a real scenario, we might redirect to a read-only replica here.
+       // For now, we log it.
+    }
+
+    logger.info({ policy_id, sample_strategy, sample_size, is_sandbox }, "PolicySimulation: Starting simulation");
 
     // 1. Collect Snapshots (Pillar 3.4.A)
     const snapshots = await this._collectSnapshots(sample_strategy, sample_size, {
@@ -49,11 +57,52 @@ export class PolicySimulationService {
       days_back,
     });
 
-    // 2. Generate Simulation Hash (Invariant 3)
-    const simulation_hash = this._calculateSimHash(draft_rules, snapshots.map(s => s.id));
+    // 2. Fetch Rules (if not provided as draft)
+    let rules = draft_rules;
+    if (!rules) {
+      // Check if it's a Core Policy ID (e.g. SEC-001) or a DB UUID
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
+      
+      if (isUuid) {
+        const policy = await this.db.Policy.findByPk(policy_id);
+        if (!policy) throw new Error("Policy not found");
+        
+        const version = await this.db.PolicyVersion.findOne({
+          where: { policy_id, is_current: true }
+        });
+        if (!version) throw new Error("No active version found for policy");
+        rules = version.rules_logic;
+      } else {
+        // It's a Core Policy ID, fetch from static definition
+        // We need to import CORE_POLICIES here, or pass it in. 
+        // Ideally, we'd have a unified PolicyService that abstracts this.
+        // For now, let's assume we can get it from a helper or just return a default rule for the simulation test.
+        // In a real app, import { CORE_POLICIES } from '../policies/corePolicies.js';
+        const { CORE_POLICIES } = await import('../policies/corePolicies.js');
+        const corePolicy = CORE_POLICIES.find(p => p.id === policy_id);
+        if (!corePolicy) throw new Error(`Core Policy ${policy_id} not found`);
+        
+        // Map Core Policy to a rule structure the engine understands
+        rules = {
+           type: "core_enforcement",
+           id: corePolicy.id,
+           severity: corePolicy.severity
+        };
+      }
+    }
+
+    // 3. Generate Simulation Hash (Invariant 3)
+    const simulation_hash = this._calculateSimHash(rules, snapshots.map(s => s.id));
 
     // If no snapshots, return a completed simulation with empty summary (no 500)
     if (snapshots.length === 0) {
+      // For Core Policies, we might not want to create a DB record if we can't link it to a UUID policy_id
+      // But let's see. If policy_id is 'SEC-001', PostgreSQL UUID column will fail.
+      // So we must handle simulation creation differently for Core Policies or ensure schema supports it.
+      // The schema likely has policy_id as UUID.
+      
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
+      
       const emptyResults = {
         summary: {
           total_snapshots: 0,
@@ -65,10 +114,23 @@ export class PolicySimulationService {
         },
         impacted_prs: [],
       };
+
+      if (!isUuid) {
+         // Return an ephemeral simulation result without saving to DB
+         return {
+           id: `sim-core-${Date.now()}`,
+           policy_id,
+           status: 'COMPLETED',
+           created_by,
+           results: emptyResults,
+           createdAt: new Date().toISOString()
+         };
+      }
+
       const simulation = await this.db.PolicySimulation.create({
         simulation_hash,
         policy_id,
-        draft_rules,
+        draft_rules: rules, // Use the resolved rules
         engine_version: this.ENGINE_VERSION,
         sample_strategy,
         sample_size: 0,
@@ -80,31 +142,59 @@ export class PolicySimulationService {
     }
 
     // 3. Create Simulation Record
-    const simulation = await this.db.PolicySimulation.create({
-      simulation_hash,
-      policy_id,
-      draft_rules,
-      engine_version: this.ENGINE_VERSION,
-      sample_strategy,
-      sample_size: snapshots.length,
-      status: 'RUNNING',
-      created_by
-    });
+    let simulation;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
+
+    if (isUuid) {
+      simulation = await this.db.PolicySimulation.create({
+        simulation_hash,
+        policy_id,
+        draft_rules: rules,
+        engine_version: this.ENGINE_VERSION,
+        sample_strategy,
+        sample_size: snapshots.length,
+        status: 'RUNNING',
+        created_by
+      });
+    } else {
+       // Ephemeral simulation object for Core Policies
+       simulation = {
+         id: `sim-core-${Date.now()}`,
+         policy_id,
+         draft_rules: rules,
+         engine_version: this.ENGINE_VERSION,
+         sample_strategy,
+         sample_size: snapshots.length,
+         status: 'RUNNING',
+         created_by,
+         update: async (data) => { Object.assign(simulation, data); return simulation; }, // Mock update
+         toJSON: () => simulation
+       };
+    }
 
     try {
       // 4. Execute Simulation (The Snapshot Replayer)
-      const results = await this._executeSimulation(simulation, snapshots, draft_rules);
+      const results = await this._executeSimulation(simulation, snapshots, rules);
 
       // 5. Update Record
-      await simulation.update({
-        status: 'COMPLETED',
-        results
-      });
+      if (isUuid) {
+        await simulation.update({
+          status: 'COMPLETED',
+          results
+        });
+      } else {
+        simulation.status = 'COMPLETED';
+        simulation.results = results;
+      }
 
-      return simulation.toJSON();
+      return simulation.toJSON ? simulation.toJSON() : simulation;
     } catch (error) {
       logger.error({ error, simulation_id: simulation.id }, "PolicySimulation: Simulation failed");
-      await simulation.update({ status: 'FAILED' });
+      if (isUuid) {
+        await simulation.update({ status: 'FAILED' });
+      } else {
+        simulation.status = 'FAILED';
+      }
       throw error;
     }
   }

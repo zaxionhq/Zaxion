@@ -28,8 +28,8 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
 
   // Form State
   const [name, setName] = useState('');
-  const [scope, setScope] = useState<'GLOBAL' | 'REPO' | 'BRANCH'>('GLOBAL');
-  const [targetId, setTargetId] = useState('GLOBAL');
+  const [scope, setScope] = useState<'ORG' | 'REPO' | 'BRANCH'>('ORG');
+  const [targetId, setTargetId] = useState('ORG');
   const [owningRole, setOwningRole] = useState('admin'); // Default role
   const [description, setDescription] = useState(''); // Plain English description
   const [rulesLogic, setRulesLogic] = useState('{\n  "type": "mandatory_review",\n  "count": 1\n}');
@@ -41,8 +41,8 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     setStep('select');
     setMode(null);
     setName('');
-    setScope('GLOBAL');
-    setTargetId('GLOBAL');
+    setScope('ORG');
+    setTargetId('ORG');
     setDescription('');
     setRulesLogic('{\n  "type": "mandatory_review",\n  "count": 1\n}');
   };
@@ -206,10 +206,10 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
               </div>
               <div className="space-y-2">
                 <Label>Scope</Label>
-                <Select value={scope} onValueChange={(val: string) => setScope(val as "GLOBAL" | "REPO" | "BRANCH")}>
+                <Select value={scope} onValueChange={(val: string) => setScope(val as "ORG" | "REPO" | "BRANCH")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GLOBAL">Global (Org-wide)</SelectItem>
+                    <SelectItem value="ORG">Global (Org-wide)</SelectItem>
                     <SelectItem value="REPO">Specific Repository</SelectItem>
                     <SelectItem value="BRANCH">Specific Branch</SelectItem>
                   </SelectContent>
@@ -217,7 +217,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
               </div>
             </div>
 
-            {scope !== 'GLOBAL' && (
+            {scope !== 'ORG' && (
               <div className="space-y-2">
                 <Label>{scope === 'REPO' ? 'Repository Name' : 'Branch Name (format: repo/branch)'}</Label>
                 <Input value={targetId} onChange={(e) => setTargetId(e.target.value)} placeholder={scope === 'REPO' ? "owner/repo" : "owner/repo/branch"} />

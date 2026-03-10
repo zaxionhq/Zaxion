@@ -16,12 +16,16 @@ import crypto from "crypto"; // Import crypto for random UUID generation
 import { Registry, Counter, Histogram } from 'prom-client';
 import { register, httpRequestCounter, httpRequestDurationSeconds } from './utils/metrics.js';
 import { generateCSRFToken, verifyCSRFToken } from './middleware/csrf.js';
+import { initMonitoring, monitoringErrorHandler } from './utils/monitoring.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default function createApp(db) {
   const app = express();
+
+  // Initialize Monitoring (Sentry)
+  initMonitoring(app);
 
   // Trust proxy - Essential for Railway/Vercel to get the real user IP
   // This must be set BEFORE any rate limiters are applied
@@ -177,6 +181,9 @@ export default function createApp(db) {
 
   // Catch-all 404
   app.use((req, res) => res.status(404).json({ error: "Not Found", path: req.originalUrl }));
+
+  // Sentry Error Handler (must be before any other error middleware)
+  app.use(monitoringErrorHandler());
 
   // Central error handler with standardized envelope
   app.use((err, _req, res, _next) => {

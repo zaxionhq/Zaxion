@@ -29,6 +29,14 @@ export default function policyRoutesFactory(db) {
     policyController.listPolicies
   );
 
+  // Core Policies
+  router.get(
+    '/core',
+    authenticateJWT,
+    authorize(['user', 'admin', 'maintainer']),
+    policyController.listCorePolicies
+  );
+
   router.get(
     '/:id',
     authenticateJWT,

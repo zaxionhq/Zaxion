@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle2, AlertCircle, Loader2, Plus, Filter, Search, ShieldCheck, Clock, User, GitBranch } from 'lucide-react';
 import { format } from 'date-fns';
 import { CreatePolicyModal } from '@/components/governance/CreatePolicyModal';
@@ -19,7 +21,7 @@ import { DashboardLayout } from '@/components/governance/DashboardLayout';
 interface Policy {
   id: string;
   name: string;
-  scope: 'GLOBAL' | 'REPO' | 'BRANCH';
+  scope: 'ORG' | 'REPO' | 'BRANCH';
   target_id: string;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   is_enabled: boolean;
@@ -44,8 +46,8 @@ export default function GovernancePolicyLibrary() {
   
   // Enable Modal State
   const [isEnableModalOpen, setIsEnableModalOpen] = useState(false);
-  const [enableScope, setEnableScope] = useState<'GLOBAL' | 'REPO' | 'BRANCH'>('GLOBAL');
-  const [enableTargetId, setEnableTargetId] = useState('GLOBAL');
+  const [enableScope, setEnableScope] = useState<'ORG' | 'REPO' | 'BRANCH'>('ORG');
+  const [enableTargetId, setEnableTargetId] = useState('ORG');
   const [policyToEnable, setPolicyToEnable] = useState<Policy | null>(null);
 
   // Diff Modal State
@@ -54,11 +56,35 @@ export default function GovernancePolicyLibrary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    staleTime: Infinity,
+    queryKey: ['user'],
+    queryFn: () => api.get<unknown>('/v1/auth/me'),
+  });
+
+  // TARGET POLICY STATE (Renamed to avoid conflicts)
+  const [simTargetPolicy, setSimTargetPolicy] = useState<Policy | null>(null);
+
   const { data: policies = [], isLoading } = useQuery<Policy[], Error>({
     queryKey: ['policies'],
     queryFn: async () => {
       const response = await api.get<Policy[]>('/v1/policies');
       return response;
+    }
+  });
+
+  const { data: corePolicies = [] } = useQuery<Policy[], Error>({
+    queryKey: ['core-policies'],
+    staleTime: Infinity,
+    queryFn: async () => {
+      const response = await api.get<unknown[]>('/v1/policies/core');
+      return response.map((p: any) => ({
+        ...p,
+        display_description: p.description,
+        createdAt: new Date().toISOString(),
+        id: p.id || `core-${p.name}`,
+        is_enabled: false
+      })) as Policy[];
     }
   });
 
@@ -124,13 +150,48 @@ export default function GovernancePolicyLibrary() {
     }
   });
 
+  const simulateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await api.post(`/v1/policies/${id}/simulate`, {
+        sample_strategy: 'RANDOM',
+        sample_size: 10,
+        is_sandbox: true
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Simulation Started", description: "Running simulation in sandbox mode." });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Simulation Failed", 
+        description: error.message || "Could not start simulation.", 
+        variant: "destructive" 
+      });
+    }
+  });
+
   // Filter Logic
   const filteredPolicies = policies.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     p.display_description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const zaxionPolicies = filteredPolicies.filter(p => p.owning_role === 'system' || p.name.includes('Zaxion Core'));
+  const filteredCorePolicies = corePolicies.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) || 
+    p.display_description?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Combine DB policies and Core Templates (avoid duplicates by name if needed, but for now just show both)
+  // Actually, if a core policy is enabled, it should be in `policies`. 
+  // We should show `corePolicies` only if they are NOT in `policies`? 
+  // Or just show them as "Templates" available to be enabled.
+  // The requirement is "display all available... descriptions".
+  
+  const zaxionPolicies = [
+    ...filteredPolicies.filter(p => p.owning_role === 'system' || p.name.includes('Zaxion Core')),
+    ...filteredCorePolicies.filter(cp => !policies.some(p => p.name === cp.name))
+  ];
+  
   const adminPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role === 'admin' && p.status !== 'PENDING_APPROVAL');
   const userPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role !== 'admin' && p.status !== 'PENDING_APPROVAL');
   const pendingPolicies = filteredPolicies.filter(p => p.status === 'PENDING_APPROVAL');
@@ -204,9 +265,9 @@ export default function GovernancePolicyLibrary() {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
-                    {policy.scope === 'GLOBAL' ? 'ORG-WIDE' : policy.scope}
+                    {policy.scope}
                   </Badge>
-                  {policy.scope !== 'GLOBAL' && <div className="text-xs text-muted-foreground mt-1">{policy.target_id}</div>}
+                  {policy.scope !== 'ORG' && <div className="text-xs text-muted-foreground mt-1">{policy.target_id}</div>}
                 </TableCell>
                 <TableCell>
                   {isDeleted ? (
@@ -260,6 +321,18 @@ export default function GovernancePolicyLibrary() {
                         >
                           {policy.is_enabled ? "Update Scope" : "Enable"}
                         </Button>
+                        
+                        {(user?.role === 'admin' || user?.role === 'maintainer') && (
+                          <Button 
+                            size="sm" 
+                            variant="secondary"
+                            onClick={() => simulateMutation.mutate(policy.id)}
+                            disabled={simulateMutation.isPending}
+                          >
+                            {simulateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simulate"}
+                          </Button>
+                        )}
+
                         {policy.owning_role !== 'system' && !policy.name.includes('Zaxion Core') && (
                           <Button 
                             size="sm" 
@@ -339,15 +412,65 @@ export default function GovernancePolicyLibrary() {
           <Accordion type="multiple" defaultValue={["zaxion", "admin", "user"]} className="w-full space-y-4">
             
             <AccordionItem value="zaxion" className="border rounded-lg px-4 bg-card">
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex items-center gap-2">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-2 w-full">
                   <ShieldCheck className="h-5 w-5 text-blue-600" />
-                  <span className="text-lg font-semibold">Zaxion Policy Library</span>
-                  <Badge variant="secondary" className="ml-2">{zaxionPolicies.length}</Badge>
+                  <div className="flex flex-col items-start text-left">
+                     <span className="text-lg font-semibold">Zaxion Core Policy Library (V1)</span>
+                     <span className="text-xs text-muted-foreground">30 Enterprise-grade policies ready for simulation and enforcement.</span>
+                  </div>
+                  <Badge variant="secondary" className="ml-auto mr-4">{zaxionPolicies.length} Policies</Badge>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pt-2">
-                <PolicyTable data={zaxionPolicies} showActions={true} />
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center bg-muted/30 p-3 rounded-md border">
+                      <div className="text-sm">
+                        {simTargetPolicy ? (
+                          <span>Target Policy: <strong>{simTargetPolicy.name}</strong></span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Select a policy below to simulate...</span>
+                        )}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        disabled={!simTargetPolicy || simulateMutation.isPending || !(user?.role === 'admin' || user?.role === 'maintainer')}
+                        onClick={() => simTargetPolicy && simulateMutation.mutate(simTargetPolicy.id)}
+                      >
+                         {simulateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                         Run Simulation (Sandbox)
+                      </Button>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2">
+                     {zaxionPolicies.map(policy => (
+                       <Card 
+                         key={policy.id} 
+                         className={cn(
+                           "cursor-pointer transition-all hover:border-primary", 
+                           simTargetPolicy?.id === policy.id ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:bg-muted/50"
+                         )}
+                         onClick={() => setSimTargetPolicy(policy)}
+                       >
+                         <CardHeader className="pb-2">
+                           <div className="flex justify-between items-start">
+                             <Badge variant="outline">{policy.id.split('-')[0]}</Badge>
+                             <Badge className={cn(
+                               policy.status === 'APPROVED' ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                             )}>V1</Badge>
+                           </div>
+                           <CardTitle className="text-base mt-2">{policy.name}</CardTitle>
+                         </CardHeader>
+                         <CardContent>
+                           <p className="text-sm text-muted-foreground leading-relaxed">
+                             {policy.display_description}
+                           </p>
+                         </CardContent>
+                       </Card>
+                     ))}
+                   </div>
+                </div>
               </AccordionContent>
             </AccordionItem>
 
@@ -448,16 +571,16 @@ export default function GovernancePolicyLibrary() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Enforcement Scope</label>
-                <Select value={enableScope} onValueChange={(val: 'GLOBAL' | 'REPO' | 'BRANCH') => setEnableScope(val)}>
+                <Select value={enableScope} onValueChange={(val: 'ORG' | 'REPO' | 'BRANCH') => setEnableScope(val)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GLOBAL">Global (Organization-wide)</SelectItem>
+                    <SelectItem value="ORG">Global (Organization-wide)</SelectItem>
                     <SelectItem value="REPO">Specific Repository</SelectItem>
                     <SelectItem value="BRANCH">Specific Branch</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {enableScope !== 'GLOBAL' && (
+              {enableScope !== 'ORG' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Target Identifier</label>
                   <Input 

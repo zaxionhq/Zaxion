@@ -1,29 +1,20 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import GovernancePolicyLibrary from '../pages/GovernancePolicyLibrary';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TooltipProvider } from '../components/ui/tooltip';
 import { api } from '@/lib/api';
+import { Toaster } from '@/components/ui/toaster';
 
 // Mock dependencies
-vi.mock('@/lib/api', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    delete: vi.fn(),
-  },
+vi.mock('@/lib/api');
+vi.mock('@/components/governance/CreatePolicyModal', () => ({
+  CreatePolicyModal: ({ open }: { open: boolean }) => open ? <div data-testid="create-modal">Modal</div> : null
 }));
-
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: vi.fn() }),
-}));
-
-// Mock DashboardLayout to render children directly
 vi.mock('@/components/governance/DashboardLayout', () => ({
-  DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
-const createTestQueryClient = () => new QueryClient({
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
@@ -31,68 +22,110 @@ const createTestQueryClient = () => new QueryClient({
   },
 });
 
-const mockPolicies = [
-  { id: '1', name: 'Policy 1', scope: 'GLOBAL', target_id: 'GLOBAL', status: 'APPROVED', is_enabled: true, created_by: { id: 'u1', username: 'admin', role: 'admin' }, createdAt: '2023-01-01', owning_role: 'system' },
-  { id: '2', name: 'Policy 2', scope: 'REPO', target_id: 'repo/1', status: 'DRAFT', is_enabled: false, created_by: { id: 'u2', username: 'user', role: 'user' }, createdAt: '2023-01-02', owning_role: 'system' },
-];
+describe('GovernancePolicyLibrary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-describe('GovernancePolicyLibrary Select All', () => {
-    it('selects all rows when "Select All" is checked', async () => {
-      vi.mocked(api.get).mockResolvedValue(mockPolicies);
-  
-      render(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <TooltipProvider>
-          <GovernancePolicyLibrary />
-        </TooltipProvider>
+  it('renders all policies including core policies', async () => {
+    // Mock API responses
+    (api.get as unknown as { mockImplementation: (fn: (url: string) => Promise<unknown>) => void }).mockImplementation((url: string) => {
+      if (url === '/v1/policies') {
+        return Promise.resolve([]);
+      }
+      if (url === '/v1/policies/core') {
+        return Promise.resolve(Array(30).fill(null).map((_, i) => ({
+          id: `core-${i}`,
+          name: `Core Policy ${i + 1}`,
+          description: `Description ${i + 1}`,
+          scope: 'ORG',
+          status: 'APPROVED',
+          owning_role: 'system'
+        })));
+      }
+      if (url === '/v1/policies?deleted=true') return Promise.resolve([]);
+      if (url === '/v1/auth/me') return Promise.resolve({ id: 'user-1', role: 'admin' });
+      return Promise.reject(new Error('Not found'));
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GovernancePolicyLibrary />
+        <Toaster />
       </QueryClientProvider>
     );
 
-    // Wait for data to load
-    await waitFor(() => expect(screen.getByText('Policy 1')).toBeInTheDocument());
-
-    // Find the first "Select All" checkbox (in the first table, e.g., Zaxion Library)
-    // Note: The page renders multiple tables. We should target one.
-    // For simplicity, let's find all checkboxes.
-    const checkboxes = screen.getAllByRole('checkbox');
-    const selectAllCheckbox = checkboxes[0]; // Assuming first one is header checkbox
-
-    fireEvent.click(selectAllCheckbox);
-
-    // Check if all row checkboxes are checked
-    // Note: This is a simplified check. In a real scenario, we'd be more specific.
-    // However, since we share state `selectedPolicies` across tables, clicking one might select policies in that table.
-    // The implementation shares `selectedPolicies` state globally for the page.
-    
-    // Let's verify if 'Enable Policies' button appears with correct count
+    // Wait for core policies to load
     await waitFor(() => {
-      expect(screen.getByText(/Enable Policies \(2\)/)).toBeInTheDocument();
+      expect(screen.getByText('Core Policy 1')).toBeInTheDocument();
+      expect(screen.getByText('Core Policy 30')).toBeInTheDocument();
     });
   });
 
-  it('deselects all rows when "Select All" is unchecked', async () => {
-      vi.mocked(api.get).mockResolvedValue(mockPolicies);
-  
-      render(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <TooltipProvider>
-          <GovernancePolicyLibrary />
-        </TooltipProvider>
+  it('shows Simulate button for admin users', async () => {
+    (api.get as unknown as { mockImplementation: (fn: (url: string) => Promise<unknown>) => void }).mockImplementation((url: string) => {
+      if (url === '/v1/policies') return Promise.resolve([]);
+      if (url === '/v1/policies/core') {
+        return Promise.resolve([{
+          id: 'core-1',
+          name: 'Core Policy 1',
+          description: 'Desc',
+          scope: 'ORG',
+          status: 'APPROVED',
+          owning_role: 'system'
+        }]);
+      }
+      if (url === '/v1/policies?deleted=true') return Promise.resolve([]);
+      if (url === '/v1/auth/me') return Promise.resolve({ id: 'user-1', role: 'admin' });
+      return Promise.reject(new Error('Not found'));
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GovernancePolicyLibrary />
       </QueryClientProvider>
     );
 
-    await waitFor(() => expect(screen.getByText('Policy 1')).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByText('Simulate')).toBeInTheDocument();
+    });
+  });
 
-    // Select All
-    const checkboxes = screen.getAllByRole('checkbox');
-    const selectAllCheckbox = checkboxes[0];
-    fireEvent.click(selectAllCheckbox);
-    await waitFor(() => expect(screen.getByText(/Enable Policies \(2\)/)).toBeInTheDocument());
+  it('triggers simulation when Simulate button is clicked', async () => {
+    (api.get as unknown as { mockImplementation: (fn: (url: string) => Promise<unknown>) => void }).mockImplementation((url: string) => {
+      if (url === '/v1/policies') return Promise.resolve([]);
+      if (url === '/v1/policies/core') {
+        return Promise.resolve([{
+          id: 'core-1',
+          name: 'Core Policy 1',
+          description: 'Desc',
+          scope: 'ORG',
+          status: 'APPROVED',
+          owning_role: 'system'
+        }]);
+      }
+      if (url === '/v1/policies?deleted=true') return Promise.resolve([]);
+      if (url === '/v1/auth/me') return Promise.resolve({ id: 'user-1', role: 'admin' });
+      return Promise.reject(new Error('Not found'));
+    });
 
-    // Deselect All
-    const updatedCheckboxes = screen.getAllByRole('checkbox');
-    const updatedSelectAllCheckbox = updatedCheckboxes[0];
-    fireEvent.click(updatedSelectAllCheckbox);
-    await waitFor(() => expect(screen.queryByText(/Enable Policies/)).not.toBeInTheDocument());
+    (api.post as unknown as { mockResolvedValue: (val: unknown) => void }).mockResolvedValue({ id: 'sim-1' });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GovernancePolicyLibrary />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      const simulateBtn = screen.getByText('Simulate');
+      fireEvent.click(simulateBtn);
+    });
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/v1/policies/core-1/simulate', expect.objectContaining({
+        is_sandbox: true
+      }));
+    });
   });
 });
