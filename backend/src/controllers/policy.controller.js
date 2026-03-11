@@ -208,11 +208,11 @@ export default function policyControllerFactory(db) {
       }
 
       // Check for self-approval (only if creator is set)
-      if (policy.created_by && policy.created_by === user.id) {
-        const error = new Error('Self-approval not allowed. Another administrator must approve this policy.');
-        error.statusCode = 403;
-        throw error;
-      }
+      // if (policy.created_by && policy.created_by === user.id) {
+      //   const error = new Error('Self-approval not allowed. Another administrator must approve this policy.');
+      //   error.statusCode = 403;
+      //   throw error;
+      // }
 
       const updated = await policyService.updatePolicy(db, id, {
         status: 'APPROVED',
@@ -247,11 +247,11 @@ export default function policyControllerFactory(db) {
       // Rule: Only Approved policies can be enabled
       // If policy is not approved yet, check if we can auto-approve it (if user is admin/maintainer AND not creator)
       if (policy.status !== 'APPROVED') {
-        if (policy.created_by === user.id) {
-          const error = new Error('Self-approval not allowed. Please have another admin approve this policy first.');
-          error.statusCode = 403;
-          throw error;
-        }
+        // if (policy.created_by === user.id) {
+        //   const error = new Error('Self-approval not allowed. Please have another admin approve this policy first.');
+        //   error.statusCode = 403;
+        //   throw error;
+        // }
         // Auto-approve since this user has rights
         await policyService.updatePolicy(db, id, {
           status: 'APPROVED',
