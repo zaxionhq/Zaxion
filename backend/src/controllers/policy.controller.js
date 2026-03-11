@@ -102,7 +102,26 @@ export default function policyControllerFactory(db) {
       }
 
       // Ensure no unexpected fields that could be used for injection
-      const allowedKeys = ['type', 'max_files', 'min_tests', 'min_coverage_ratio', 'allowed_extensions', 'pattern', 'security_paths', 'count'];
+      const allowedKeys = [
+        'type', 
+        'max_files', 
+        'min_tests', 
+        'min_coverage_ratio', 
+        'allowed_extensions', 
+        'pattern', 
+        'security_paths', 
+        'count',
+        'min_files',
+        'path',
+        'paths',
+        'exclude_paths',
+        'file_types',
+        'severity',
+        'message',
+        'min_approvals',
+        'required_checks',
+        'context'
+      ];
       const keys = Object.keys(parsed);
       const invalidKeys = keys.filter(k => !allowedKeys.includes(k));
       

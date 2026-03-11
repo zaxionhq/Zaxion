@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, FileJson, Type, Upload, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Loader2, FileJson, Type, Upload, CheckCircle2, AlertCircle, X, Check, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import Editor from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+interface Repository {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: { login: string };
+}
+
+interface Branch {
+  name: string;
+}
 
 interface CreatePolicyModalProps {
   open: boolean;
@@ -30,9 +43,18 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   const [name, setName] = useState('');
   const [scope, setScope] = useState<'ORG' | 'REPO' | 'BRANCH'>('ORG');
   const [targetId, setTargetId] = useState('ORG');
+  const [branchName, setBranchName] = useState(''); // Separate state for branch
   const [owningRole, setOwningRole] = useState('admin'); // Default role
   const [description, setDescription] = useState(''); // Plain English description
   const [rulesLogic, setRulesLogic] = useState('{\n  "type": "mandatory_review",\n  "count": 1\n}');
+
+  // Dropdown Data
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [isRepoOpen, setIsRepoOpen] = useState(false);
+  const [isBranchOpen, setIsBranchOpen] = useState(false);
 
   // Drag & Drop
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,9 +65,50 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     setName('');
     setScope('ORG');
     setTargetId('ORG');
+    setBranchName('');
     setDescription('');
     setRulesLogic('{\n  "type": "mandatory_review",\n  "count": 1\n}');
   };
+
+  const fetchRepositories = async () => {
+    setIsLoadingRepos(true);
+    try {
+      const response = await api.get('/v1/github/repos') as Repository[];
+      setRepositories(response);
+    } catch (error) {
+      console.error('Failed to fetch repositories:', error);
+      toast({ title: "Fetch Failed", description: "Could not load repositories.", variant: "destructive" });
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  };
+
+  const fetchBranches = async (repoFullName: string) => {
+    if (!repoFullName) return;
+    const [owner, repo] = repoFullName.split('/');
+    setIsLoadingBranches(true);
+    try {
+      const response = await api.get(`/v1/github/repos/${owner}/${repo}/branches`) as Branch[];
+      setBranches(response);
+    } catch (error) {
+      console.error('Failed to fetch branches:', error);
+      toast({ title: "Fetch Failed", description: "Could not load branches.", variant: "destructive" });
+    } finally {
+      setIsLoadingBranches(false);
+    }
+  };
+
+  useEffect(() => {
+    if (scope !== 'ORG' && step === 'configure') {
+      fetchRepositories();
+    }
+  }, [scope, step]);
+
+  useEffect(() => {
+    if (scope === 'BRANCH' && targetId && targetId !== 'ORG') {
+      fetchBranches(targetId);
+    }
+  }, [targetId, scope]);
 
   const handleModeSelect = (selectedMode: 'json' | 'english' | 'upload') => {
     setMode(selectedMode);
@@ -125,10 +188,12 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
 
     setIsCreating(true);
     try {
+      const finalTargetId = scope === 'BRANCH' ? `${targetId}:${branchName}` : targetId;
+
       await api.post('/v1/policies', {
         name,
         scope,
-        target_id: targetId,
+        target_id: finalTargetId,
         owning_role: owningRole,
         rules_logic: rulesLogic,
         description: description || name, // Plain English description stored here
@@ -218,9 +283,110 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
             </div>
 
             {scope !== 'ORG' && (
-              <div className="space-y-2">
-                <Label>{scope === 'REPO' ? 'Repository Name' : 'Branch Name (format: repo/branch)'}</Label>
-                <Input value={targetId} onChange={(e) => setTargetId(e.target.value)} placeholder={scope === 'REPO' ? "owner/repo" : "owner/repo/branch"} />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Repository</Label>
+                  <Popover open={isRepoOpen} onOpenChange={setIsRepoOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isRepoOpen}
+                        className="w-full justify-between"
+                        disabled={isLoadingRepos}
+                      >
+                        {targetId && targetId !== 'ORG' ? targetId : "Select repository..."}
+                        {isLoadingRepos ? (
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search repository..." />
+                        <CommandList>
+                          <CommandEmpty>No repository found.</CommandEmpty>
+                          <CommandGroup>
+                            {repositories.map((repo) => (
+                              <CommandItem
+                                key={repo.id}
+                                value={repo.full_name}
+                                onSelect={(currentValue) => {
+                                  setTargetId(currentValue === targetId ? "" : currentValue);
+                                  setIsRepoOpen(false);
+                                  // Reset branch if repo changes
+                                  setBranchName('');
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    targetId === repo.full_name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {repo.full_name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {scope === 'BRANCH' && (
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <Popover open={isBranchOpen} onOpenChange={setIsBranchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isBranchOpen}
+                          className="w-full justify-between"
+                          disabled={!targetId || isLoadingBranches}
+                        >
+                          {branchName || "Select branch..."}
+                          {isLoadingBranches ? (
+                            <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search branch..." />
+                          <CommandList>
+                            <CommandEmpty>No branch found.</CommandEmpty>
+                            <CommandGroup>
+                              {branches.map((branch) => (
+                                <CommandItem
+                                  key={branch.name}
+                                  value={branch.name}
+                                  onSelect={(currentValue) => {
+                                    setBranchName(currentValue === branchName ? "" : currentValue);
+                                    setIsBranchOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      branchName === branch.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {branch.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
             )}
 
