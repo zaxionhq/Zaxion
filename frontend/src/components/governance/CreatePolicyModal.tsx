@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +70,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     setRulesLogic('{\n  "type": "mandatory_review",\n  "count": 1\n}');
   };
 
-  const fetchRepositories = async () => {
+  const fetchRepositories = useCallback(async () => {
     setIsLoadingRepos(true);
     try {
       const response = await api.get('/v1/github/repos') as Repository[];
@@ -81,9 +81,9 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     } finally {
       setIsLoadingRepos(false);
     }
-  };
+  }, [toast]);
 
-  const fetchBranches = async (repoFullName: string) => {
+  const fetchBranches = useCallback(async (repoFullName: string) => {
     if (!repoFullName) return;
     const [owner, repo] = repoFullName.split('/');
     setIsLoadingBranches(true);
@@ -96,19 +96,19 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     } finally {
       setIsLoadingBranches(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (scope !== 'ORG' && step === 'configure') {
       fetchRepositories();
     }
-  }, [scope, step]);
+  }, [scope, step, fetchRepositories]);
 
   useEffect(() => {
     if (scope === 'BRANCH' && targetId && targetId !== 'ORG') {
       fetchBranches(targetId);
     }
-  }, [targetId, scope]);
+  }, [targetId, scope, fetchBranches]);
 
   const handleModeSelect = (selectedMode: 'json' | 'english' | 'upload') => {
     setMode(selectedMode);

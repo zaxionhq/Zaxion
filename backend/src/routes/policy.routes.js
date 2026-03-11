@@ -108,7 +108,7 @@ export default function policyRoutesFactory(db) {
   router.post(
     '/translate-natural-language',
     authenticateJWT,
-    authorize(adminOnlyRoles),
+    authorize(['user', 'admin', 'maintainer']), // Allow all authenticated users
     policyController.translateNaturalLanguage
   );
 
