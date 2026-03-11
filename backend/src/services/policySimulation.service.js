@@ -206,6 +206,7 @@ export class PolicySimulationService {
     let newlyBlocked = 0;
     let newlyPassed = 0;
     let consistent = 0;
+    let totalBlocked = 0;
     const impactedPrs = [];
     const perPrResults = [];
     const allViolations = [];
@@ -229,6 +230,10 @@ export class PolicySimulationService {
       const simResult = this.evaluationEngine.evaluate(snapshot, [mockAppliedPolicy]);
       const historicalResult = historicalDecision ? historicalDecision.result : 'UNKNOWN';
       const simVerdict = simResult.result;
+
+      if (simVerdict === 'BLOCK') {
+        totalBlocked++;
+      }
 
       const pullRequest = snapshot.data?.pull_request;
       const violations = simResult.structured_violations || [];
@@ -279,6 +284,7 @@ export class PolicySimulationService {
         consistent_count: consistent,
         newly_blocked_count: newlyBlocked,
         newly_passed_count: newlyPassed,
+        total_blocked_count: totalBlocked,
         fail_rate_change: `${failRateChange}%`,
         friction_index: parseFloat(failRateChange) > 10 ? 'HIGH' : 'LOW',
         total_violations: totalViolations,

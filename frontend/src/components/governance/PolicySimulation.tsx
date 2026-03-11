@@ -557,6 +557,7 @@ export const PolicySimulation: React.FC = () => {
           summary?: {
             total_snapshots?: number;
             newly_blocked_count?: number;
+            total_blocked_count?: number;
             fail_rate_change?: string;
             total_violations?: number;
             violations_by_severity?: { BLOCK?: number; WARN?: number; OBSERVE?: number };
@@ -589,7 +590,7 @@ export const PolicySimulation: React.FC = () => {
         id: data.id,
         status: data.status || 'PENDING',
         total_scanned: summary.total_snapshots ?? 0,
-        total_blocked: summary.newly_blocked_count ?? 0,
+        total_blocked: summary.total_blocked_count ?? summary.newly_blocked_count ?? 0,
         blast_radius: isNaN(br) ? 0 : br,
         created_at: data.createdAt || new Date().toISOString(),
         impacted_prs: data?.results?.impacted_prs,
