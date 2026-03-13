@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle2, AlertCircle, Loader2, Plus, Filter, Search, ShieldCheck, Clock, User, GitBranch } from 'lucide-react';
 import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CreatePolicyModal } from '@/components/governance/CreatePolicyModal';
 import { cn } from '@/lib/utils';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
@@ -217,9 +218,10 @@ export default function GovernancePolicyLibrary() {
     ...filteredCorePolicies.filter(cp => !policies.some(p => p.name === cp.name))
   ];
   
-  const adminPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role === 'admin' && p.status !== 'PENDING_APPROVAL');
-  const userPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role !== 'admin' && p.status !== 'PENDING_APPROVAL');
+  const adminPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role === 'admin' && p.status !== 'PENDING_APPROVAL' && p.status !== 'REJECTED');
+  const userPolicies = filteredPolicies.filter(p => p.owning_role !== 'system' && !p.name.includes('Zaxion Core') && p.created_by?.role !== 'admin' && p.status !== 'PENDING_APPROVAL' && p.status !== 'REJECTED');
   const pendingPolicies = filteredPolicies.filter(p => p.status === 'PENDING_APPROVAL');
+  const rejectedPolicies = filteredPolicies.filter(p => p.status === 'REJECTED');
 
   const handleSelectAll = (checked: boolean, policiesToSelect: Policy[]) => {
     if (checked) {
@@ -339,7 +341,7 @@ export default function GovernancePolicyLibrary() {
                         </Button>
                       </>
                     )}
-                    {!isDeleted && showActions && (
+                    {!isDeleted && showActions && policy.status !== 'REJECTED' && (
                       <>
                         <Button 
                           size="sm" 
@@ -410,12 +412,59 @@ export default function GovernancePolicyLibrary() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search policies..." className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Filter Policies</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Refine the policy list by status and type.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  {/* Add filter options here in future iterations */}
+                  <div className="text-sm text-muted-foreground italic">No additional filters available yet.</div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           {selectedPolicies.length > 0 && (
             <Button 
               variant="default" 
-              className="ml-auto bg-green-600 hover:bg-green-700"
+              className={cn(
+                "ml-auto",
+                selectedPolicies.some(id => 
+                  deletedPolicies.some(delPolicy => delPolicy.id === id) || 
+                  rejectedPolicies.some(rejPolicy => rejPolicy.id === id) 
+                )
+                  ? "bg-destructive hover:bg-destructive cursor-not-allowed opacity-50"
+                  : "bg-green-600 hover:bg-green-700"
+              )}
               onClick={() => {
+                const isDeletedSelected = selectedPolicies.some(id => deletedPolicies.some(delPolicy => delPolicy.id === id));
+                const isRejectedSelected = selectedPolicies.some(id => rejectedPolicies.some(rejPolicy => rejPolicy.id === id));
+                
+                if (isDeletedSelected) {
+                  toast({
+                    title: "Action Forbidden",
+                    description: "Deleted Policy is selected - cannot enable.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                if (isRejectedSelected) {
+                  toast({
+                    title: "Action Forbidden",
+                    description: "Rejected Policy is selected - cannot enable.",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+
                 const firstPolicy = policies.find(p => p.id === selectedPolicies[0]);
                 if (firstPolicy) handleEnableClick(firstPolicy);
               }}
@@ -433,6 +482,16 @@ export default function GovernancePolicyLibrary() {
                 <Clock className="h-5 w-5" /> Pending Approval ({pendingPolicies.length})
               </h2>
               <PolicyTable data={pendingPolicies} showApproval={true} />
+            </div>
+          )}
+
+          {/* Rejected Policies Section */}
+          {rejectedPolicies.length > 0 && (
+            <div className="rounded-lg border bg-red-50/10 p-4 border-red-200/20 dark:bg-red-500/5 dark:border-red-500/20">
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 text-red-800 dark:text-red-500/90">
+                <AlertCircle className="h-5 w-5" /> Rejected Policies ({rejectedPolicies.length})
+              </h2>
+              <PolicyTable data={rejectedPolicies} showActions={true} />
             </div>
           )}
 

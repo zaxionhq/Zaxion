@@ -106,6 +106,7 @@ interface Policy {
   description?: string;
   scope: string;
   target_id: string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   latest_version?: {
     id?: string;
     version_number?: number;
@@ -834,7 +835,7 @@ export const PolicySimulation: React.FC = () => {
                 <SelectValue placeholder="Select a policy..." />
               </SelectTrigger>
               <SelectContent>
-                {policies.map(p => (
+                {policies.filter(p => p.status !== 'REJECTED').map(p => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
