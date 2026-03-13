@@ -39,6 +39,12 @@ interface Policy {
 
 import { Trash2, RotateCcw } from 'lucide-react';
 
+interface User {
+  id: string;
+  username: string;
+  role: string;
+}
+
 export default function GovernancePolicyLibrary() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -56,10 +62,10 @@ export default function GovernancePolicyLibrary() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery<unknown>({
+  const { data: user } = useQuery<User>({
     staleTime: Infinity,
     queryKey: ['user'],
-    queryFn: () => api.get<unknown>('/v1/auth/me'),
+    queryFn: () => api.get<User>('/v1/auth/me'),
   });
 
   // TARGET POLICY STATE (Renamed to avoid conflicts)
@@ -401,8 +407,8 @@ export default function GovernancePolicyLibrary() {
         <div className="space-y-4">
           {/* Pending Approval Section */}
           {pendingPolicies.length > 0 && (
-            <div className="rounded-lg border bg-yellow-50/50 p-4 border-yellow-200">
-              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 text-yellow-800">
+            <div className="rounded-lg border bg-yellow-50/10 p-4 border-yellow-200/20 dark:bg-yellow-500/5 dark:border-yellow-500/20">
+              <h2 className="text-lg font-semibold flex items-center gap-2 mb-4 text-yellow-800 dark:text-yellow-500/90">
                 <Clock className="h-5 w-5" /> Pending Approval ({pendingPolicies.length})
               </h2>
               <PolicyTable data={pendingPolicies} showApproval={true} />

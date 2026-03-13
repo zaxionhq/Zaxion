@@ -21,9 +21,12 @@ const VALID_POLICY_TYPES = [
   'mandatory_review'
 ];
 
+import { ReportGeneratorService } from '../services/reportGenerator.service.js';
+
 export default function policyControllerFactory(db) {
   const evaluationEngine = new EvaluationEngineService();
   const simulationService = new PolicySimulationService(db, evaluationEngine);
+  const reportGenerator = new ReportGeneratorService();
 
   async function listCorePolicies(req, res, next) {
     try {
@@ -420,6 +423,15 @@ export default function policyControllerFactory(db) {
         is_sandbox: true // FORCE SANDBOX
       });
 
+      // Generate HTML Report immediately
+      const policy = await db.Policy.findByPk(policyId) || { name: 'Draft Policy' };
+      const htmlReport = reportGenerator.generateHtmlReport(simulation, policy);
+      
+      // Attach report to response (as base64 or separate field)
+      // For simplicity, we return it as a string field 'report_html'
+      // Ideally, this should be a separate download endpoint or signed URL
+      simulation.report_html = htmlReport;
+
       res.status(202).json(simulation);
     } catch (error) {
       next(error);
@@ -493,10 +505,34 @@ export default function policyControllerFactory(db) {
       }
       const result = codeAnalysis.runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine);
 
+      // Generate HTML Report for Code Analysis
+      // We need to shape the result into a simulation-like object for the report generator
+      const simulationLike = {
+        summary: {
+            total_snapshots: 1,
+            total_blocked_count: result.result === 'BLOCK' ? 1 : 0,
+            fail_rate_change: result.result === 'BLOCK' ? '100%' : '0%',
+            policy_would_block: result.result === 'BLOCK',
+            policy_would_pass: result.result === 'PASS',
+            violations_by_severity: { [result.result]: result.violations.length }
+        },
+        per_pr_results: [{
+            pr_number: 0,
+            repo: 'uploaded-code',
+            pr_title: file?.name || 'Pasted Code',
+            verdict: result.result,
+            violations: result.violations
+        }],
+        violations: result.violations
+      };
+      
+      const htmlReport = reportGenerator.generateHtmlReport(simulationLike, policy);
+
       res.status(200).json({
         id: `code-${Date.now()}`,
         status: 'COMPLETED',
         ...result,
+        report_html: htmlReport,
         createdAt: new Date().toISOString(),
       });
     } catch (error) {

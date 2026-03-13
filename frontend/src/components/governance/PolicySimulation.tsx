@@ -175,6 +175,7 @@ interface SimulationResult {
     policy_would_block?: boolean;
     policy_would_pass?: boolean;
   };
+  report_html?: string;
 }
 
 export const PolicySimulation: React.FC = () => {
@@ -486,6 +487,8 @@ export const PolicySimulation: React.FC = () => {
     }
   };
 
+  const [htmlReport, setHtmlReport] = useState<string | null>(null);
+
   const fetchPrsFromGitHub = async () => {
     if (!simulationRepo) {
       toast({ title: "Select a repository first", variant: "destructive" });
@@ -553,6 +556,7 @@ export const PolicySimulation: React.FC = () => {
         id: string;
         status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
         createdAt?: string;
+        report_html?: string;
         results?: {
           summary?: {
             total_snapshots?: number;
@@ -602,8 +606,10 @@ export const PolicySimulation: React.FC = () => {
           policy_would_block: summary.policy_would_block,
           policy_would_pass: summary.policy_would_pass,
         },
+        report_html: data.report_html,
       };
       setResult(mapped);
+      setHtmlReport(data.report_html || null);
       toast({
         title: "Simulation completed",
         description: `Scanned ${mapped.total_scanned} PR(s). ${mapped.total_blocked} would be blocked.`,
@@ -662,6 +668,7 @@ export const PolicySimulation: React.FC = () => {
         result?: string;
         rationale?: string;
         createdAt?: string;
+        report_html?: string;
       }>(`/v1/policies/${selectedPolicyId}/analyze-code`, body);
       const summary = data?.summary || {};
       const mapped: SimulationResult = {
@@ -679,8 +686,10 @@ export const PolicySimulation: React.FC = () => {
           policy_would_block: summary.policy_would_block,
           policy_would_pass: summary.policy_would_pass,
         },
+        report_html: data.report_html,
       };
       setResult(mapped);
+      setHtmlReport(data.report_html ?? null);
       toast({
         title: 'Code analysis completed',
         description: data.result === 'BLOCK' ? 'Policy would block this code.' : 'Policy would pass.',
@@ -714,6 +723,7 @@ export const PolicySimulation: React.FC = () => {
         result?: string;
         rationale?: string;
         createdAt?: string;
+        report_html?: string;
       }>('/v1/github/simulation/analyze-pr', {
         policy_id: selectedPolicyId,
         github_pr_url: trimmed,
@@ -734,8 +744,10 @@ export const PolicySimulation: React.FC = () => {
           policy_would_block: summary.policy_would_block,
           policy_would_pass: summary.policy_would_pass,
         },
+        report_html: data.report_html,
       };
       setResult(mapped);
+      setHtmlReport(data.report_html ?? null);
       toast({
         title: 'PR analysis completed',
         description: data.result === 'BLOCK' ? 'Policy would block this PR.' : 'Policy would pass.',
@@ -1333,6 +1345,25 @@ export const PolicySimulation: React.FC = () => {
                   </Link>
                 </div>
                 <div className="flex gap-2">
+                  {result?.report_html && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => {
+                        const blob = new Blob([result.report_html!], { type: 'text/html' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `zaxion-interactive-report-${new Date().toISOString().slice(0, 10)}.html`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Interactive Report (HTML)
+                    </Button>
+                  )}
                   {result && (
                     <Button
                       variant="outline"

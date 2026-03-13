@@ -111,6 +111,7 @@ export class PolicySimulationService {
           newly_passed_count: 0,
           fail_rate_change: '0.00%',
           friction_index: 'LOW',
+          target_repo: target_repo_full_name || 'GLOBAL',
         },
         impacted_prs: [],
       };
@@ -174,7 +175,7 @@ export class PolicySimulationService {
 
     try {
       // 4. Execute Simulation (The Snapshot Replayer)
-      const results = await this._executeSimulation(simulation, snapshots, rules);
+      const results = await this._executeSimulation(simulation, snapshots, rules, target_repo_full_name);
 
       // 5. Update Record
       if (isUuid) {
@@ -202,7 +203,7 @@ export class PolicySimulationService {
   /**
    * Pillar 3.4.A: The Snapshot Replayer Logic
    */
-  async _executeSimulation(simulation, snapshots, draftRules) {
+  async _executeSimulation(simulation, snapshots, draftRules, target_repo_full_name) {
     let newlyBlocked = 0;
     let newlyPassed = 0;
     let consistent = 0;
@@ -291,6 +292,7 @@ export class PolicySimulationService {
         violations_by_severity: severityCounts,
         policy_would_block: newlyBlocked > 0,
         policy_would_pass: total === 0 || (newlyBlocked === 0 && consistent + newlyPassed === total),
+        target_repo: target_repo_full_name || 'GLOBAL',
       },
       violations: allViolations,
       impacted_prs: impactedPrs.slice(0, 50),
