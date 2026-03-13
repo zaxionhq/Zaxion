@@ -247,6 +247,35 @@ export default function policyControllerFactory(db) {
     }
   }
 
+  async function rejectPolicy(req, res, next) {
+    try {
+      const { id } = req.params;
+      const user = req.user;
+
+      if (!user || (user.role !== 'admin' && user.role !== 'maintain' && user.role !== 'maintainer')) {
+        const error = new Error('Only administrators or maintainers can reject policies.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      const policy = await policyService.getPolicy(db, id);
+      if (!policy) {
+        const error = new Error('Policy not found');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Allow rejecting from PENDING_APPROVAL or even APPROVED (to disable)
+      const updated = await policyService.updatePolicy(db, id, {
+        status: 'REJECTED',
+        is_enabled: false // Automatically disable if rejected
+      });
+      res.json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async function enablePolicy(req, res, next) {
     try {
       const { id } = req.params;
@@ -555,6 +584,7 @@ export default function policyControllerFactory(db) {
     translateNaturalLanguage,
     submitPolicy,
     approvePolicy,
+    rejectPolicy,
     enablePolicy,
     listCorePolicies,
   };

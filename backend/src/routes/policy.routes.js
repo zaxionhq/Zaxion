@@ -67,6 +67,13 @@ export default function policyRoutesFactory(db) {
   );
 
   router.post(
+    '/:id/reject',
+    authenticateJWT,
+    authorize(maintainerRoles),
+    policyController.rejectPolicy
+  );
+
+  router.post(
     '/:id/enable',
     authenticateJWT,
     authorize(maintainerRoles),

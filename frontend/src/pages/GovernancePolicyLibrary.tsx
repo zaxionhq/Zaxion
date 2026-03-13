@@ -105,7 +105,7 @@ export default function GovernancePolicyLibrary() {
     mutationFn: async ({ id, reason }: { id: string, reason?: string }) => {
       // In a real implementation, you might want to call a specific reject endpoint or update status
       // For now, let's assume rejecting moves it back to DRAFT or REJECTED status
-      return await api.put(`/v1/policies/${id}`, { status: 'REJECTED' });
+      return await api.post(`/v1/policies/${id}/reject`, { reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['policies'] });
