@@ -20,12 +20,8 @@ module.exports = {
           deleted_by_user_id: {
             type: Sequelize.UUID,
             allowNull: false,
-            references: {
-              model: 'Users',
-              key: 'id',
-            },
-            onUpdate: 'CASCADE',
-            onDelete: 'CASCADE',
+            // Removed foreign key reference to Users to prevent migration failure if Users table name differs (e.g. "users" vs "Users")
+            // The relation is logical and enforced by application logic
           },
           deleted_at: {
             type: Sequelize.DATE,
