@@ -101,6 +101,25 @@ export default function GovernancePolicyLibrary() {
     }
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string, reason?: string }) => {
+      // In a real implementation, you might want to call a specific reject endpoint or update status
+      // For now, let's assume rejecting moves it back to DRAFT or REJECTED status
+      return await api.put(`/v1/policies/${id}`, { status: 'REJECTED' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      toast({ title: "Policy Rejected", description: "Policy has been rejected." });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Rejection Failed", 
+        description: error.message || "Could not reject policy.", 
+        variant: "destructive" 
+      });
+    }
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string, reason: string }) => {
       const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
@@ -315,7 +334,9 @@ export default function GovernancePolicyLibrary() {
                         <Button size="sm" variant="default" onClick={() => approveMutation.mutate(policy.id)}>
                           Approve
                         </Button>
-                        <Button size="sm" variant="destructive">Reject</Button>
+                        <Button size="sm" variant="destructive" onClick={() => rejectMutation.mutate({ id: policy.id })}>
+                          Reject
+                        </Button>
                       </>
                     )}
                     {!isDeleted && showActions && (
