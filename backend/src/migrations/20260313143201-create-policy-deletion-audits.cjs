@@ -68,7 +68,6 @@ module.exports = {
         // If table exists, ensure columns exist (idempotent check)
         // This is simplified; assumes if table exists, structure is mostly correct or managed manually
         // We just skip creation to avoid "relation already exists" error
-        console.log("Table PolicyDeletionAudits already exists, skipping creation.");
     }
     
     // Check if indices exist before adding
