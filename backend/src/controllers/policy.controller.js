@@ -453,7 +453,21 @@ export default function policyControllerFactory(db) {
       });
 
       // Generate HTML Report immediately
-      const policy = await db.Policy.findByPk(policyId) || { name: 'Draft Policy' };
+      let policy;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policyId);
+
+      if (isUuid) {
+        policy = await db.Policy.findByPk(policyId);
+      } else {
+        // Core Policy ID (e.g. SEC-004)
+        policy = CORE_POLICIES.find(p => p.id === policyId);
+      }
+      
+      // Fallback
+      if (!policy) {
+        policy = { name: 'Draft Policy' };
+      }
+
       const htmlReport = reportGenerator.generateHtmlReport(simulation, policy);
       
       // Attach report to response (as base64 or separate field)
