@@ -339,7 +339,7 @@ export const PolicySimulation: React.FC = () => {
     }
   };
 
-  const fetchBranches = async (fullName: string) => {
+  const fetchBranches = useCallback(async (fullName: string) => {
     if (!fullName) return;
     const [owner, repo] = fullName.split('/');
     setIsLoadingBranches(true);
@@ -351,7 +351,7 @@ export const PolicySimulation: React.FC = () => {
     } finally {
       setIsLoadingBranches(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPolicies();
@@ -946,6 +946,7 @@ export const PolicySimulation: React.FC = () => {
                   setSimulationRepo(value);
                   // If branch-level simulation, refresh branches for the selected repo
                   if (simulationScope === 'BRANCH') {
+                    setBranches([]); // Clear old branches immediately
                     fetchBranches(value);
                     setSimulationBranch('');
                   }
@@ -1346,7 +1347,7 @@ export const PolicySimulation: React.FC = () => {
                   </Link>
                 </div>
                 <div className="flex gap-2">
-                  {result?.report_html && (
+                  {result?.report_html && (inputMode === 'repository' || inputMode === 'github_url') && (
                     <Button
                       variant="default"
                       size="sm"
