@@ -845,10 +845,27 @@ export default function githubControllerFactory(db) {
         const repoFullName = `${owner}/${repo}`;
         const prNumber = parseInt(prNumberStr, 10);
 
-        const policy = await policyService.getPolicy(db, policy_id);
-        if (!policy) return res.status(404).json({ error: "Policy not found" });
-        const latestVersion = await policyService.getLatestPolicyVersion(db, policy_id);
-        const draftRules = latestVersion?.rules_logic || {};
+        let policy;
+        let draftRules = {};
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
+
+        if (isUuid) {
+          policy = await policyService.getPolicy(db, policy_id);
+          if (!policy) return res.status(404).json({ error: "Policy not found" });
+          const latestVersion = await policyService.getLatestPolicyVersion(db, policy_id);
+          draftRules = latestVersion?.rules_logic || {};
+        } else {
+          // Core Policy Handling
+          const { CORE_POLICIES } = await import('../policies/corePolicies.js');
+          policy = CORE_POLICIES.find(p => p.id === policy_id);
+          if (!policy) return res.status(404).json({ error: "Core Policy not found" });
+          draftRules = {
+             type: "core_enforcement",
+             id: policy.id,
+             severity: policy.severity
+          };
+        }
+
         if (!draftRules || Object.keys(draftRules).length === 0) {
           return res.status(400).json({ error: "Policy has no rules to evaluate" });
         }
