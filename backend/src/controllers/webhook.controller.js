@@ -70,13 +70,13 @@ export async function handleGitHubWebhook(req, res, next) {
           await addPrAnalysisJob(prData);
           logger.log(`[webhook] Queued PR analysis for ${prData.owner}/${prData.repo} PR #${prData.prNumber} SHA:${prData.headSha}`);
         } catch (queueErr) {
-          logger.warn(`[webhook] Queue failed (${queueErr.message}), falling back to Direct Execution (Dev Mode).`);
+          logger.warn(`[webhook] Queue failed (${queueErr.message}), falling back to Direct Execution (Reliable Fallback).`);
           
-          // Fallback: Execute directly (async, don't await result to keep webhook fast)
-          // This ensures Phase 1 logic works even without Redis
-          prAnalysisService.execute(prData).catch(err => {
-            logger.error(`[DirectMode] Analysis failed: ${err.message}`);
-          });
+          // Fallback: Execute directly but DO NOT await it to keep webhook fast (<5s).
+          // We catch errors here to ensure they are logged.
+          prAnalysisService.execute(prData)
+            .then(() => logger.log(`[DirectMode] Analysis completed for PR #${prData.prNumber}`))
+            .catch(err => logger.error(`[DirectMode] Analysis failed for PR #${prData.prNumber}: ${err.message}`));
         }
       }
     }

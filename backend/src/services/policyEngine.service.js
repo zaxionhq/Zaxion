@@ -3,6 +3,7 @@
  * Evaluates facts against rules. Handles Admin Overrides.
  */
 import * as logger from "../utils/logger.js";
+import { CORE_POLICIES } from "../policies/corePolicies.js";
 
 export class PolicyEngineService {
   constructor(octokit) {
@@ -21,7 +22,61 @@ export class PolicyEngineService {
     let isBlocked = false;
     let isWarned = false;
 
-    // --- POLICY 1: High-risk files require tests ---
+    // --- CORE POLICIES EVALUATION ---
+    // In Phase 7, we enable all Core Policies by default for "Zaxion Guard" behavior.
+    // We map the static CORE_POLICIES to actual checks.
+
+    for (const corePolicy of CORE_POLICIES) {
+       let passed = true;
+       let message = `${corePolicy.name} passed.`;
+       
+       // 1. SEC-001: No Hardcoded Secrets
+       if (corePolicy.id === 'SEC-001') {
+          // Check if DiffAnalyzer found secrets
+          if (prContext.security && prContext.security.secretsFound && prContext.security.secretsFound.length > 0) {
+             passed = false;
+             message = `**FAILED:** Found ${prContext.security.secretsFound.length} potential secret(s) in code.`;
+          }
+       }
+       
+       // 2. SEC-002: No SQL Injection (Basic Regex Check on Diff)
+       if (corePolicy.id === 'SEC-002') {
+          const sqlInjectionPattern = /raw\s*\(\s*['"`]SELECT.*?\$\{/i;
+          // Scan changed files content
+          const hasSqlRisk = prContext.files?.some(f => sqlInjectionPattern.test(f.content || ''));
+          if (hasSqlRisk) {
+             passed = false;
+             message = `**FAILED:** Detected potential Raw SQL Injection pattern.`;
+          }
+       }
+
+       // 3. SEC-004: Dependency Risk (Lockfile check)
+       if (corePolicy.id === 'SEC-004') {
+          const lockFiles = prContext.files?.filter(f => f.filename === 'package-lock.json' || f.filename === 'yarn.lock');
+          if (lockFiles && lockFiles.length > 0) {
+             // In a real implementation, we would parse the lockfile.
+             // For now, we just warn that dependencies changed.
+             // passed = true; // Don't fail just for changing deps without a scanner
+             message = `Dependency files changed. (Scan skipped in this version)`; 
+          }
+       }
+
+       // Add to results if it failed or if we want to show it
+       if (!passed) {
+          policies.push({
+             name: corePolicy.name,
+             passed: false,
+             severity: corePolicy.severity === 'CRITICAL' ? 'BLOCK' : 'WARN',
+             message: message,
+             remediation: corePolicy.remediation
+          });
+          
+          if (corePolicy.severity === 'CRITICAL') isBlocked = true;
+          else isWarned = true;
+       }
+    }
+
+    // --- POLICY 1: High-risk files require tests (Legacy Logic preserved) ---
     const highRiskFiles = prContext.categories.highRisk || [];
     const testFiles = prContext.categories.tests || [];
     

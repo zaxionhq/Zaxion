@@ -58,6 +58,7 @@ const schema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_REDIRECT_URI: z.string().optional(),
+  GITHUB_API_URL: z.string().default("https://api.github.com"),
 
   // --- Resend Email Configuration ---
   RESEND_API_KEY: z.string().optional(),

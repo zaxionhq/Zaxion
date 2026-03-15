@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -327,7 +327,7 @@ export const PolicySimulation: React.FC = () => {
     }
   };
 
-  const fetchRepositories = async () => {
+  const fetchRepositories = useCallback(async () => {
     setIsLoadingRepos(true);
     try {
       const response = await api.get('/v1/github/repos') as Repository[];
@@ -337,7 +337,7 @@ export const PolicySimulation: React.FC = () => {
     } finally {
       setIsLoadingRepos(false);
     }
-  };
+  }, []);
 
   const fetchBranches = useCallback(async (fullName: string) => {
     if (!fullName) return;
@@ -356,7 +356,7 @@ export const PolicySimulation: React.FC = () => {
   useEffect(() => {
     fetchPolicies();
     fetchRepositories();
-  }, []);
+  }, [fetchRepositories]);
 
   // Whenever a policy is selected, derive a sensible default simulation target
   useEffect(() => {

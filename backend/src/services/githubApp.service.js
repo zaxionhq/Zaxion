@@ -20,9 +20,15 @@ class GitHubAppService {
   getPrivateKey() {
     if (this._privateKey) return this._privateKey;
 
-    let keyPath = env.get("GITHUB_PRIVATE_KEY_PATH");
+    // 1. Priority: Raw Content from Env Var (Best for Production/Railway/Heroku)
     const rawKey = env.get("GITHUB_PRIVATE_KEY");
+    if (rawKey) {
+      this._privateKey = rawKey.replace(/\\n/g, "\n");
+      return this._privateKey;
+    }
 
+    // 2. Fallback: Read from File Path (Best for Local Dev)
+    let keyPath = env.get("GITHUB_PRIVATE_KEY_PATH");
     if (keyPath) {
       try {
         // Expand home directory (~) if present
@@ -41,12 +47,8 @@ class GitHubAppService {
         return this._privateKey;
       } catch (err) {
         logger.error({ err, keyPath }, "Failed to read GITHUB_PRIVATE_KEY_PATH");
+        // Don't throw here yet, fall through to final error
       }
-    }
-
-    if (rawKey) {
-      this._privateKey = rawKey.replace(/\\n/g, "\n");
-      return this._privateKey;
     }
 
     throw new Error("GITHUB_APP_ID configured but neither GITHUB_PRIVATE_KEY nor GITHUB_PRIVATE_KEY_PATH is available.");
