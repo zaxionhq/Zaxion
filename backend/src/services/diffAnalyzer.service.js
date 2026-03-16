@@ -77,10 +77,33 @@ export class DiffAnalyzerService {
     // Check each file
     for (const file of files) {
       const filename = file.filename;
-      const content = file.patch || ""; // patch contains the diff content
+      let content = file.patch || ""; // patch contains the diff content
 
+      // For security pattern matching, we prefer the full file content over just the patch
+      // Fetching full content if it's a modified file (not deleted)
+      if (file.status !== 'removed' && file.contents_url) {
+        try {
+          const { data: fullFile } = await this.octokit.repos.getContent({
+            owner,
+            repo,
+            path: filename,
+            ref: file.sha || undefined // Use the specific commit SHA for this file version
+          });
+          
+          if (fullFile && fullFile.content) {
+            content = Buffer.from(fullFile.content, 'base64').toString('utf8');
+          }
+        } catch (fetchErr) {
+          logger.warn(`[DiffAnalyzer] Failed to fetch full content for ${filename}: ${fetchErr.message}. Falling back to patch.`);
+        }
+      }
+      
       // Populate files array for content-based checks
-      context.files.push({ filename, content });
+      context.files.push({ 
+        path: filename, 
+        content: content,
+        extension: filename.split('.').pop()
+      });
 
       // Scan for secrets in content
       SECRET_PATTERNS.forEach(pattern => {

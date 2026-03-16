@@ -5,12 +5,14 @@
 import * as logger from "../utils/logger.js";
 import { CORE_POLICIES } from "../policies/corePolicies.js";
 import { PolicyConfigurationService } from "./policyConfiguration.service.js";
+import { EvaluationEngineService } from "./evaluationEngine.service.js";
 
 export class PolicyEngineService {
   constructor(octokit, db) {
     this.octokit = octokit;
     this.db = db;
     this.configService = db ? new PolicyConfigurationService(db) : null;
+    this.evaluationEngine = new EvaluationEngineService();
     this.POLICY_VERSION = 1;
   }
 
@@ -21,19 +23,35 @@ export class PolicyEngineService {
    * @returns {Promise<object>} DecisionObject
    */
   async evaluate(prContext, metadata) {
-    const policies = [];
-    let isBlocked = false;
-    let isWarned = false;
+    // --- PREPARE FACT SNAPSHOT ---
+    // Mapping DiffAnalyzer output to the Fact Snapshot format expected by EvaluationEngineService
+    const factSnapshot = {
+      id: `live-${metadata.owner}-${metadata.repo}-${metadata.prNumber}`,
+      data: {
+        ...prContext,
+        metadata: {
+          base_branch: metadata.baseBranch,
+          pr_body: metadata.prBody,
+          author: metadata.userLogin,
+          test_files_changed_count: prContext.categories?.tests?.length || 0,
+        },
+        changes: {
+          total_files: prContext.totalChanges || 0,
+          high_risk_files: prContext.categories?.highRisk || [],
+          test_files: prContext.categories?.tests || [],
+          files: prContext.files || []
+        }
+      }
+    };
 
-    // --- CORE POLICIES EVALUATION ---
-    // In Phase 7, we enable all Core Policies by default for "Zaxion Guard" behavior.
-    // We map the static CORE_POLICIES to actual checks.
-    
+    // --- PREPARE APPLIED POLICIES ---
     const context = {
       org: metadata.owner,
       repo: `${metadata.owner}/${metadata.repo}`,
       branch: metadata.baseBranch
     };
+
+    const appliedPolicies = [];
 
     for (const corePolicy of CORE_POLICIES) {
        // Check if policy is enabled for this context
@@ -46,112 +64,53 @@ export class PolicyEngineService {
          continue;
        }
 
-       let passed = true;
-       let message = `${corePolicy.name} passed.`;
-       
-       // 1. SEC-001: No Hardcoded Secrets
-       if (corePolicy.id === 'SEC-001') {
-          // Check if DiffAnalyzer found secrets
-          if (prContext.security && prContext.security.secretsFound && prContext.security.secretsFound.length > 0) {
-             passed = false;
-             message = `**FAILED:** Found ${prContext.security.secretsFound.length} potential secret(s) in code.`;
-          }
-       }
-       
-       // 2. SEC-002: No SQL Injection (Basic Regex Check on Diff)
-       if (corePolicy.id === 'SEC-002') {
-          const sqlInjectionPattern = /raw\s*\(\s*['"`]SELECT.*?\$\{/i;
-          // Scan changed files content
-          const hasSqlRisk = prContext.files?.some(f => sqlInjectionPattern.test(f.content || ''));
-          if (hasSqlRisk) {
-             passed = false;
-             message = `**FAILED:** Detected potential Raw SQL Injection pattern.`;
-          }
-       }
+       // Map Core Policy to the dynamic policy format
+       const policyMap = {
+         'SEC-001': 'security_patterns',
+         'SEC-002': 'security_patterns',
+         'SEC-003': 'security_patterns',
+         'SEC-004': 'dependency_scan',
+         'SEC-005': 'security_patterns',
+         'SEC-006': 'security_patterns',
+         'SEC-007': 'security_patterns',
+         'SEC-008': 'security_patterns',
+         'REL-001': 'reliability',
+         'COD-001': 'code_quality',
+         'COD-002': 'documentation',
+         'GOV-001': 'pr_size',
+         'GOV-002': 'coverage',
+       };
 
-       // 3. SEC-004: Dependency Risk (Lockfile check)
-       if (corePolicy.id === 'SEC-004') {
-          const lockFiles = prContext.files?.filter(f => f.filename === 'package-lock.json' || f.filename === 'yarn.lock');
-          if (lockFiles && lockFiles.length > 0) {
-             // In a real implementation, we would parse the lockfile.
-             // For now, we just warn that dependencies changed.
-             // passed = true; // Don't fail just for changing deps without a scanner
-             message = `Dependency files changed. (Scan skipped in this version)`; 
-          }
-       }
+       const policyType = policyMap[corePolicy.id] || 'core_enforcement';
 
-       // Add to results if it failed or if we want to show it
-       if (!passed) {
-          policies.push({
-             name: corePolicy.name,
-             passed: false,
-             severity: corePolicy.severity === 'CRITICAL' ? 'BLOCK' : 'WARN',
-             message: message,
-             remediation: corePolicy.remediation
-          });
-          
-          if (corePolicy.severity === 'CRITICAL') isBlocked = true;
-          else isWarned = true;
-       }
+       appliedPolicies.push({
+         policy_id: corePolicy.id,
+         policy_version_id: `core-${corePolicy.id}-v1`,
+         level: corePolicy.severity === 'CRITICAL' ? 'MANDATORY' : 'ADVISORY',
+         rules_logic: {
+           type: policyType,
+           id: corePolicy.id,
+           severity: corePolicy.severity,
+           // For pr_size and coverage, we need to pass the actual thresholds
+           ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
+           ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
+         }
+       });
     }
 
-    // --- POLICY 1: High-risk files require tests (Legacy Logic preserved) ---
-    const highRiskFiles = prContext.categories.highRisk || [];
-    const testFiles = prContext.categories.tests || [];
-    
-    const policy1 = {
-      name: "High-risk Code Coverage",
-      passed: true,
-      severity: "BLOCK",
-      message: "No high-risk files changed."
-    };
+    // --- EXECUTE EVALUATION ---
+    const evaluation = this.evaluationEngine.evaluate(factSnapshot, appliedPolicies);
 
-    if (highRiskFiles.length > 0) {
-      if (testFiles.length === 0) {
-        policy1.passed = false;
-        const displayedFiles = highRiskFiles.slice(0, 3).join(', ');
-        const overflowCount = highRiskFiles.length - 3;
-        const overflowText = overflowCount > 0 ? `... and ${overflowCount} more. Click ( ? ) for full list.` : '';
-        policy1.message = `**FAILED:** Modified ${highRiskFiles.length} high-risk file(s) (${displayedFiles}${overflowText}) without adding tests.`;
-        isBlocked = true;
-      } else {
-        policy1.message = `**PASSED:** High-risk changes covered by ${testFiles.length} test file(s).`;
-      }
-    }
-    policies.push(policy1);
-
-    // --- POLICY 2: Large PR warning ---
-    const N_LARGE = 20;
-    const policy2 = {
-      name: "PR Size Check",
-      passed: true,
-      severity: "WARN",
-      message: `PR size is within limits (${prContext.totalChanges} files).`
-    };
-
-    if (prContext.totalChanges > N_LARGE) {
-      policy2.passed = false;
-      policy2.message = `**WARNING:** Large PR detected (${prContext.totalChanges} files). Consider splitting into smaller chunks for better review.`;
-      isWarned = true;
-    }
-    policies.push(policy2);
-
-    // --- POLICY 3: Branch Protection Strategy ---
+    // --- BRANCH PROTECTION LOGIC (Legacy override) ---
     const isMainBranch = ["main", "master", "prod", "production"].includes(metadata.baseBranch);
-    const policy3 = {
-      name: "Branch Protection",
-      passed: true,
-      severity: "INFO",
-      message: isMainBranch ? "Targeting protected branch (Blocking Mode enabled)." : "Targeting feature branch (Warning Mode enabled)."
-    };
-    policies.push(policy3);
+    
+    let finalVerdict = evaluation.final_verdict;
+    let rationale = evaluation.rationale;
 
     // Logic: If Blocked BUT not main branch -> Downgrade to WARN
-    if (isBlocked && !isMainBranch) {
-      isBlocked = false;
-      isWarned = true;
-      policy1.severity = "WARN (Downgraded)";
-      policy1.message += " (Allowed on feature branch)";
+    if (finalVerdict === 'BLOCK' && !isMainBranch) {
+      finalVerdict = 'WARN';
+      rationale = `**Downgraded to WARN (Non-protected branch).**\n\n${rationale}`;
     }
 
     // --- OVERRIDE LOGIC ---
@@ -160,7 +119,7 @@ export class PolicyEngineService {
     const overrideRegex = /\[override-gate:(.*?)\]/;
     const match = metadata.prBody ? metadata.prBody.match(overrideRegex) : null;
 
-    if (match && isBlocked) {
+    if (match && finalVerdict === 'BLOCK') {
       const overrideReason = match[1].trim();
       if (overrideReason.length >= 10) {
         try {
@@ -173,13 +132,8 @@ export class PolicyEngineService {
           if (["admin", "maintainer"].includes(permissionLevel.permission)) {
             overrideValid = true;
             overrideActor = metadata.userLogin;
-            isBlocked = false; // Override the block
-            policies.push({
-              name: "Admin Override",
-              passed: true,
-              severity: "INFO",
-              message: `**OVERRIDE APPLIED** by @${metadata.userLogin}: "${overrideReason}"`
-            });
+            finalVerdict = "OVERRIDDEN_PASS";
+            rationale = `**OVERRIDE APPLIED** by @${metadata.userLogin}: "${overrideReason}"\n\n${rationale}`;
           }
         } catch (error) {
           logger.error("[PolicyEngine] Failed to check permissions:", error);
@@ -187,62 +141,24 @@ export class PolicyEngineService {
       }
     }
 
-    // --- FINAL DECISION ---
-    let finalDecision = "PASS";
-    let decisionReason = "All policies passed.";
-    let violatedPolicyName = null;
-    let violationReason = null;
-    
-    if (isBlocked) {
-      finalDecision = "BLOCK";
-      const failingPolicy = policies.find(p => !p.passed && p.severity === "BLOCK");
-      violatedPolicyName = failingPolicy?.name || "Policy Violation";
-      violationReason = failingPolicy?.message || "Policy violation detected.";
-      decisionReason = violationReason;
-    } else if (isWarned) {
-      finalDecision = "WARN";
-      const warningPolicy = policies.find(p => !p.passed && p.severity === "WARN");
-      violatedPolicyName = warningPolicy?.name || "Policy Warning";
-      violationReason = warningPolicy?.message || "Policy warnings detected.";
-      decisionReason = violationReason;
-    }
-
-    if (overrideValid) {
-      finalDecision = "OVERRIDDEN_PASS";
-      decisionReason = `Overridden by ${overrideActor}.`;
-    }
-
-    // UI Path to Resolution (This is a deterministic UI contract)
-    const fixLink = `https://zaxion.app/workspace?repo=${metadata.repo}&owner=${metadata.owner}&pr=${metadata.prNumber}`;
-
-    const decisionObject = {
-      repo: `${metadata.owner}/${metadata.repo}`,
-      prNumber: metadata.prNumber,
-      decision: finalDecision,
-      decisionReason: decisionReason.replace(/\*\*/g, ''), // Clean markdown for the field
-      violated_policy: violatedPolicyName,
-      violation_reason: violationReason?.replace(/\*\*/g, ''),
+    return {
+      decision: finalVerdict,
+      decisionReason: rationale,
       policy_version: this.POLICY_VERSION,
-      evaluationStatus: "FINAL",
       facts: {
-        changedFiles: prContext.files || [],
-        testFilesAdded: testFiles.length,
-        affectedAreas: highRiskFiles.length > 0 ? highRiskFiles : (prContext.totalChanges > N_LARGE ? ["Repository Scope"] : []),
         totalChanges: prContext.totalChanges,
-        isMainBranch: isMainBranch,
-        hasCriticalChanges: highRiskFiles.length > 0
+        hasCriticalChanges: prContext.categories?.highRisk?.length > 0,
+        testFilesAdded: prContext.categories?.tests?.length || 0,
       },
-      ui: {
-        fix_link: fixLink
-      },
-      override: {
-        allowed: true, // Configurable per repo in future
-        requiredRole: "REPO_ADMIN",
-        justificationRequired: true
-      },
-      timestamp: new Date().toISOString()
+      policies: evaluation.policy_results.map(p => ({
+        name: p.policy_type === 'core_enforcement' ? (CORE_POLICIES.find(cp => cp.id === p.policy_version_id.split('-')[1])?.name || p.policy_type) : p.policy_type,
+        passed: p.verdict === 'PASS',
+        severity: p.verdict,
+        message: p.message,
+        details: p.details
+      })),
+      violations: evaluation.violations,
+      advisor: null // Will be enriched by PrAnalysisService
     };
-
-    return decisionObject;
   }
 }
