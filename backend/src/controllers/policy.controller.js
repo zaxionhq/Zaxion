@@ -23,12 +23,34 @@ const VALID_POLICY_TYPES = [
 
 import { ReportGeneratorService } from '../services/reportGenerator.service.js';
 import { PolicyConfigurationService } from '../services/policyConfiguration.service.js';
+import { PolicyTestingFramework } from '../services/policyTestingFramework.service.js';
 
 export default function policyControllerFactory(db) {
   const evaluationEngine = new EvaluationEngineService();
   const simulationService = new PolicySimulationService(db, evaluationEngine);
   const reportGenerator = new ReportGeneratorService();
   const configService = new PolicyConfigurationService(db);
+  const testingFramework = new PolicyTestingFramework(db);
+
+  async function validatePolicy(req, res, next) {
+    try {
+      const { rules_logic, description } = req.body;
+      const policy = { rules_logic, description };
+      const report = await testingFramework.validateNewPolicy(policy);
+      res.json(report);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function testCorePolicies(req, res, next) {
+    try {
+      const report = await testingFramework.testCorePolicies();
+      res.json(report);
+    } catch (error) {
+      next(error);
+    }
+  }
 
   async function listCorePolicyConfigs(req, res, next) {
     try {
@@ -672,5 +694,7 @@ export default function policyControllerFactory(db) {
     disableCorePolicy,
     enableCorePolicy,
     getCorePolicyAudit,
+    validatePolicy,
+    testCorePolicies,
   };
 }

@@ -28,16 +28,17 @@ export class DiffAnalyzerService {
       per_page: 100
     });
 
-    const fileList = files.map(f => f.filename);
-
     // 2. Filter & Classify
     const context = {
-      files: fileList,
+      files: [], // Array of { filename, content }
       totalChanges: files.length,
       categories: {
         highRisk: [],
         tests: [],
         other: []
+      },
+      security: {
+        secretsFound: []
       }
     };
 
@@ -65,30 +66,54 @@ export class DiffAnalyzerService {
       "**/*.png", "**/*.jpg", "**/*.svg"
     ];
 
+    // Secret patterns
+    const SECRET_PATTERNS = [
+      /sk-proj-[a-zA-Z0-9]{32,}/i, // OpenAI
+      /ghp_[a-zA-Z0-9]{36}/i,      // GitHub PAT
+      /postgres:\/\/.*:.*@/i,      // DB Connection string
+      /aws_access_key_id\s*=\s*['"][A-Z0-9]{20}['"]/i // AWS
+    ];
+
     // Check each file
-    for (const file of fileList) {
-      // Skip ignored files
-      if (IGNORED_GLOBS.some(glob => minimatch(file, glob))) {
+    for (const file of files) {
+      const filename = file.filename;
+      const content = file.patch || ""; // patch contains the diff content
+
+      // Populate files array for content-based checks
+      context.files.push({ filename, content });
+
+      // Scan for secrets in content
+      SECRET_PATTERNS.forEach(pattern => {
+        if (pattern.test(content)) {
+          context.security.secretsFound.push({
+            file: filename,
+            pattern: pattern.toString()
+          });
+        }
+      });
+
+      // Skip ignored files for high-risk categorization
+      if (IGNORED_GLOBS.some(glob => minimatch(filename, glob))) {
         continue;
       }
 
       let categorized = false;
 
       // Check if tests
-      if (TEST_GLOBS.some(glob => minimatch(file, glob))) {
-        context.categories.tests.push(file);
+      if (TEST_GLOBS.some(glob => minimatch(filename, glob))) {
+        context.categories.tests.push(filename);
         categorized = true;
       }
 
       // Check for high risk (only if not a test file)
-      if (!categorized && HIGH_RISK_GLOBS.some(glob => minimatch(file, glob))) {
-        context.categories.highRisk.push(file);
+      if (!categorized && HIGH_RISK_GLOBS.some(glob => minimatch(filename, glob))) {
+        context.categories.highRisk.push(filename);
         categorized = true;
       }
 
       // If neither, mark as other (source code)
       if (!categorized) {
-        context.categories.other.push(file);
+        context.categories.other.push(filename);
       }
     }
 

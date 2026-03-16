@@ -38,6 +38,20 @@ export default function policyRoutesFactory(db) {
   );
 
   router.get(
+    '/core/test',
+    authenticateJWT,
+    authorize(['admin', 'maintainer']),
+    policyController.testCorePolicies
+  );
+
+  router.post(
+    '/validate',
+    authenticateJWT,
+    authorize(['user', 'admin', 'maintainer']),
+    policyController.validatePolicy
+  );
+
+  router.get(
     '/core/config',
     authenticateJWT,
     authorize(['user', 'admin', 'maintainer']),
