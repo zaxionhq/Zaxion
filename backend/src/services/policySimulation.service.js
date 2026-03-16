@@ -102,7 +102,7 @@ export class PolicySimulationService {
            id: corePolicy.id,
            severity: corePolicy.severity,
            // Force pattern matching context for security policies
-           ...( (corePolicy.id === 'SEC-001' || corePolicy.id === 'SEC-002') && { patterns: 'all' }),
+           ...( (corePolicy.id === 'SEC-001' || corePolicy.id === 'SEC-002' || corePolicy.id === 'SEC-003') && { patterns: 'all' }),
            // Default parameters for core policies if not provided
            ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
            ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
@@ -247,11 +247,17 @@ export class PolicySimulationService {
         order: [['createdAt', 'DESC']]
       });
 
-      // Ensure snapshot data is in the format expected by the engine
-      // The engine expects facts to have a 'data' property if it's a full snapshot object
-      const factSnapshot = snapshot.data ? snapshot : { data: snapshot };
+      // Unified Evaluation Logic (Wave 4 Fix): 
+      // Always pass the full snapshot object to the engine. 
+      // The engine handles the extraction of .data or .fact_snapshot internally.
+      // We ensure the snapshot data is normalized for the engine's checkSecurityPatterns.
+      const normalizedSnapshot = {
+        ...snapshot,
+        data: snapshot.data || snapshot.fact_snapshot || snapshot
+      };
 
-      const simResult = this.evaluationEngine.evaluate(factSnapshot, [mockAppliedPolicy]);
+      const simResult = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy]);
+
       const historicalResult = historicalDecision ? historicalDecision.result : 'UNKNOWN';
       const simVerdict = simResult.result;
 

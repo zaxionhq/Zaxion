@@ -57,14 +57,14 @@ const RULE_REMEDIATIONS = new Map([
     documentation_link: `${DOCS_BASE}/policies`,
   }],
   ['security_patterns', {
-    explanation: 'Code may contain hardcoded secrets, unsafe eval(), or other security-sensitive patterns that can lead to vulnerabilities.',
+    explanation: 'Code may contain hardcoded secrets, passwords, API keys, or unsafe patterns like eval() that can lead to critical vulnerabilities.',
     remediation: {
       steps: [
-        'Remove hardcoded secrets; use environment variables or a secrets manager.',
+        'Remove hardcoded credentials/secrets; use environment variables or a secrets manager.',
         'Avoid eval() and similar dynamic code execution; use safer alternatives.',
         'Sanitize user input before rendering to prevent XSS.',
       ],
-      example: "// Use env: process.env.API_KEY\n// Avoid: eval(userInput)",
+      example: "// Use env: process.env.API_KEY\n// Avoid: const password = 'secret-p@ssword'",
     },
     documentation_link: `${DOCS_BASE}/rules`,
   }],
