@@ -79,7 +79,8 @@ export class FactIngestorService {
           deletions: f.deletions,
           is_test_file: this._isTestFile(f.filename),
         };
-        if (opts.fetchContent && shouldFetchContent(f.filename) && f.raw_url) {
+        const canFetch = shouldFetchContent(f.filename);
+        if (opts.fetchContent && canFetch && f.raw_url) {
           try {
             const content = await this._fetchFileContent(f.raw_url);
             if (content) fileObj.content = content;

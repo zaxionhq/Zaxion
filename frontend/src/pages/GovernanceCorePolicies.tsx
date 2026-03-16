@@ -79,12 +79,12 @@ export default function GovernanceCorePolicies() {
   const queryClient = useQueryClient();
 
   // Fetch Orgs/Repos for selector
-  const { data: repos = [] } = useQuery({
+  const { data: repos = [] } = useQuery<any[]>({
     queryKey: ['github-repos'],
     queryFn: () => api.get<any[]>('/v1/github/repos'),
   });
 
-  const { data: branches = [] } = useQuery({
+  const { data: branches = [] } = useQuery<any[]>({
     queryKey: ['github-branches', repo],
     enabled: !!repo,
     queryFn: () => {

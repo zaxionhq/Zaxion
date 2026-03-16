@@ -124,7 +124,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   }, [scope, step, fetchRepositories]);
 
   useEffect(() => {
-    if (scope === 'BRANCH' && targetId && targetId !== 'ORG') {
+    if (scope === 'BRANCH' && targetId && targetId !== 'ORG' && targetId !== '') {
       fetchBranches(targetId);
     }
   }, [targetId, scope, fetchBranches]);

@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { minimatch } from "minimatch";
 import env from "../config/env.js";
+import * as logger from "../utils/logger.js";
 
 /**
  * Service to fetch and analyze PR diffs
