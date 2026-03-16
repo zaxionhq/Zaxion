@@ -62,6 +62,18 @@ interface AuditEntry {
   };
 }
 
+interface Repository {
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+  };
+}
+
+interface Branch {
+  name: string;
+}
+
 export default function GovernanceCorePolicies() {
   const [scope, setScope] = useState<'GLOBAL' | 'ORG' | 'REPO' | 'BRANCH'>('GLOBAL');
   const [org, setOrg] = useState<string>('');
@@ -79,17 +91,17 @@ export default function GovernanceCorePolicies() {
   const queryClient = useQueryClient();
 
   // Fetch Orgs/Repos for selector
-  const { data: repos = [] } = useQuery<any[]>({
+  const { data: repos = [] } = useQuery<Repository[]>({
     queryKey: ['github-repos'],
-    queryFn: () => api.get<any[]>('/v1/github/repos'),
+    queryFn: () => api.get<Repository[]>('/v1/github/repos'),
   });
 
-  const { data: branches = [] } = useQuery<any[]>({
+  const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['github-branches', repo],
-    enabled: !!repo,
+    enabled: !!repo && repo.includes('/'),
     queryFn: () => {
       const [owner, name] = repo.split('/');
-      return api.get<any[]>(`/v1/github/repos/${owner}/${name}/branches`);
+      return api.get<Branch[]>(`/v1/github/repos/${owner}/${name}/branches`);
     }
   });
 
@@ -104,26 +116,26 @@ export default function GovernanceCorePolicies() {
   // Fetch Policies
   const { data: policies = [], isLoading } = useQuery<CorePolicy[]>({
     queryKey: ['core-policy-configs', scope, targetId],
-    queryFn: () => api.get(`/v1/policies/core/config?scope=${scope}&target_id=${targetId || ''}`),
+    queryFn: () => api.get<CorePolicy[]>(`/v1/policies/core/config?scope=${scope}&target_id=${targetId || ''}`),
   });
 
   // Audit Trail
   const { data: auditTrail = [], isLoading: auditLoading } = useQuery<AuditEntry[]>({
     queryKey: ['core-policy-audit', selectedPolicy?.id],
     enabled: !!selectedPolicy && auditDialogOpen,
-    queryFn: () => api.get(`/v1/policies/core/config/${selectedPolicy?.id}/audit`),
+    queryFn: () => api.get<AuditEntry[]>(`/v1/policies/core/config/${selectedPolicy?.id}/audit`),
   });
 
   const disableMutation = useMutation({
     mutationFn: (data: { policyId: string, scope: string, targetId: string | null, reason: string }) => 
-      api.post('/v1/policies/core/config/disable', data),
+      api.post<Record<string, unknown>>('/v1/policies/core/config/disable', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['core-policy-configs'] });
       toast({ title: 'Policy Disabled', description: 'The policy has been disabled for the selected scope.' });
       setConfirmDialogOpen(false);
       setReason('');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ 
         variant: 'destructive', 
         title: 'Action Blocked', 
@@ -134,12 +146,12 @@ export default function GovernanceCorePolicies() {
 
   const enableMutation = useMutation({
     mutationFn: (data: { policyId: string, scope: string, targetId: string | null }) => 
-      api.post('/v1/policies/core/config/enable', data),
+      api.post<Record<string, unknown>>('/v1/policies/core/config/enable', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['core-policy-configs'] });
       toast({ title: 'Policy Enabled', description: 'The policy has been enabled for the selected scope.' });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to enable policy.' });
     }
   });
@@ -171,13 +183,13 @@ export default function GovernanceCorePolicies() {
     });
   };
 
-  const uniqueOrgs = Array.from(new Set(repos.map((r: any) => r.owner.login)));
+  const uniqueOrgs = Array.from(new Set(repos.map((r: Repository) => r.owner.login)));
 
   return (
     <DashboardLayout>
       <div className="p-8 space-y-8 overflow-y-auto h-full">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Core Policies</h1>
             <p className="text-muted-foreground">Manage system-wide Zaxion Guard policies and their enforcement scopes.</p>
           </div>
@@ -188,9 +200,9 @@ export default function GovernanceCorePolicies() {
         </div>
 
         {/* Scope Selector Card */}
-        <Card className="border-primary/10 bg-card/50 backdrop-blur-sm">
+        <Card className="border-primary/10 bg-card/50 backdrop-blur-sm shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 font-semibold">
               <Globe className="h-5 w-5 text-primary" />
               Configuration Scope
             </CardTitle>
@@ -198,9 +210,9 @@ export default function GovernanceCorePolicies() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>Scope</Label>
-              <Select value={scope} onValueChange={(v: any) => setScope(v)}>
-                <SelectTrigger>
+              <Label className="text-sm font-medium">Scope</Label>
+              <Select value={scope} onValueChange={(v: 'GLOBAL' | 'ORG' | 'REPO' | 'BRANCH') => setScope(v)}>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -214,13 +226,13 @@ export default function GovernanceCorePolicies() {
 
             {scope !== 'GLOBAL' && (
               <div className="space-y-2">
-                <Label>Organization</Label>
+                <Label className="text-sm font-medium">Organization</Label>
                 <Select value={org} onValueChange={setOrg}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Organization" />
                   </SelectTrigger>
                   <SelectContent>
-                    {uniqueOrgs.map((o: any) => (
+                    {uniqueOrgs.map((o: string) => (
                       <SelectItem key={o} value={o}>{o}</SelectItem>
                     ))}
                   </SelectContent>
@@ -237,8 +249,8 @@ export default function GovernanceCorePolicies() {
                   </SelectTrigger>
                   <SelectContent>
                     {repos
-                      .filter((r: any) => !org || r.owner.login === org)
-                      .map((r: any) => (
+                      .filter((r: Repository) => !org || r.owner.login === org)
+                      .map((r: Repository) => (
                         <SelectItem key={r.full_name} value={r.full_name}>{r.name}</SelectItem>
                       ))}
                   </SelectContent>
@@ -254,7 +266,7 @@ export default function GovernanceCorePolicies() {
                     <SelectValue placeholder="Select Branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    {branches.map((b: any) => (
+                    {branches.map((b: Branch) => (
                       <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
                     ))}
                   </SelectContent>

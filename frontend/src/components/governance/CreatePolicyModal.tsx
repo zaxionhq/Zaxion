@@ -28,6 +28,20 @@ interface Branch {
   name: string;
 }
 
+interface Violation {
+  rule_id: string;
+  severity: string;
+  message: string;
+  file?: string;
+  line?: number;
+  column?: number;
+  current_value?: string;
+  required_value?: string;
+  explanation?: string;
+  remediation?: { steps: string[]; example?: string };
+  documentation_link?: string;
+}
+
 interface ValidationReport {
   isValid: boolean;
   errors: string[];
@@ -38,7 +52,7 @@ interface ValidationReport {
     status: 'PASS' | 'FAIL';
     actual: string;
     expected: string;
-    violations: any[];
+    violations: Violation[];
   }[];
 }
 
@@ -92,7 +106,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   const fetchRepositories = useCallback(async () => {
     setIsLoadingRepos(true);
     try {
-      const response = await api.get('/v1/github/repos') as Repository[];
+      const response = await api.get<Repository[]>('/v1/github/repos');
       setRepositories(response);
     } catch (error) {
       console.error('Failed to fetch repositories:', error);
@@ -107,7 +121,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     const [owner, repo] = repoFullName.split('/');
     setIsLoadingBranches(true);
     try {
-      const response = await api.get(`/v1/github/repos/${owner}/${repo}/branches`) as Branch[];
+      const response = await api.get<Branch[]>(`/v1/github/repos/${owner}/${repo}/branches`);
       setBranches(response);
     } catch (error) {
       console.error('Failed to fetch branches:', error);
@@ -118,16 +132,16 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   }, [toast]);
 
   useEffect(() => {
-    if (scope !== 'ORG' && (step === 'configure' || step === 'validate')) {
+    if (scope !== 'ORG' && step === 'configure' && repositories.length === 0) {
       fetchRepositories();
     }
-  }, [scope, step, fetchRepositories]);
+  }, [scope, step, fetchRepositories, repositories.length]);
 
   useEffect(() => {
-    if (scope === 'BRANCH' && targetId && targetId !== 'ORG' && targetId !== '') {
+    if (scope === 'BRANCH' && step === 'configure' && targetId && targetId !== 'ORG' && targetId !== '') {
       fetchBranches(targetId);
     }
-  }, [targetId, scope, fetchBranches]);
+  }, [targetId, scope, step, fetchBranches]);
 
   const handleModeSelect = (selectedMode: 'json' | 'english' | 'upload') => {
     setMode(selectedMode);
@@ -160,19 +174,19 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (!file.name.endsWith('.md')) {
       toast({ title: "Invalid File", description: "Please upload a Markdown (.md) file.", variant: "destructive" });
       return;
     }
-    
+
     if (file.size > 2 * 1024 * 1024) { // 2MB
       toast({ title: "File Too Large", description: "Max file size is 2MB.", variant: "destructive" });
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
+    reader.onload = async (event: ProgressEvent<FileReader>) => {
       const content = event.target?.result as string;
       setDescription(content); // Store raw content as description
       setIsTranslating(true);
@@ -181,9 +195,11 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
           description: `Analyze this Markdown policy file and extract the governance rules into Zaxion JSON schema:\n\n${content}`
         });
         setRulesLogic(JSON.stringify(result, null, 2));
-        toast({ title: "Policy Parsed", description: "Rules extracted from Markdown file." });
-      } catch (error) {
-        toast({ title: "Parse Failed", description: "Could not extract rules from Markdown.", variant: "destructive" });
+        toast({ title: "Policy Uploaded", description: "Rules extracted from Markdown file." });
+        setStep('configure');
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Could not extract rules from Markdown.";
+        toast({ title: "Upload Failed", description: msg, variant: "destructive" });
       } finally {
         setIsTranslating(false);
       }
@@ -469,7 +485,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
                   className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
+                  onDrop={(e: React.DragEvent<HTMLDivElement>) => {
                     e.preventDefault();
                     if (e.dataTransfer.files?.[0]) {
                        // Manually trigger handleFileUpload with a mock event

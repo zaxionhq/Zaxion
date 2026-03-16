@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, ArrowRight, ShieldCheck, GitBranch } from 'lucide-react';
+import { FileText, ArrowRight, ShieldCheck, Zap, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
@@ -51,35 +51,34 @@ const DocsPolicies = () => {
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Custom Policy Creation</h2>
         <div className="p-6 rounded border border-white/5 bg-white/[0.02] space-y-4">
           <p className="text-sm text-slate-400 leading-relaxed">
-            You can author organization-specific policies locally using a <code className="bg-white/10 px-1 rounded text-indigo-300">.zaxion.yaml</code> file for fast iteration, or publish through the Institutional Registry for fleet-wide enforcement. Start local in feature branches, then promote to the registry when ready.
+            Zaxion offers a flexible environment for creating and testing your own governance rules. You can define organization-specific policies to handle your team's unique security and quality standards.
           </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-200 uppercase">Local (.zaxion.yaml)</h4>
-              <div className="bg-[#0a0a0a] rounded border border-white/5 p-4 font-mono text-[11px] text-slate-300 overflow-x-auto">
-                <pre>{`version: 1.0.0
-name: local-auth-guard
-rules:
-  - id: require-tests-in-auth
-    type: coverage
-    target: "src/auth/**"
-    min_tests: 1
-    severity: BLOCK`}</pre>
+          <div className="grid md:grid-cols-2 gap-8 py-4">
+            <div className="space-y-3">
+              <div className="h-8 w-8 rounded bg-indigo-500/10 flex items-center justify-center">
+                <Zap className="h-4 w-4 text-indigo-400" />
               </div>
+              <h4 className="text-sm font-bold text-slate-200">Smart Creation Tools</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Use our <strong>Smart Policy Editor</strong> to build rules in plain English. Our system helps translate your business requirements into technical guardrails automatically.
+              </p>
             </div>
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-200 uppercase">Registry (Promote)</h4>
-              <p className="text-[11px] text-slate-500">
-                Use the Policy Simulator to evaluate blast radius, then publish a new immutable version. Repositories pin to an explicit version to avoid “floating” policy changes.
+            <div className="space-y-3">
+              <div className="h-8 w-8 rounded bg-emerald-500/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-emerald-400" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-200">Risk-Free Testing</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Run a <strong>Policy Simulation</strong> before activation. This allows you to see the impact on historical Pull Requests and ensure your rules work exactly as intended.
               </p>
             </div>
           </div>
-          <div className="pt-1">
+          <div className="pt-2">
             <Link 
-              to="/docs/examples" 
+              to="/docs/policy-creation" 
               className="inline-flex items-center gap-2 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              See More Examples
+              View Policy Creation Guide
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>

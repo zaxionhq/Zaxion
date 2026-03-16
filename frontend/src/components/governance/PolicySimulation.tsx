@@ -331,7 +331,7 @@ export const PolicySimulation: React.FC = () => {
   const fetchRepositories = useCallback(async () => {
     setIsLoadingRepos(true);
     try {
-      const response = await api.get('/v1/github/repos') as Repository[];
+      const response = await api.get<Repository[]>('/v1/github/repos');
       setRepositories(response);
     } catch (error) {
       logger.error('Failed to fetch repositories:', error);
@@ -341,11 +341,11 @@ export const PolicySimulation: React.FC = () => {
   }, []);
 
   const fetchBranches = useCallback(async (fullName: string) => {
-    if (!fullName) return;
+    if (!fullName || !fullName.includes('/')) return;
     const [owner, repo] = fullName.split('/');
     setIsLoadingBranches(true);
     try {
-      const response = await api.get(`/v1/github/repos/${owner}/${repo}/branches`) as Branch[];
+      const response = await api.get<Branch[]>(`/v1/github/repos/${owner}/${repo}/branches`);
       setBranches(response);
     } catch (error) {
       logger.error('Failed to fetch branches:', error);
@@ -356,8 +356,10 @@ export const PolicySimulation: React.FC = () => {
 
   useEffect(() => {
     fetchPolicies();
-    fetchRepositories();
-  }, [fetchRepositories]);
+    if (inputMode === 'repository' && repositories.length === 0) {
+      fetchRepositories();
+    }
+  }, [fetchRepositories, inputMode, repositories.length]);
 
   // Whenever a policy is selected, derive a sensible default simulation target
   useEffect(() => {
@@ -388,7 +390,7 @@ export const PolicySimulation: React.FC = () => {
       setSimulationRepo(repoFullName);
       setSimulationBranch('');
     }
-  }, [policies, selectedPolicyId]);
+  }, [policies, selectedPolicyId, fetchBranches]);
 
   // When user selects "Specific Branch" and has a repo, load branches so the dropdown shows without manual refresh
   useEffect(() => {
@@ -397,7 +399,7 @@ export const PolicySimulation: React.FC = () => {
     } else if (simulationScope !== 'BRANCH') {
       setSimulationBranch('');
     }
-  }, [simulationScope, simulationRepo]);
+  }, [simulationScope, simulationRepo, fetchBranches]);
 
   const handleCreatePolicy = async () => {
     if (!newPolicy.name) return;

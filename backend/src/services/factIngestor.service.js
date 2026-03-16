@@ -56,6 +56,14 @@ export class FactIngestorService {
     });
 
     if (existingSnapshot) {
+      // Wave 4 Enrichment: If content is requested but the existing snapshot doesn't have it,
+      // we perform a partial ingestion to add file contents.
+      const hasContent = existingSnapshot.data?.changes?.files?.some(f => f.content);
+      if (opts.fetchContent && !hasContent) {
+        logger.info({ repoFullName, commitSha }, "FactIngestor: Enriching existing snapshot with file contents");
+        return await this._enrichSnapshotWithContent(existingSnapshot);
+      }
+
       logger.info({ repoFullName, commitSha }, "FactIngestor: Returning existing FactSnapshot");
       return existingSnapshot;
     }
@@ -220,6 +228,10 @@ export class FactIngestorService {
    * Deterministically extracts all unique directory prefixes from the changed file paths.
    * e.g. "src/auth/login.ts" -> ["src", "src/auth"]
    */
+  /**
+   * Deterministically extracts all unique directory prefixes from the changed file paths.
+   * e.g. "src/auth/login.ts" -> ["src", "src/auth"]
+   */
   _extractPathPrefixes(files) {
     const prefixes = new Set();
     files.forEach(f => {
@@ -235,5 +247,40 @@ export class FactIngestorService {
       }
     });
     return Array.from(prefixes).sort();
+  }
+
+  /**
+   * Wave 4: Enrichment Logic
+   * Fetches file contents for an existing snapshot that only has metadata.
+   */
+  async _enrichSnapshotWithContent(snapshot) {
+    const { repo_full_name, pr_number } = snapshot;
+    try {
+      const { data: filesData } = await this._fetchPRFiles(repo_full_name, pr_number);
+      const factData = snapshot.data;
+      const files = factData.changes.files;
+
+      for (const f of files) {
+        const matchingFile = filesData.find(fd => fd.filename === f.path);
+        if (matchingFile && matchingFile.raw_url && shouldFetchContent(f.path)) {
+          try {
+            const content = await this._fetchFileContent(matchingFile.raw_url);
+            if (content) f.content = content;
+          } catch (err) {
+            logger.warn({ file: f.path, err: err.message }, 'FactIngestor: Enrichment failed for file');
+          }
+        }
+      }
+
+      factData.ingestion_status.ingested_at = new Date().toISOString();
+      snapshot.data = factData;
+      snapshot.changed('data', true);
+      await snapshot.save();
+
+      return snapshot;
+    } catch (error) {
+      logger.error({ error: error.message, repo_full_name, pr_number }, "FactIngestor: Enrichment failed");
+      return snapshot; // Return unenriched snapshot as fallback
+    }
   }
 }
