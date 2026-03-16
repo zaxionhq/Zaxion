@@ -20,7 +20,8 @@ import {
   History,
   Info,
   Loader2,
-  Lock
+  Lock,
+  User
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
@@ -296,7 +297,7 @@ export default function GovernanceCorePolicies() {
                         <span className="font-semibold flex items-center gap-2">
                           {policy.name}
                           {policy.category === 'Security' && policy.severity === 'CRITICAL' && (
-                            <Lock className="h-3 w-3 text-primary" title="Mandatory Compliance" />
+                            <Lock className="h-3 w-3 text-primary" />
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground line-clamp-1">{policy.description}</span>

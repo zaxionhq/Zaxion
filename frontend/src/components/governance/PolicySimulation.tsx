@@ -299,6 +299,7 @@ export const PolicySimulation: React.FC = () => {
           description: typeof p.description === 'string' ? p.description : undefined,
           scope: 'ORG',
           target_id: 'ORG',
+          status: 'APPROVED',
           latest_version: {
             version_number: 1,
             createdAt: new Date().toISOString(),
