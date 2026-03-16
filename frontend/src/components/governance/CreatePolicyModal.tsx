@@ -7,13 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, FileJson, Type, Upload, CheckCircle2, AlertCircle, X, Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2, FileJson, Type, Upload, CheckCircle2, AlertCircle, X, Check, ChevronsUpDown, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/lib/api';
 import Editor from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Repository {
   id: number;
@@ -26,6 +28,20 @@ interface Branch {
   name: string;
 }
 
+interface ValidationReport {
+  isValid: boolean;
+  errors: string[];
+  isConsistent: boolean;
+  warning: string;
+  testResults: {
+    name: string;
+    status: 'PASS' | 'FAIL';
+    actual: string;
+    expected: string;
+    violations: any[];
+  }[];
+}
+
 interface CreatePolicyModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,10 +49,12 @@ interface CreatePolicyModalProps {
 }
 
 export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: CreatePolicyModalProps) {
-  const [step, setStep] = useState<'select' | 'configure'>('select');
+  const [step, setStep] = useState<'select' | 'configure' | 'validate'>('select');
   const [mode, setMode] = useState<'json' | 'english' | 'upload' | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const { toast } = useToast();
 
   // Form State
@@ -68,6 +86,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     setBranchName('');
     setDescription('');
     setRulesLogic('{\n  "type": "mandatory_review",\n  "count": 1\n}');
+    setValidationReport(null);
   };
 
   const fetchRepositories = useCallback(async () => {
@@ -99,7 +118,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   }, [toast]);
 
   useEffect(() => {
-    if (scope !== 'ORG' && step === 'configure') {
+    if (scope !== 'ORG' && (step === 'configure' || step === 'validate')) {
       fetchRepositories();
     }
   }, [scope, step, fetchRepositories]);
@@ -172,20 +191,41 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     reader.readAsText(file);
   };
 
-  const handleCreate = async () => {
+  const handleValidate = async () => {
     if (!name || !rulesLogic) {
       toast({ title: "Missing Fields", description: "Name and Rules are required.", variant: "destructive" });
       return;
     }
 
     // Validate JSON
+    let parsedLogic;
     try {
-      JSON.parse(rulesLogic);
+      parsedLogic = JSON.parse(rulesLogic);
     } catch (e) {
       toast({ title: "Invalid JSON", description: "Please fix JSON syntax errors.", variant: "destructive" });
       return;
     }
 
+    setIsValidating(true);
+    try {
+      const report = await api.post<ValidationReport>('/v1/policies/validate', {
+        rules_logic: parsedLogic,
+        description: description || name
+      });
+      setValidationReport(report);
+      setStep('validate');
+    } catch (error) {
+      toast({ 
+        title: "Validation Failed", 
+        description: error instanceof Error ? error.message : "Unknown error", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleCreate = async () => {
     setIsCreating(true);
     try {
       const finalTargetId = scope === 'BRANCH' ? `${targetId}:${branchName}` : targetId;
@@ -221,9 +261,15 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{step === 'select' ? 'Create New Policy' : `Configure Policy (${mode === 'json' ? 'JSON' : mode === 'english' ? 'Plain English' : 'Upload .md'})`}</DialogTitle>
+          <DialogTitle>
+            {step === 'select' ? 'Create New Policy' : 
+             step === 'configure' ? `Configure Policy (${mode === 'json' ? 'JSON' : mode === 'english' ? 'Plain English' : 'Upload .md'})` :
+             'Policy Validation Report'}
+          </DialogTitle>
           <DialogDescription>
-            {step === 'select' ? 'Choose how you want to define your governance rules.' : 'Define the policy details and scope.'}
+            {step === 'select' ? 'Choose how you want to define your governance rules.' : 
+             step === 'configure' ? 'Define the policy details and scope.' :
+             'Systematic verification of policy logic and requirements.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -262,7 +308,7 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
               </CardHeader>
             </Card>
           </div>
-        ) : (
+        ) : step === 'configure' ? (
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -471,20 +517,125 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
               </div>
             </div>
           </div>
+        ) : (
+          <div className="py-4 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className={cn("border-l-4", validationReport?.isValid ? "border-l-green-500" : "border-l-red-500")}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-medium">Schema Validation</CardTitle>
+                    {validationReport?.isValid ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-red-500" />}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {validationReport?.isValid ? (
+                    <p className="text-xs text-muted-foreground">JSON structure is valid and compliant with Zaxion schema.</p>
+                  ) : (
+                    <ul className="text-xs text-red-500 space-y-1">
+                      {validationReport?.errors.map((err, i) => <li key={i}>• {err}</li>)}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className={cn("border-l-4", validationReport?.isConsistent ? "border-l-blue-500" : "border-l-yellow-500")}>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm font-medium">Requirement Analysis</CardTitle>
+                    {validationReport?.isConsistent ? <CheckCircle2 className="h-4 w-4 text-blue-500" /> : <ShieldAlert className="h-4 w-4 text-yellow-500" />}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {validationReport?.isConsistent ? (
+                    <p className="text-xs text-muted-foreground">Logical intent matches the policy description.</p>
+                  ) : (
+                    <p className="text-xs text-yellow-600 font-medium">{validationReport?.warning}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                Automated Test Scenarios
+              </h4>
+              <ScrollArea className="h-[250px] border rounded-md p-4">
+                <div className="space-y-4">
+                  {validationReport?.testResults.map((test, i) => (
+                    <div key={i} className="flex flex-col gap-2 p-3 bg-muted/30 rounded-lg border">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{test.name}</span>
+                        <Badge variant={test.status === 'PASS' ? "default" : "destructive"} className={test.status === 'PASS' ? "bg-green-500" : ""}>
+                          {test.status}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-[10px]">
+                        <div>
+                          <span className="text-muted-foreground block mb-1">Expected Outcome</span>
+                          <code className="bg-muted px-1 py-0.5 rounded">{test.expected}</code>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block mb-1">Actual Result</span>
+                          <code className={cn("px-1 py-0.5 rounded", test.status === 'FAIL' ? "bg-red-100 text-red-700" : "bg-muted")}>
+                            {test.actual}
+                          </code>
+                        </div>
+                      </div>
+                      {test.violations.length > 0 && (
+                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-100 dark:border-red-900/30">
+                          <span className="text-[10px] font-bold text-red-600 block mb-1 uppercase">Violations Found</span>
+                          <ul className="text-[10px] text-red-500 space-y-1">
+                            {test.violations.map((v, j) => <li key={j}>• {v.message || v.explanation}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {validationReport?.testResults.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground italic text-sm">
+                      No automated tests generated for this policy type yet.
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
         )}
 
         <DialogFooter>
           {step === 'configure' && (
-            <Button variant="outline" onClick={() => setStep('select')} className="mr-auto">
-              Back
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setStep('select')} className="mr-auto">
+                Back
+              </Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button onClick={handleValidate} disabled={isValidating}>
+                {isValidating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Run Validation Framework
+              </Button>
+            </>
           )}
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          {step === 'configure' && (
-            <Button onClick={handleCreate} disabled={isCreating}>
-              {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Policy
-            </Button>
+          
+          {step === 'validate' && (
+            <>
+              <Button variant="outline" onClick={() => setStep('configure')} className="mr-auto">
+                Back to Editor
+              </Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button 
+                onClick={handleCreate} 
+                disabled={isCreating || !validationReport?.isValid}
+                className={cn(validationReport?.isValid ? "bg-green-600 hover:bg-green-700" : "")}
+              >
+                {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Finalize & Submit Policy
+              </Button>
+            </>
+          )}
+
+          {step === 'select' && (
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           )}
         </DialogFooter>
       </DialogContent>
