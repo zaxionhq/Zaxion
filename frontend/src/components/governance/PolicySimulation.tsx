@@ -837,48 +837,35 @@ export const PolicySimulation: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {policies.filter(p => p.status !== 'REJECTED').map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{p.name}</span>
+                    </div>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {selectedPolicy && (
-              <div className="group/card p-3 rounded-lg border border-border/50 bg-muted/10 space-y-2 transition-colors hover:border-primary/30 hover:bg-muted/20">
-                <p className="text-[10px] font-bold uppercase text-muted-foreground">Selected policy</p>
-                {selectedPolicy.description && (
-                  <p className="text-xs text-slate-300">{selectedPolicy.description}</p>
-                )}
+              <div className="p-4 rounded-lg border border-border/50 bg-muted/20 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-medium text-sm">{selectedPolicy.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">{selectedPolicy.description}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase">
+                    {selectedPolicy.latest_version?.rules_logic?.type || 'Custom'}
+                  </Badge>
+                </div>
+                
                 {selectedPolicy.latest_version?.rules_logic && (
-                  <>
-                    <div className="mt-2 pt-2 border-t border-border/30">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1.5">What this policy does</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs text-slate-300">
-                        {describePolicyRules(selectedPolicy.latest_version.rules_logic).map((line, i) => (
-                          <li key={i}>{line}</li>
-                        ))}
-                      </ul>
+                  <div className="pt-3 border-t border-border/50">
+                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Rules Logic</p>
+                    <div className="bg-slate-950 rounded-md p-3 overflow-hidden">
+                      <code className="text-xs font-mono text-slate-300 block whitespace-pre-wrap">
+                        {JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)}
+                      </code>
                     </div>
-                    
-                    <HoverCard>
-                      <HoverCardTrigger asChild>
-                        <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer rounded px-2 py-1.5 -mx-2 hover:text-primary hover:bg-muted/50 transition-colors">
-                            <FileJson className="h-3.5 w-3.5 shrink-0" />
-                            <span>View policy JSON</span>
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent className="w-96" align="start">
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-semibold">Policy Configuration</h4>
-                          <ScrollArea className="h-[300px] w-full rounded-md border bg-slate-950 p-2">
-                             <pre className="text-xs text-slate-50 font-mono whitespace-pre-wrap break-words">
-                               {typeof selectedPolicy.latest_version.rules_logic === 'object'
-                                 ? JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)
-                                 : String(selectedPolicy.latest_version.rules_logic)}
-                             </pre>
-                          </ScrollArea>
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -1325,7 +1312,12 @@ export const PolicySimulation: React.FC = () => {
                                 {pr.verdict}
                               </Badge>
                             </td>
-                            <td className="p-2 max-w-[200px] truncate text-muted-foreground" title={pr.rationale}>{pr.rationale}</td>
+                            <td className="p-2 max-w-[200px] truncate text-muted-foreground">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium text-slate-200">{pr.verdict === 'BLOCK' ? 'Policy Violation' : 'Compliant'}</span>
+                                <span className="text-[10px]" title={pr.rationale}>{pr.rationale}</span>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

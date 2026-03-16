@@ -88,6 +88,7 @@ const DocsLayout = () => {
       items: [
         { title: "Institutional Audit Trail", path: "/docs/audit-trail", icon: History },
         { title: "Signed Overrides", path: "/docs/signed-overrides", icon: FileText },
+        { title: "Policy Creation", path: "/docs/policy-creation", icon: Shield },
         { title: "Privacy Policy", path: "/docs/privacy", icon: Shield },
       ]
     }

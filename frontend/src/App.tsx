@@ -41,6 +41,7 @@ const DocsPolicyConfiguration = lazy(() => import("./pages/docs/implementation/P
 const DocsOverrideProtocol = lazy(() => import("./pages/docs/implementation/OverrideProtocol"));
 const DocsAuditTrail = lazy(() => import("./pages/docs/AuditTrail"));
 const DocsSignedOverrides = lazy(() => import("./pages/docs/SignedOverrides"));
+const DocsPolicyCreationGuide = lazy(() => import("./pages/docs/PolicyCreationGuide"));
 const DocsPrivacyPolicy = lazy(() => import("./pages/docs/PrivacyPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -115,6 +116,7 @@ const App = () => (
                   <Route path="implementation/override-protocol" element={<DocsOverrideProtocol />} />
                   <Route path="audit-trail" element={<DocsAuditTrail />} />
                   <Route path="signed-overrides" element={<DocsSignedOverrides />} />
+                  <Route path="policy-creation" element={<DocsPolicyCreationGuide />} />
                   <Route path="privacy" element={<DocsPrivacyPolicy />} />
                 </Route>
 
