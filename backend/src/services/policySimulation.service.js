@@ -74,19 +74,36 @@ export class PolicySimulationService {
         rules = version.rules_logic;
       } else {
         // It's a Core Policy ID, fetch from static definition
-        // We need to import CORE_POLICIES here, or pass it in. 
-        // Ideally, we'd have a unified PolicyService that abstracts this.
-        // For now, let's assume we can get it from a helper or just return a default rule for the simulation test.
-        // In a real app, import { CORE_POLICIES } from '../policies/corePolicies.js';
         const { CORE_POLICIES } = await import('../policies/corePolicies.js');
         const corePolicy = CORE_POLICIES.find(p => p.id === policy_id);
         if (!corePolicy) throw new Error(`Core Policy ${policy_id} not found`);
         
         // Map Core Policy to a rule structure the engine understands
+        // Hardcore Policy Mode (Wave 4) logic: 
+        // For simulation, we map the static core policy ID to the correct checker type.
+        const policyMap = {
+          'SEC-001': 'security_patterns',
+          'SEC-002': 'security_patterns',
+          'SEC-003': 'security_patterns',
+          'SEC-004': 'dependency_scan',
+          'SEC-005': 'security_patterns',
+          'SEC-006': 'security_patterns',
+          'SEC-007': 'security_patterns',
+          'SEC-008': 'security_patterns',
+          'REL-001': 'reliability',
+          'COD-001': 'code_quality',
+          'COD-002': 'documentation',
+          'GOV-001': 'pr_size',
+          'GOV-002': 'coverage',
+        };
+
         rules = {
-           type: "core_enforcement",
+           type: policyMap[corePolicy.id] || "core_enforcement",
            id: corePolicy.id,
-           severity: corePolicy.severity
+           severity: corePolicy.severity,
+           // Default parameters for core policies if not provided
+           ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
+           ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
         };
       }
     }
@@ -279,6 +296,11 @@ export class PolicySimulationService {
     const failRateChange = total > 0 ? ((newlyBlocked - newlyPassed) / total * 100).toFixed(2) : '0.00';
     const totalViolations = allViolations.length;
 
+    // Simulation blocking logic: 
+    // It should block if ANY PR in the sample would be blocked by the new policy,
+    // OR if we are simulating a policy that specifically targets violations found in the snapshots.
+    const policyWouldBlock = totalBlocked > 0 || newlyBlocked > 0;
+
     return {
       summary: {
         total_snapshots: total,
@@ -290,8 +312,8 @@ export class PolicySimulationService {
         friction_index: parseFloat(failRateChange) > 10 ? 'HIGH' : 'LOW',
         total_violations: totalViolations,
         violations_by_severity: severityCounts,
-        policy_would_block: newlyBlocked > 0,
-        policy_would_pass: total === 0 || (newlyBlocked === 0 && consistent + newlyPassed === total),
+        policy_would_block: policyWouldBlock,
+        policy_would_pass: total === 0 || (!policyWouldBlock),
         target_repo: target_repo_full_name || 'GLOBAL',
       },
       violations: allViolations,

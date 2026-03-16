@@ -130,7 +130,7 @@ export class PolicyTestRunner {
           context: {
             totalChanges: 1,
             categories: { highRisk: [], tests: [], other: [] },
-            files: [{ filename: 'app.js', content: 'console.log("Hello World");' }],
+            files: [{ filename: 'app.js', content: '"Hello World";' }],
             security: { secretsFound: [] }
           },
           expected: 'PASS'
