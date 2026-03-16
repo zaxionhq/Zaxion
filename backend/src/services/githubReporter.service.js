@@ -8,7 +8,7 @@ import * as logger from "../utils/logger.js";
 export class GitHubReporterService {
   constructor(octokit) {
     this.octokit = octokit;
-    this.CHECK_NAME = "Zaxion/pr-gate";
+    this.CHECK_NAME = env.GITHUB_CHECK_NAME || "Zaxion Governance";
     this.STICKY_MARKER = "<!-- ZAXION_STICKY_COMMENT -->";
   }
 
