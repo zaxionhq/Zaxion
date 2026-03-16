@@ -101,6 +101,8 @@ export class PolicySimulationService {
            type: policyMap[corePolicy.id] || "core_enforcement",
            id: corePolicy.id,
            severity: corePolicy.severity,
+           // Force pattern matching context for security policies
+           ...( (corePolicy.id === 'SEC-001' || corePolicy.id === 'SEC-002') && { patterns: 'all' }),
            // Default parameters for core policies if not provided
            ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
            ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
@@ -245,7 +247,11 @@ export class PolicySimulationService {
         order: [['createdAt', 'DESC']]
       });
 
-      const simResult = this.evaluationEngine.evaluate(snapshot, [mockAppliedPolicy]);
+      // Ensure snapshot data is in the format expected by the engine
+      // The engine expects facts to have a 'data' property if it's a full snapshot object
+      const factSnapshot = snapshot.data ? snapshot : { data: snapshot };
+
+      const simResult = this.evaluationEngine.evaluate(factSnapshot, [mockAppliedPolicy]);
       const historicalResult = historicalDecision ? historicalDecision.result : 'UNKNOWN';
       const simVerdict = simResult.result;
 

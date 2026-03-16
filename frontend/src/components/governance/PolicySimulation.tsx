@@ -112,7 +112,7 @@ interface Policy {
     version_number?: number;
     enforcement_level?: string;
     createdAt: string;
-    rules_logic?: unknown;
+    rules_logic?: RulesLogic;
     creator?: { email: string };
   };
 }
@@ -859,11 +859,32 @@ export const PolicySimulation: React.FC = () => {
                 
                 {selectedPolicy.latest_version?.rules_logic && (
                   <div className="pt-3 border-t border-border/50">
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Rules Logic</p>
-                    <div className="bg-slate-950 rounded-md p-3 overflow-hidden">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="flex items-center justify-between cursor-pointer group/logic">
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2 group-hover/logic:text-primary transition-colors">Rules Logic</p>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground group-hover/logic:text-primary transition-colors" />
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                        <DialogHeader>
+                          <DialogTitle>Rules Logic: {selectedPolicy.name}</DialogTitle>
+                          <DialogDescription>
+                            Full JSON configuration for this policy version.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <ScrollArea className="flex-1 mt-4 rounded-md border bg-slate-950 p-4">
+                          <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap">
+                            {JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)}
+                          </pre>
+                        </ScrollArea>
+                      </DialogContent>
+                    </Dialog>
+                    <div className="bg-slate-950 rounded-md p-3 overflow-hidden max-h-24 relative">
                       <code className="text-xs font-mono text-slate-300 block whitespace-pre-wrap">
                         {JSON.stringify(selectedPolicy.latest_version.rules_logic, null, 2)}
                       </code>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
                     </div>
                   </div>
                 )}
