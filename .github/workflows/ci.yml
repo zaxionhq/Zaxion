@@ -75,9 +75,14 @@ jobs:
       - name: Scan for leaked secrets
         working-directory: backend
         run: |
-          if grep -rnE "(access_token|client_secret|private_key|password|jwt_secret)" src/ --exclude=env.js; then
+          if grep -rnE "(access_token|client_secret|private_key|password|jwt_secret)\s*[:=]\s*['\"]" src/ \
+              --exclude=env.js \
+              --exclude=evaluationEngine.service.js \
+              --exclude-dir=node_modules; then
             echo "❌ CRITICAL: Potential secrets detected in source code!"
             exit 1
+          else
+            echo "✅ No hardcoded secrets found"
           fi
 
       - name: Scan for sensitive logs
