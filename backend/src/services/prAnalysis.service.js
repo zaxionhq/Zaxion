@@ -23,9 +23,12 @@ export class PrAnalysisService {
     const token = await githubAppService.getInstallationAccessToken(installationId);
     const octokit = new Octokit({ auth: token });
     
+    // Ensure DB is initialized for PolicyEngine
+    const db = await initDb();
+    
     // Initialize sub-services with the dynamic token/octokit
     const diffAnalyzer = new DiffAnalyzerService(token);
-    const policyEngine = new PolicyEngineService(octokit);
+    const policyEngine = new PolicyEngineService(octokit, db);
     const advisor = new AdvisorService(); // Best-effort intelligence
     const reporter = new GitHubReporterService(octokit);
 

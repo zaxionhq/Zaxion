@@ -17,6 +17,7 @@ const GovernanceDecisions = lazy(() => import("./pages/GovernanceDecisions"));
 const GovernanceAnalytics = lazy(() => import("./pages/GovernanceAnalytics"));
 const GovernanceSettings = lazy(() => import("./pages/GovernanceSettings"));
 const GovernancePolicyLibrary = lazy(() => import("./pages/GovernancePolicyLibrary"));
+const GovernanceCorePolicies = lazy(() => import("./pages/GovernanceCorePolicies"));
 
 // Documentation Pages Lazy Load
 const DocsLayout = lazy(() => import("./components/docs/DocsLayout"));
@@ -88,6 +89,7 @@ const App = () => (
                 <Route path="/governance/decisions" element={<GovernanceDecisions />} />
                 <Route path="/governance/analytics" element={<GovernanceAnalytics />} />
                 <Route path="/governance/policy-library" element={<GovernancePolicyLibrary />} />
+                <Route path="/governance/core-policies" element={<GovernanceCorePolicies />} />
                 <Route path="/governance/settings" element={<GovernanceSettings />} />
                 
                 {/* Documentation Ecosystem */}

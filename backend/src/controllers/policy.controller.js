@@ -22,11 +22,62 @@ const VALID_POLICY_TYPES = [
 ];
 
 import { ReportGeneratorService } from '../services/reportGenerator.service.js';
+import { PolicyConfigurationService } from '../services/policyConfiguration.service.js';
 
 export default function policyControllerFactory(db) {
   const evaluationEngine = new EvaluationEngineService();
   const simulationService = new PolicySimulationService(db, evaluationEngine);
   const reportGenerator = new ReportGeneratorService();
+  const configService = new PolicyConfigurationService(db);
+
+  async function listCorePolicyConfigs(req, res, next) {
+    try {
+      const { scope, target_id, org, repo, branch } = req.query;
+      const context = { scope, target_id, org, repo, branch };
+      const policies = await configService.listPoliciesWithStatus(context, req.user?.id);
+      res.json(policies);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function disableCorePolicy(req, res, next) {
+    try {
+      const { policyId, scope, targetId, reason } = req.body;
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      if (!policyId || !scope) return res.status(400).json({ error: 'policyId and scope are required' });
+
+      const config = await configService.disablePolicy(policyId, scope, targetId, userId, reason);
+      res.json(config);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function enableCorePolicy(req, res, next) {
+    try {
+      const { policyId, scope, targetId } = req.body;
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      if (!policyId || !scope) return res.status(400).json({ error: 'policyId and scope are required' });
+
+      const result = await configService.enablePolicy(policyId, scope, targetId, userId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async function getCorePolicyAudit(req, res, next) {
+    try {
+      const { policyId } = req.params;
+      const audit = await configService.getAuditTrail(policyId);
+      res.json(audit);
+    } catch (error) {
+      next(error);
+    }
+  }
 
   async function listCorePolicies(req, res, next) {
     try {
@@ -617,5 +668,9 @@ export default function policyControllerFactory(db) {
     rejectPolicy,
     enablePolicy,
     listCorePolicies,
+    listCorePolicyConfigs,
+    disableCorePolicy,
+    enableCorePolicy,
+    getCorePolicyAudit,
   };
 }

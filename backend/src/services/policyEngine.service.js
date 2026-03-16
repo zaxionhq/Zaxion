@@ -4,10 +4,13 @@
  */
 import * as logger from "../utils/logger.js";
 import { CORE_POLICIES } from "../policies/corePolicies.js";
+import { PolicyConfigurationService } from "./policyConfiguration.service.js";
 
 export class PolicyEngineService {
-  constructor(octokit) {
+  constructor(octokit, db) {
     this.octokit = octokit;
+    this.db = db;
+    this.configService = db ? new PolicyConfigurationService(db) : null;
     this.POLICY_VERSION = 1;
   }
 
@@ -25,8 +28,24 @@ export class PolicyEngineService {
     // --- CORE POLICIES EVALUATION ---
     // In Phase 7, we enable all Core Policies by default for "Zaxion Guard" behavior.
     // We map the static CORE_POLICIES to actual checks.
+    
+    const context = {
+      org: metadata.owner,
+      repo: `${metadata.owner}/${metadata.repo}`,
+      branch: metadata.baseBranch
+    };
 
     for (const corePolicy of CORE_POLICIES) {
+       // Check if policy is enabled for this context
+       const isEnabled = this.configService 
+         ? await this.configService.isPolicyEnabled(corePolicy.id, context)
+         : true;
+
+       if (!isEnabled) {
+         logger.log(`[PolicyEngine] Skipping disabled policy: ${corePolicy.id} for ${context.repo}:${context.branch}`);
+         continue;
+       }
+
        let passed = true;
        let message = `${corePolicy.name} passed.`;
        

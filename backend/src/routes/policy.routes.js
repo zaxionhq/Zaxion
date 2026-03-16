@@ -38,6 +38,34 @@ export default function policyRoutesFactory(db) {
   );
 
   router.get(
+    '/core/config',
+    authenticateJWT,
+    authorize(['user', 'admin', 'maintainer']),
+    policyController.listCorePolicyConfigs
+  );
+
+  router.post(
+    '/core/config/disable',
+    authenticateJWT,
+    authorize(maintainerRoles),
+    policyController.disableCorePolicy
+  );
+
+  router.post(
+    '/core/config/enable',
+    authenticateJWT,
+    authorize(maintainerRoles),
+    policyController.enableCorePolicy
+  );
+
+  router.get(
+    '/core/config/:policyId/audit',
+    authenticateJWT,
+    authorize(['user', 'admin', 'maintainer']),
+    policyController.getCorePolicyAudit
+  );
+
+  router.get(
     '/:id',
     authenticateJWT,
     authorize(['user', 'admin', 'maintainer']),
