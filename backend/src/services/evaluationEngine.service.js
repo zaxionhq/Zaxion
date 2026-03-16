@@ -64,7 +64,7 @@ const RULE_REMEDIATIONS = new Map([
         'Avoid eval() and similar dynamic code execution; use safer alternatives.',
         'Sanitize user input before rendering to prevent XSS.',
       ],
-      example: "// Use env: process.env.API_KEY\n// Avoid: const password = 'secret-p@ssword'",
+      example: "// Use env: process.env.API_KEY\n// Avoid: const password = 'replace-with-real-secret'",
     },
     documentation_link: `${DOCS_BASE}/rules`,
   }],
