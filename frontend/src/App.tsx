@@ -42,6 +42,7 @@ const DocsOverrideProtocol = lazy(() => import("./pages/docs/implementation/Over
 const DocsAuditTrail = lazy(() => import("./pages/docs/AuditTrail"));
 const DocsSignedOverrides = lazy(() => import("./pages/docs/SignedOverrides"));
 const DocsPolicyCreationGuide = lazy(() => import("./pages/docs/PolicyCreationGuide"));
+const DocsSetupGuide = lazy(() => import("./pages/docs/SetupGuide"));
 const DocsPrivacyPolicy = lazy(() => import("./pages/docs/PrivacyPolicy"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -93,6 +94,11 @@ const App = () => (
                 <Route path="/governance/core-policies" element={<GovernanceCorePolicies />} />
                 <Route path="/governance/settings" element={<GovernanceSettings />} />
                 
+                {/* Comprehensive Setup Guide (Global Access) */}
+                <Route path="/documentation" element={<DocsLayout />}>
+                  <Route index element={<DocsSetupGuide />} />
+                </Route>
+
                 {/* Documentation Ecosystem */}
                 <Route path="/docs" element={<DocsLayout />}>
                   <Route index element={<DocsGettingStarted />} />

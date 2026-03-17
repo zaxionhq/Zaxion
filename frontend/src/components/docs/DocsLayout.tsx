@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   HelpCircle,
   Wrench,
-  List
+  List, 
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -30,6 +31,7 @@ const DocsLayout = () => {
     {
       label: "Getting Started",
       items: [
+        { title: "Setup Guide", path: "/documentation", icon: Settings },
         { title: "Introduction", path: "/docs/getting-started", icon: Info },
         { title: "Quick Start (5 min)", path: "/docs/quick-start", icon: Terminal },
         { title: "Use Cases", path: "/docs/use-cases", icon: CheckCircle2 },
