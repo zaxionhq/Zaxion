@@ -45,6 +45,7 @@ export class DecisionDTO {
 
       // UI/Policies context
       policies: decision.policies || [],
+      violations: decision.violations || [], // Ensure structured violations array is passed to frontend
       violation_reason: decision.violation_reason || null,
       violated_policy: decision.violated_policy || null,
 
