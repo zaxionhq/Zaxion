@@ -960,44 +960,95 @@ const DecisionResolutionConsole = () => {
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification Category</label>
                         <Select value={category} onValueChange={setCategory}>
-                          <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl">
-                            <SelectValue placeholder="Select reason" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#0B0F1A] border-white/10 text-white">
-                            <SelectItem value="BUSINESS_EXCEPTION">Business Exception (Critical Path)</SelectItem>
-                            <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
-                            <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
-                            <SelectItem value="FALSE_POSITIVE">False Positive / Tooling Error</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Business Justification</label>
-                        <Textarea 
-                          placeholder="Explain why this policy cannot be satisfied..."
-                          className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
-                          value={justification}
-                          onChange={(e) => setJustification(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                        />
-                        <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
-                      </div>
+                          <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
+                             <SelectValue placeholder="Select reason" />
+                           </SelectTrigger>
+                           <SelectContent className="bg-[#0B0F1A] border-white/10 text-white">
+                             <SelectItem value="BUSINESS_EXCEPTION">Business Exception (Critical Path)</SelectItem>
+                             <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
+                             <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
+                             <SelectItem value="FALSE_POSITIVE">False Positive / Tooling Error</SelectItem>
+                           </SelectContent>
+                         </Select>
+                       </div>
+                       <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Business Justification</label>
+                         <Textarea 
+                           placeholder="Explain why this policy cannot be satisfied..."
+                           className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
+                           value={justification}
+                           onChange={(e) => setJustification(e.target.value)}
+                           onKeyDown={handleKeyDown}
+                         />
+                         <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
+                       </div>
+                     </div>
+                     <DialogFooter className="gap-3">
+                       <Button 
+                         variant="ghost" 
+                         onClick={() => setIsOverrideDialogOpen(false)}
+                         className="text-white/40 hover:text-white"
+                       >
+                         Cancel
+                       </Button>
+                       <Button 
+                         onClick={handleOverrideSubmit}
+                         disabled={justification.length < 10 || isSubmitting}
+                         className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
+                       >
+                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                         Authorize Override
+                       </Button>
+                     </DialogFooter>
+                   </DialogContent>
+                 </Dialog>
+              </div>
+            )}
+          </section>
+
+          {/* ZONE 4: OVERRIDE HISTORY (COLLAPSIBLE) */}
+          <section>
+            <Accordion type="single" collapsible>
+              <AccordionItem value="history" className="border-none">
+                <AccordionTrigger className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white hover:no-underline py-6">
+                  <div className="flex items-center gap-3">
+                    <History className="h-4 w-4" />
+                    Governance Override History
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="rounded-3xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                    <div className="p-8 text-center text-white/30 italic text-sm">
+                      No historical overrides found for this pull request context.
                     </div>
-                    <DialogFooter className="gap-3">
-                      <Button 
-                        variant="ghost" 
-                        onClick={() => setIsOverrideDialogOpen(false)}
-                        className="text-white/40 hover:text-white"
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        onClick={handleOverrideSubmit}
-                        disabled={justification.length < 10 || isSubmitting}
-                        className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
-                      >
-                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                        Authorize Override
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </section>
+
+        </div>
+      </main>
+
+      <footer className="relative z-10 py-12 border-t border-white/5 mt-20">
+        <div className="container mx-auto px-6 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+            <Lock className="h-3 w-3" />
+            Audit & Integrity Layer
+          </div>
+          <p className="text-[10px] text-white/20 max-w-lg mx-auto leading-relaxed">
+            Deterministic governance engine for high-stakes software environments. Enforcing organizational policy through automated code analysis.
+          </p>
+          <div className="pt-8 text-[9px] text-white/10 font-mono">
+            © 2024 Zaxion Governance Engine · v2.4.0-STABLE
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default DecisionResolutionConsole;
                       </Button>
                     </DialogFooter>
                   </DialogContent>
