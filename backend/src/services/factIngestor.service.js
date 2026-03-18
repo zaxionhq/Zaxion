@@ -192,16 +192,36 @@ export class FactIngestorService {
   }
 
   /**
-   * Fetches files changed in the PR from GitHub API
+   * Fetches files changed in the PR from GitHub API, with pagination.
    */
   async _fetchPRFiles(repoFullName, prNumber) {
-    // Note: This fetches up to 100 files. For extremely large PRs, pagination would be needed.
-    return await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}/files?per_page=100`, {
-      headers: { 
-        Authorization: `Bearer ${this.token}`,
-        Accept: "application/vnd.github.v3+json"
+    let page = 1;
+    let allFiles = [];
+    let hasNext = true;
+    let lastHeaders = {};
+
+    while (hasNext) {
+      const response = await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}/files`, {
+        headers: { 
+          Authorization: `Bearer ${this.token}`,
+          Accept: "application/vnd.github.v3+json"
+        },
+        params: { per_page: 100, page }
+      });
+
+      lastHeaders = response.headers;
+      const files = response.data;
+      
+      if (!files || files.length === 0) {
+        hasNext = false;
+      } else {
+        allFiles = allFiles.concat(files);
+        if (files.length < 100) hasNext = false;
+        else page++;
       }
-    });
+    }
+
+    return { data: allFiles, headers: lastHeaders };
   }
 
   /**
