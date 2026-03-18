@@ -141,14 +141,34 @@ export class PolicyEngineService {
       }
     }
 
+    // Determine primary violation for UI display
+    let violatedPolicy = null;
+    let violationReason = null;
+
+    if (evaluation.violations && evaluation.violations.length > 0) {
+      // Prioritize BLOCKing violations, then WARNing
+      const criticalViolation = evaluation.violations.find(v => v.severity === 'BLOCK') 
+                             || evaluation.violations.find(v => v.severity === 'WARN')
+                             || evaluation.violations[0];
+      
+      if (criticalViolation) {
+        violatedPolicy = criticalViolation.rule_id || criticalViolation.checker;
+        violationReason = criticalViolation.message;
+      }
+    }
+
     return {
       decision: finalVerdict,
       decisionReason: rationale,
       policy_version: this.POLICY_VERSION,
+      violated_policy: violatedPolicy,
+      violation_reason: violationReason,
       facts: {
         totalChanges: prContext.totalChanges,
         hasCriticalChanges: prContext.categories?.highRisk?.length > 0,
         testFilesAdded: prContext.categories?.tests?.length || 0,
+        affectedAreas: prContext.categories?.highRisk || [],
+        changedFiles: prContext.files.map(f => f.path)
       },
       policies: evaluation.policy_results.map(p => ({
         name: p.policy_type === 'core_enforcement' ? (CORE_POLICIES.find(cp => cp.id === p.policy_version_id.split('-')[1])?.name || p.policy_type) : p.policy_type,
@@ -157,7 +177,7 @@ export class PolicyEngineService {
         message: p.message,
         details: p.details
       })),
-      violations: evaluation.violations,
+      violations: evaluation.violations, // Pass through the full structured violations from EvaluationEngine
       advisor: null // Will be enriched by PrAnalysisService
     };
   }
