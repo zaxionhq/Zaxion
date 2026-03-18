@@ -299,6 +299,7 @@ export default function githubControllerFactory(db) {
             decision.advisor = parsed.advisor;
             decision.violated_policy = parsed.violated_policy;
             decision.violation_reason = parsed.violation_reason;
+            decision.violations = parsed.violations; // Extract structured violations from raw_data
           } catch (e) {
             warn("Failed to parse decision raw_data", e);
           }
@@ -348,6 +349,7 @@ export default function githubControllerFactory(db) {
             decision.advisor = parsed.advisor;
             decision.violated_policy = parsed.violated_policy;
             decision.violation_reason = parsed.violation_reason;
+            decision.violations = parsed.violations; // Extract structured violations from raw_data
           } catch (e) {
             warn("Failed to parse latest decision raw_data", e);
           }
@@ -637,7 +639,8 @@ export default function githubControllerFactory(db) {
         // 2. Verify Zaxion Decision (PASS or OVERRIDDEN_PASS)
         const [decision] = await db.sequelize.query(
           `SELECT 
-            CASE WHEN o.id IS NOT NULL THEN 'OVERRIDDEN_PASS' ELSE d.decision END as decision
+            CASE WHEN o.id IS NOT NULL THEN 'OVERRIDDEN_PASS' ELSE d.decision END as decision,
+            d.id as pr_decision_id
            FROM pr_decisions d
            LEFT JOIN pr_overrides o ON d.id = o.pr_decision_id
            WHERE d.repo_owner = :owner AND d.repo_name = :repo AND d.pr_number = :prNumber 
@@ -672,6 +675,37 @@ export default function githubControllerFactory(db) {
             commit_title: `Zaxion Authorized Merge: PR #${prNumber}`,
             commit_message: `PR merged via Zaxion Governance Console by ${user.username || user.login || user.email}. Decision: ${decision.decision}.`
           });
+
+          // Sync merge status to Governance Decision if it exists
+          try {
+            const decisionUpdate = await db.Decision.update(
+              { is_merged: true, merged_at: new Date() },
+              { 
+                where: { 
+                  id: decision.pr_decision_id
+                } 
+              }
+            );
+
+            // Audit the successful merge
+            if (db.AuditEvent) {
+              await db.AuditEvent.create({
+                eventType: 'PR_MERGE',
+                actorId: user.id,
+                targetId: `${owner}/${repo}#${prNumber}`,
+                action: 'MERGE_COMPLETED',
+                metadata: {
+                  decision_id: decision.pr_decision_id,
+                  verdict: decision.decision,
+                  sha: mergeResponse.data.sha
+                }
+              });
+            }
+
+            logger.log(`[GitHubController] Merge synced for decision ${decision.pr_decision_id}. Rows affected: ${decisionUpdate[0]}`);
+          } catch (syncErr) {
+            logger.warn(`[GitHubController] Failed to sync merge status: ${syncErr.message}`);
+          }
 
           return res.status(200).json({
             status: "SUCCESS",
@@ -803,6 +837,8 @@ export default function githubControllerFactory(db) {
 
         const ingestor = new FactIngestorService(db, token);
         let ingested = 0;
+        const failedPrs = [];
+
         for (const pr of prs) {
           try {
             const sha = pr.head?.sha;
@@ -811,7 +847,16 @@ export default function githubControllerFactory(db) {
             ingested++;
           } catch (e) {
             warn("fetchPrsForSimulation: ingest failed for PR", pr.number, e.message);
+            failedPrs.push({ pr: pr.number, error: e.message });
           }
+        }
+
+        if (failedPrs.length > 0) {
+          return res.status(500).json({ 
+            error: "Batch Fetch Failed", 
+            message: `Failed to ingest ${failedPrs.length} PRs. Simulation cannot guarantee parity.`,
+            details: failedPrs 
+          });
         }
 
         res.status(200).json({ fetched: prs.length, ingested, repo_full_name, branch: branch || null });
