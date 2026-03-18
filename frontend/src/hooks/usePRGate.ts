@@ -28,6 +28,10 @@ export interface PRDecision {
       riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     };
     rationale: string;
+    suggestedTestIntents?: {
+      file: string;
+      intent: string;
+    }[];
   };
   override_by?: string;
   override_reason?: string;
@@ -35,8 +39,26 @@ export interface PRDecision {
   observed_change?: string;
   affected_files?: string[];
   policies?: PolicyResult[];
+  violations?: Violation[];
   created_at: string;
   updated_at: string;
+}
+
+export interface Violation {
+  rule_id: string;
+  severity: string;
+  message: string;
+  file?: string;
+  line?: number;
+  column?: number;
+  current_value?: any;
+  required_value?: any;
+  explanation?: string;
+  remediation?: string | {
+    steps: string[];
+    example?: string;
+  };
+  documentation_link?: string;
 }
 
 export interface PolicyResult {
@@ -72,6 +94,10 @@ export interface DecisionObject {
     riskAssessment: {
       riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     };
+    suggestedTestIntents?: {
+      file: string;
+      intent: string;
+    }[];
   };
   override?: {
     executed: boolean;
