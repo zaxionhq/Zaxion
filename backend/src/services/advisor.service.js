@@ -27,7 +27,7 @@ export class AdvisorService {
 
       // 2. Generate Fix Intents (Intent-level, not code-level)
       // For now, using deterministic mapping, but this is where LLM integration happens in Phase 4/5.
-      const suggestedTestIntents = highRiskFiles.map(f => {
+      let suggestedTestIntents = highRiskFiles.map(f => {
         const fileName = f.split('/').pop().split('.')[0];
         return {
           file: f,
@@ -35,6 +35,22 @@ export class AdvisorService {
           rationale: `This file is categorized as high-risk and requires validation to satisfy quality gates.`
         };
       });
+
+      // 2.1 Enrich with specific security violation intents
+      if (decision.violations && decision.violations.length > 0) {
+        decision.violations.forEach(v => {
+           if (v.file && (v.rule_id === 'security_patterns' || v.rule_id === 'dependency_scan')) {
+             suggestedTestIntents.push({
+               file: v.file,
+               intent: `Remediate security violation: ${v.message}`,
+               rationale: `Detected ${v.rule_id} violation. Immediate fix required.`
+             });
+           }
+        });
+      }
+
+      // Deduplicate intents
+      suggestedTestIntents = [...new Map(suggestedTestIntents.map(item => [item.file + item.intent, item])).values()];
 
       // 3. Explanation/Rationale
       let rationale = "AI suggests focusing tests on modified business logic.";
