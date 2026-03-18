@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { Github, Shield, History, ExternalLink, AlertTriangle, CheckCircle2, FileText, Scale, Info, Lock, Loader2, AlertCircle, ListChecks, FileCode, ChevronDown, Fingerprint, Activity, HelpCircle } from 'lucide-react';
+import { Shield, History, ExternalLink, AlertTriangle, CheckCircle2, FileText, Scale, Info, Lock, Loader2, AlertCircle, ListChecks, FileCode, Fingerprint, Activity, HelpCircle, ChevronRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { GitHubButton } from '@/components/ui/github-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
-import { usePRGate, PRDecision, DecisionObject, PolicyResult } from '@/hooks/usePRGate';
+import { usePRGate, PRDecision, PolicyResult } from '@/hooks/usePRGate';
 
 const DecisionResolutionConsole = () => {
   const { owner, repo: repoName, prNumber: prNumStr } = useParams<{ owner: string; repo: string; prNumber: string }>();
@@ -46,9 +46,14 @@ const DecisionResolutionConsole = () => {
     // If we have a structured object from the DTO, use it directly.
     // If we have raw_data (legacy or nested), parse it.
     
-    let baseData = latestDecision;
+    let baseData = { ...latestDecision };
     
-    // If raw_data exists and is valid, merge it in as the source of truth for 'facts'
+    // Ensure violations are picked up from the root if available
+    if (latestDecision.violations) {
+      baseData.violations = latestDecision.violations;
+    }
+    
+    // If raw_data exists and is valid, merge it in as the source of truth for 'facts' and 'violations'
     if (latestDecision.raw_data) {
       try {
         const parsed = typeof latestDecision.raw_data === 'string' 
@@ -57,10 +62,11 @@ const DecisionResolutionConsole = () => {
         
         // Merge structured facts from raw_data if they exist
         baseData = {
-          ...latestDecision,
+          ...baseData,
           ...parsed,
-          facts: parsed.facts || latestDecision.facts,
-          advisor: parsed.advisor || latestDecision.advisor
+          facts: parsed.facts || baseData.facts,
+          advisor: parsed.advisor || baseData.advisor,
+          violations: parsed.violations || baseData.violations || []
         };
       } catch (e) {
         logger.error("Failed to parse decision raw_data:", e);
@@ -127,6 +133,25 @@ const DecisionResolutionConsole = () => {
 
   const [showDetails, setShowDetails] = useState(false);
   const [isAcknowledged, setIsAcknowledged] = useState(false);
+  
+  // File expansion state management
+  const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({});
+  // Context expansion state management
+  const [expandedContexts, setExpandedContexts] = useState<Record<string, boolean>>({});
+
+  const toggleFileExpansion = (fileId: string) => {
+    setExpandedFiles(prev => ({
+      ...prev,
+      [fileId]: !prev[fileId]
+    }));
+  };
+
+  const toggleContextExpansion = (contextId: string) => {
+    setExpandedContexts(prev => ({
+      ...prev,
+      [contextId]: !prev[contextId]
+    }));
+  };
 
   // Auth Overlay
   if (!user) {
@@ -144,16 +169,15 @@ const DecisionResolutionConsole = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="pb-10">
-            <GitHubButton 
-              variant="hero" 
-              size="lg" 
-              onClick={handleGitHubConnect}
-              className="w-full gap-3 bg-neon-cyan text-black hover:bg-neon-cyan/90 rounded-2xl font-bold py-6"
-              disabled={sessionLoading}
-            >
-              <Github className="h-5 w-5" />
-              {sessionLoading ? 'Authenticating...' : 'Sign in with GitHub'}
-            </GitHubButton>
+              <GitHubButton 
+                variant="hero" 
+                size="lg" 
+                onClick={handleGitHubConnect}
+                className="w-full gap-3 bg-neon-cyan text-black hover:bg-neon-cyan/90 rounded-2xl font-bold py-6"
+                disabled={sessionLoading}
+              >
+                {sessionLoading ? 'Authenticating...' : 'Sign in with GitHub'}
+              </GitHubButton>
           </CardContent>
         </Card>
       </div>
@@ -250,67 +274,172 @@ const DecisionResolutionConsole = () => {
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12">
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Policy Violated</h4>
-                      <p className={`text-sm font-mono px-3 py-1.5 rounded-lg inline-block border ${isBlocked ? 'text-destructive bg-destructive/5 border-destructive/10' : 'text-amber-500 bg-amber-500/5 border-amber-500/10'}`}>
-                        {decisionData?.violated_policy || "coverage-auth-required"}
-                      </p>
-                      <p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter mt-1">MANDATORY · HIGH SEVERITY</p>
+                  {decisionData?.violations && decisionData.violations.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/5">
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">File</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Policy</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Line(s)</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Description</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Required Action</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Observed Change</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {decisionData.violations.map((v, i) => {
+                            const isExpanded = expandedFiles[`violation-${i}`] || false;
+                            return (
+                              <React.Fragment key={i}>
+                                <tr 
+                                  className="group/row hover:bg-white/[0.02] transition-colors cursor-pointer border-b border-white/5 last:border-0"
+                                  onClick={() => toggleFileExpansion(`violation-${i}`)}
+                                >
+                                  <td className="py-4 pr-4 pl-4 rounded-l-xl">
+                                    <div className="flex items-center gap-3">
+                                      <ChevronRight className={`h-4 w-4 text-white/30 transition-transform duration-300 ${isExpanded ? 'rotate-90 text-neon-cyan' : ''}`} />
+                                      <p className="text-xs font-mono text-neon-cyan truncate max-w-[150px]" title={v.file || "N/A"}>
+                                        {v.file || "N/A"}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-4 pr-4">
+                                    <Badge variant="outline" className={`text-[10px] font-mono ${v.severity === 'BLOCK' ? 'text-destructive border-destructive/20 bg-destructive/5' : 'text-amber-500 border-amber-500/20 bg-amber-500/5'}`}>
+                                      {v.rule_id || "N/A"}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-4 pr-4 text-xs font-mono text-white/40">
+                                    {v.line || "N/A"}
+                                  </td>
+                                  <td className="py-4 pr-4 text-xs text-white/70 leading-relaxed max-w-[200px] truncate">
+                                    {v.message || "N/A"}
+                                  </td>
+                                  <td className="py-4 pr-4">
+                                    <div className="space-y-1 truncate max-w-[200px]">
+                                      {v.remediation && typeof v.remediation === 'object' && 'steps' in v.remediation ? (
+                                        <p className="text-[11px] text-white/50">{v.remediation.steps[0]}...</p>
+                                      ) : (
+                                        <p className="text-[11px] text-white/50 truncate">{typeof v.remediation === 'string' ? v.remediation : "N/A"}</p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-4 pr-4 rounded-r-xl">
+                                    <code className="text-[10px] bg-white/5 px-2 py-1 rounded text-white/40 truncate max-w-[100px] block">
+                                      {v.current_value || "N/A"}
+                                    </code>
+                                  </td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr className="bg-black/40 border-b border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <td colSpan={6} className="p-6 pl-12">
+                                      <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                          <div>
+                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Detailed Description</h5>
+                                            <p className="text-xs text-white/70 leading-relaxed">{v.message}</p>
+                                            {v.explanation && (
+                                              <p className="text-xs text-white/50 leading-relaxed mt-2 italic">"{v.explanation}"</p>
+                                            )}
+                                          </div>
+                                          <div>
+                                            <button 
+                                              onClick={() => toggleContextExpansion(`context-${i}`)}
+                                              className="w-full flex items-center justify-between mb-2 group/context focus:outline-none"
+                                            >
+                                              <h5 className="text-[9px] font-black uppercase tracking-widest text-white/30 group-hover/context:text-neon-cyan transition-colors">Observed Context</h5>
+                                              <ChevronRight className={`h-3 w-3 text-white/30 transition-transform duration-300 ${expandedContexts[`context-${i}`] ? 'rotate-90 text-neon-cyan' : ''}`} />
+                                            </button>
+                                            
+                                            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedContexts[`context-${i}`] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                              <pre className="text-[10px] font-mono bg-[#0B0F1A] border border-white/5 p-4 rounded-xl text-white/60 whitespace-pre-wrap break-words max-h-[400px] overflow-y-auto custom-scrollbar">
+                                                {v.current_value || "No context provided."}
+                                              </pre>
+                                            </div>
+                                            {!expandedContexts[`context-${i}`] && (
+                                              <div 
+                                                onClick={() => toggleContextExpansion(`context-${i}`)}
+                                                className="text-[10px] font-mono bg-[#0B0F1A] border border-white/5 p-3 rounded-xl text-white/40 truncate cursor-pointer hover:border-white/10 hover:text-white/60 transition-colors"
+                                              >
+                                                {v.current_value || "No context provided."}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                          <div>
+                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2">Required Remediation</h5>
+                                            <div className="bg-[#0B0F1A] border border-white/5 p-4 rounded-lg space-y-2">
+                                              {v.remediation && typeof v.remediation === 'object' && 'steps' in v.remediation ? (
+                                                v.remediation.steps.map((step: string, j: number) => (
+                                                  <div key={j} className="flex items-start gap-2">
+                                                    <div className="h-4 w-4 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                      <span className="text-[8px] font-bold text-neon-cyan">{j + 1}</span>
+                                                    </div>
+                                                    <p className="text-xs text-white/60 leading-relaxed">{step}</p>
+                                                  </div>
+                                                ))
+                                              ) : (
+                                                <p className="text-xs text-white/60 leading-relaxed">{typeof v.remediation === 'string' ? v.remediation : "Manual intervention required."}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Violation Reason</h4>
-                      <p className="text-sm font-medium text-white/70 leading-relaxed">
-                        {decisionData?.violation_reason || "Authentication-related file modified without test coverage"}
-                      </p>
+                  ) : (
+                    // If no structured violations exist yet, we synthesize one from the legacy fields to ensure a table ALWAYS appears
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/5">
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">File</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Policy</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Line(s)</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Description</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Required Action</th>
+                            <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-white/20">Observed Change</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          <tr className="group/row hover:bg-white/[0.01] transition-colors">
+                            <td className="py-4 pr-4">
+                              <p className="text-xs font-mono text-neon-cyan truncate max-w-[150px]">
+                                {decisionData?.facts?.affectedAreas?.[0] || "N/A"}
+                              </p>
+                            </td>
+                            <td className="py-4 pr-4">
+                              <Badge variant="outline" className="text-[10px] font-mono text-destructive border-destructive/20 bg-destructive/5">
+                                {decisionData?.violated_policy || "N/A"}
+                              </Badge>
+                            </td>
+                            <td className="py-4 pr-4 text-xs font-mono text-white/40">N/A</td>
+                            <td className="py-4 pr-4 text-xs text-white/70 leading-relaxed max-w-[200px]">
+                              {decisionData?.violation_reason || "N/A"}
+                            </td>
+                            <td className="py-4 pr-4">
+                              <p className="text-[11px] text-white/50 italic">
+                                {isBlocked ? "Add unit tests covering authentication logic." : latestDecision?.override_reason}
+                              </p>
+                            </td>
+                            <td className="py-4">
+                              <code className="text-[10px] bg-white/5 px-2 py-1 rounded text-white/40 break-all">
+                                {decisionData?.observed_change || "N/A"}
+                              </code>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Affected File</h4>
-                      <p className="text-sm font-mono text-neon-cyan truncate">
-                        {decisionData?.facts?.affectedAreas?.[0] || "auth/login.js"}
-                      </p>
-                    </div>
-
-                    {isOverridden && (
-                      <div className="space-y-2">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Authorization Actor</h4>
-                        <div className="flex items-center gap-2">
-                          <Fingerprint className="h-3 w-3 text-amber-500" />
-                          <p className="text-sm font-bold text-amber-500">
-                            {latestDecision?.override_by || "System Admin"}
-                          </p>
-                        </div>
-                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-tighter mt-1">
-                          Verified Governance Signature
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">Observed Change</h4>
-                      <p className="text-sm font-medium text-white/70">
-                        {decisionData?.observed_change || "File modified · No corresponding test files detected"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white/20">
-                        {isOverridden ? 'Override Justification' : 'Required Action'}
-                      </h4>
-                      <div className={`flex items-start gap-3 p-4 rounded-2xl border ${isBlocked ? 'bg-white/5 border-white/5' : 'bg-amber-500/5 border-amber-500/10'}`}>
-                        {isBlocked ? <ListChecks className="h-4 w-4 text-neon-cyan mt-0.5" /> : <FileText className="h-4 w-4 text-amber-500 mt-0.5" />}
-                        <p className={`text-sm ${isBlocked ? 'text-white/80' : 'text-amber-500/80 italic'}`}>
-                          {isBlocked ? (
-                            <>Add unit tests covering authentication logic in <code className="text-neon-cyan font-mono">{decisionData?.facts?.affectedAreas?.[0] || "auth/login.js"}</code></>
-                          ) : (
-                            `"${latestDecision?.override_reason || "Administrative bypass granted for emergency resolution."}"`
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -352,18 +481,45 @@ const DecisionResolutionConsole = () => {
                                 {decisionData?.facts?.affectedAreas?.length || 0} FILES
                               </Badge>
                             </div>
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                              {decisionData?.facts?.affectedAreas?.map((file: string, i: number) => (
-                                <div key={i} className="space-y-1.5 p-2 rounded-xl bg-white/[0.02] border border-white/5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="h-1.5 w-1.5 bg-destructive rounded-full shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
-                                    <span className="text-[11px] font-mono text-white/80 break-all">{file}</span>
+                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              {decisionData?.facts?.affectedAreas?.map((file: string, i: number) => {
+                                const isExpanded = expandedFiles[`file-${i}`] || false;
+                                return (
+                                  <div key={i} className="rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden transition-all duration-300 hover:border-white/10">
+                                    <button 
+                                      onClick={() => toggleFileExpansion(`file-${i}`)}
+                                      className="w-full flex items-center justify-between p-3 text-left hover:bg-white/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-neon-cyan/30 rounded-t-xl"
+                                      aria-expanded={isExpanded}
+                                      aria-controls={`file-content-${i}`}
+                                    >
+                                      <div className="flex items-center gap-3 overflow-hidden">
+                                        <ChevronRight className={`h-4 w-4 text-white/30 transition-transform duration-300 ${isExpanded ? 'rotate-90 text-neon-cyan' : ''}`} />
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                          <div className="h-1.5 w-1.5 flex-shrink-0 bg-destructive rounded-full shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+                                          <span className="text-[11px] font-mono text-white/80 truncate">{file}</span>
+                                        </div>
+                                      </div>
+                                      {isExpanded && <Badge variant="outline" className="text-[9px] ml-2 bg-destructive/10 text-destructive border-destructive/20 h-5">VIOLATION</Badge>}
+                                    </button>
+                                    
+                                    <div 
+                                      id={`file-content-${i}`}
+                                      className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+                                    >
+                                      <div className="p-3 pt-0 border-t border-white/5 bg-black/20">
+                                        <p className="text-[10px] text-white/40 leading-relaxed italic pl-7">
+                                          {decisionData?.violated_policy || "coverage-auth-required"} violation: Missing tests for critical path logic.
+                                        </p>
+                                        <div className="mt-2 pl-7">
+                                          <Button size="sm" variant="link" className="h-auto p-0 text-[10px] text-neon-cyan hover:text-neon-cyan/80">
+                                            View Diff <ExternalLink className="ml-1 h-2.5 w-2.5" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <p className="text-[10px] text-white/40 pl-3 leading-relaxed italic">
-                                    {decisionData?.violated_policy || "coverage-auth-required"} violation: Missing tests for critical path logic.
-                                  </p>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                             {decisionData?.policies && decisionData.policies.filter((p: PolicyResult) => !p.passed).length > 1 && (
                               <div className="pt-2 border-t border-white/5 mt-2">
@@ -426,7 +582,7 @@ const DecisionResolutionConsole = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-white/40">Files changed</span>
-                    <span className="text-xs font-bold font-mono">{decisionData?.affected_files?.length || decisionData?.facts?.totalChanges || 0}</span>
+                    <span className="text-xs font-bold font-mono">{decisionData?.facts?.totalChanges || decisionData?.affected_files?.length || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-white/40">High-risk files</span>
@@ -474,6 +630,42 @@ const DecisionResolutionConsole = () => {
               </div>
             </div>
 
+            {/* AI SUGGESTED TEST INTENTS */}
+            {decisionData?.advisor?.suggestedTestIntents?.length > 0 && (
+              <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-neon-purple/10 border border-neon-purple/20">
+                    <Fingerprint className="h-4 w-4 text-neon-purple" />
+                  </div>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">AI Recommended Test Scenarios</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {decisionData.advisor.suggestedTestIntents.map((intent: any, i: number) => (
+                     <div key={i} className="group relative p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
+                       <div className="space-y-2">
+                         <div className="flex items-center justify-between">
+                           <a 
+                             href={`https://github.com/${pOwner}/${pRepo}/blob/${decisionData?.commit_sha || 'main'}/${intent.file}`}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="flex items-center gap-2 hover:underline decoration-neon-purple/50 underline-offset-4"
+                           >
+                             <FileCode className="h-3 w-3 text-neon-purple/70" />
+                             <span className="text-[10px] font-mono text-neon-purple/70">{intent.file}</span>
+                             <ExternalLink className="h-2.5 w-2.5 text-neon-purple/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                           </a>
+                         </div>
+                         <p className="text-sm text-white/70 leading-relaxed">
+                           {intent.intent}
+                         </p>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+              </div>
+            )}
+
             <Accordion type="single" collapsible className="space-y-4">
               <AccordionItem value="evidence" className="border-none">
                 <AccordionTrigger className="flex items-center justify-between p-8 bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-3xl transition-all group outline-none [&[data-state=open]]:rounded-b-none">
@@ -492,11 +684,16 @@ const DecisionResolutionConsole = () => {
                     {/* Compliance Rationale */}
                     <div className="space-y-4">
                       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Plain English Rationale</h4>
-                      <div className="text-xl font-medium text-white/70 leading-relaxed max-w-3xl">
-                        {decisionData?.advisor?.rationale ? (
-                          <span>"{decisionData.advisor.rationale}"</span>
+                      <div className="text-xl font-medium text-white/70 leading-relaxed max-w-3xl space-y-4">
+                        {decisionData?.violations && decisionData.violations.length > 0 ? (
+                          // Requirement 4: Human-readable explanation for every policy violation
+                          [...new Set(decisionData.violations.map(v => v.explanation).filter(Boolean))].map((exp, i) => (
+                            <p key={i}>"{exp}"</p>
+                          ))
+                        ) : decisionData?.advisor?.rationale ? (
+                          <p>"{decisionData.advisor.rationale}"</p>
                         ) : (
-                          <span>"{decisionData?.decisionReason || "No detailed rationale available for this decision."}"</span>
+                          <p>"{decisionData?.decisionReason || "No detailed rationale available for this decision."}"</p>
                         )}
                       </div>
                     </div>
