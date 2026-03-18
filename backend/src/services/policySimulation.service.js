@@ -251,9 +251,11 @@ export class PolicySimulationService {
       // Always pass the full snapshot object to the engine. 
       // The engine handles the extraction of .data or .fact_snapshot internally.
       // We ensure the snapshot data is normalized for the engine's checkSecurityPatterns.
+      // FIX: Handle Sequelize instances correctly by converting to plain object
+      const plainSnapshot = snapshot.toJSON ? snapshot.toJSON() : snapshot;
       const normalizedSnapshot = {
-        ...snapshot,
-        data: snapshot.data || snapshot.fact_snapshot || snapshot
+        ...plainSnapshot,
+        data: plainSnapshot.data || plainSnapshot.fact_snapshot || plainSnapshot
       };
 
       const simResult = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy]);
@@ -266,8 +268,9 @@ export class PolicySimulationService {
       }
 
       const pullRequest = snapshot.data?.pull_request;
-      const violations = simResult.structured_violations || [];
-      const passes = simResult.structured_passes || [];
+      // FIX: Use 'violations' property from engine result, not 'structured_violations'
+      const violations = simResult.violations || [];
+      const passes = simResult.passes || [];
 
       for (const v of violations) {
         severityCounts[v.severity] = (severityCounts[v.severity] || 0) + 1;

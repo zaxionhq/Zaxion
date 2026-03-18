@@ -168,7 +168,6 @@ export async function listDecisions(db, limit = 50, offset = 0, dateRange = {}) 
               model: db.OverrideSignature,
               as: 'signatures',
               attributes: ['justification', 'actor_id', 'createdAt'],
-              order: [['createdAt', 'DESC']],
               include: [
                 {
                   model: db.User,
@@ -190,7 +189,6 @@ export async function listDecisions(db, limit = 50, offset = 0, dateRange = {}) 
               model: db.OverrideSignature,
               as: 'signatures',
               attributes: ['justification', 'actor_id', 'createdAt'],
-              order: [['createdAt', 'DESC']],
               include: [
                 {
                   model: db.User,
@@ -216,6 +214,11 @@ export async function listDecisions(db, limit = 50, offset = 0, dateRange = {}) 
       // Safety check: Filter out rejected or expired overrides from the "OVERRIDDEN" badge
       const isActiveOverride = overrideData && (overrideData.status === 'APPROVED' || overrideData.status === 'REVOKED');
       
+      // Get the latest signature for justification and actor
+      const latestSignature = overrideData?.signatures?.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      
       return {
         id: d.id,
         repo_owner: owner || 'unknown',
@@ -227,8 +230,8 @@ export async function listDecisions(db, limit = 50, offset = 0, dateRange = {}) 
           id: overrideData.id,
           status: overrideData.status,
           category: overrideData.category,
-          justification: overrideData.signatures?.[0]?.justification,
-          actor: overrideData.signatures?.[0]?.actor?.displayName || overrideData.signatures?.[0]?.actor?.username
+          justification: latestSignature?.justification,
+          actor: latestSignature?.actor?.displayName || latestSignature?.actor?.username
         } : null,
         created_at: d.createdAt
       };

@@ -292,36 +292,57 @@ export class ReportGeneratorService {
             </div>
         </div>
 
-        <!-- Stopped Changes Table -->
-        <div class="section-title">Details: Changes that would be stopped</div>
+        <!-- Detailed Violations Table -->
+        <div class="section-title">Violation Details</div>
         <div class="card" style="padding: 0;">
             <div class="table-container">
-                <table id="prTable">
+                <table id="violationTable">
                     <thead>
                         <tr>
-                            <th>PR Number</th>
-                            <th>Repository</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Why was it stopped?</th>
+                            <th>PR</th>
+                            <th>Policy / Severity</th>
+                            <th>Location</th>
+                            <th>Issue & Remediation</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${perPrResults.filter(pr => pr.verdict === 'BLOCK').map((pr, index) => `
+                        ${perPrResults.flatMap(pr => 
+                            (pr.violations || []).map(v => `
                         <tr>
-                            <td style="font-weight: 600;">#${pr.pr_number}</td>
-                            <td style="color: var(--text-muted);">${pr.repo}</td>
-                            <td>${pr.pr_title}</td>
-                            <td><span class="badge badge-danger" style="font-size: 0.7rem;">Blocked</span></td>
-                            <td style="color: var(--text-muted); font-size: 0.8125rem; max-width: 300px;">
-                                ${pr.rationale || 'Does not follow security rules.'}
+                            <td style="vertical-align: top;">
+                                <div style="font-weight: 600;">#${pr.pr_number}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${pr.repo}</div>
+                            </td>
+                            <td style="vertical-align: top;">
+                                <div style="font-weight: 600;">${v.rule_id}</div>
+                                <span class="badge ${v.severity === 'BLOCK' ? 'badge-danger' : 'badge-warning'}" style="font-size: 0.7rem; margin-top: 0.25rem; display: inline-block;">${v.severity}</span>
+                            </td>
+                            <td style="vertical-align: top; font-family: monospace; font-size: 0.8125rem;">
+                                ${v.file ? `<div>${v.file}${v.line ? `:${v.line}` : ''}</div>` : '<span style="color: var(--text-muted);">Global</span>'}
+                            </td>
+                            <td style="vertical-align: top;">
+                                <div style="font-weight: 500;">${v.message}</div>
+                                ${v.explanation ? `<div style="margin-top: 0.5rem; font-size: 0.8125rem; color: var(--text-muted);">${v.explanation}</div>` : ''}
+                                ${v.remediation && v.remediation.steps ? `
+                                <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 4px; font-size: 0.75rem;">
+                                    <strong>Fix:</strong>
+                                    <ul style="margin: 0.25rem 0 0 1rem; padding: 0;">
+                                        ${v.remediation.steps.slice(0, 2).map(s => `<li>${s}</li>`).join('')}
+                                    </ul>
+                                </div>` : ''}
                             </td>
                         </tr>
-                        `).join('')}
-                        ${perPrResults.filter(pr => pr.verdict === 'BLOCK').length === 0 ? '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">No changes were stopped during this test.</td></tr>' : ''}
+                        `)).join('')}
+                        ${perPrResults.flatMap(pr => pr.violations || []).length === 0 ? '<tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">No policy violations found.</td></tr>' : ''}
                     </tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- Export Controls -->
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+            <button onclick="downloadCSV()" class="btn btn-outline">Download CSV</button>
+            <button onclick="downloadJSON()" class="btn btn-outline">Download JSON</button>
         </div>
 
         <!-- Setup Guide -->
@@ -346,6 +367,48 @@ export class ReportGeneratorService {
 
     <script>
         const data = JSON.parse(document.getElementById('simulationData').textContent);
+
+        function downloadJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "zaxion-report.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function downloadCSV() {
+            const rows = [];
+            // Header
+            rows.push(['PR Number', 'Repo', 'Title', 'Policy', 'Severity', 'File', 'Line', 'Message']);
+            
+            // Data
+            data.simulation.per_pr_results.forEach(pr => {
+                if (!pr.violations || pr.violations.length === 0) return;
+                pr.violations.forEach(v => {
+                    rows.push([
+                        pr.pr_number,
+                        pr.repo,
+                        \`"\${(pr.pr_title || '').replace(/"/g, '""')}"\`,
+                        v.rule_id,
+                        v.severity,
+                        v.file || 'Global',
+                        v.line || '',
+                        \`"\${(v.message || '').replace(/"/g, '""')}"\`
+                    ]);
+                });
+            });
+
+            const csvString = rows.map(e => e.join(",")).join("\\n");
+            const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvString);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "zaxion-report.csv");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
     </script>
 </body>
 </html>`;
