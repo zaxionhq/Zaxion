@@ -122,7 +122,7 @@ export class GitHubReporterService {
           const line = v.line || "N/A";
           const description = v.message || "N/A";
           const requiredAction = v.remediation?.steps ? v.remediation.steps.join("<br>") : (v.remediation || "N/A");
-          const observedChange = v.current_value || "N/A";
+          const observedChange = v.current_value ? (typeof v.current_value === 'object' ? JSON.stringify(v.current_value) : v.current_value) : "N/A";
           
           text += `| \`${file}\` | \`${policy}\` | ${line} | ${description} | ${requiredAction} | \`${observedChange}\` |\n`;
         });
