@@ -250,8 +250,9 @@ export function runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine)
   }
 
   const evalResult = evaluationEngine.evaluate(syntheticSnapshot, policies);
-  const violations = evalResult.structured_violations || [];
-  const passes = evalResult.structured_passes || [];
+  // FIX: Use 'violations' property from engine result, not 'structured_violations'
+  const violations = evalResult.violations || [];
+  const passes = evalResult.passes || [];
   const severityCounts = { BLOCK: 0, WARN: 0, OBSERVE: 0 };
   violations.forEach(v => {
     if (v.severity) severityCounts[v.severity] = (severityCounts[v.severity] || 0) + 1;
