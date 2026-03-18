@@ -71,19 +71,81 @@ export class GitHubReporterService {
         badge = "❌";
     }
 
-    // 0. Build Rich Markdown Output
+    // 0. Build Concise Summary Output (Concise Mode for Comment)
     const frontendUrl = env.FRONTEND_URL || "http://localhost:8080";
     const deepLink = `${frontendUrl}/pr/${owner}/${repo}/${prNumber}`;
     
-    let summary = description;
+    // Concise Summary for Sticky Comment
+    let summary = `### ${title}\n\n`;
+    
+    // Always provide the deep link prominently
+    summary += `[**📋 View Full Governance Report**](${deepLink})\n\n`;
+    
+    if (typeof decisionObject === 'object' && decisionObject !== null && decisionObject.decision) {
+      if (decisionObject.facts) {
+        // Only key stats in the summary
+        const issueCount = (decisionObject.advisor?.suggestedTestIntents?.length || 0);
+        summary += `- **Status:** ${badge} ${decisionState}\n`;
+        summary += `- **Risk Analysis:** ${decisionObject.facts.hasCriticalChanges ? '🔴 Critical' : '🟢 Safe'}\n`;
+        summary += `- **Changes:** ${decisionObject.facts.totalChanges || 0} files\n`;
+        if (issueCount > 0) {
+           summary += `- **Issues Found:** ${issueCount} (See full report for details)\n`;
+        }
+      }
+    } else {
+      // Handle string-only decisions (like OVERRIDDEN_PASS)
+      summary += `> ${description}\n\n`;
+      if (metadata.override_by) {
+        summary += `**Authorized By:** ${metadata.override_by}\n`;
+      }
+    }
+
+    summary += `\n---\n*Visit the [Full Report](${deepLink}) for detailed metrics, findings, and interactive remediation.*`;
+
+    // Detailed Text for Check Run
     let text = `## 🛡️ Zaxion Policy Evaluation Report\n`;
     text += `**Decision:** ${decisionState}\n`;
     text += `**Timestamp:** ${new Date().toISOString()}\n\n`;
-
+    
     if (typeof decisionObject === 'object' && decisionObject !== null && decisionObject.decision) {
-      summary = `### ${title}\n${description}\n\n[📋 Full Report](${deepLink})`;
-      
-      text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n`;
+      text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n\n`;
+
+      // 1. Policy Violation Breakdown Table (Requirement 1, 2, 3)
+      if (decisionObject.violations && decisionObject.violations.length > 0) {
+        text += `### 📋 Policy Violation Breakdown\n`;
+        text += `| File | Policy | Line(s) | Description | Required Action | Observed Change |\n`;
+        text += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+        
+        decisionObject.violations.forEach(v => {
+          const file = v.file || "N/A";
+          const policy = v.rule_id || "N/A";
+          const line = v.line || "N/A";
+          const description = v.message || "N/A";
+          const requiredAction = v.remediation?.steps ? v.remediation.steps.join("<br>") : (v.remediation || "N/A");
+          const observedChange = v.current_value || "N/A";
+          
+          text += `| \`${file}\` | \`${policy}\` | ${line} | ${description} | ${requiredAction} | \`${observedChange}\` |\n`;
+        });
+        text += `\n`;
+      }
+
+      // 2. Plain English Rationale (Requirement 4)
+      text += `### 💡 Plain English Rationale\n`;
+      if (decisionObject.violations && decisionObject.violations.length > 0) {
+        // Collect unique explanations from all violations
+        const uniqueExplanations = [...new Set(decisionObject.violations.map(v => v.explanation).filter(Boolean))];
+        if (uniqueExplanations.length > 0) {
+          uniqueExplanations.forEach(exp => {
+            text += `> ${exp}\n\n`;
+          });
+        } else if (decisionObject.advisor?.rationale) {
+          text += `> ${decisionObject.advisor.rationale}\n\n`;
+        } else {
+          text += `> ${decisionObject.decisionReason || "No detailed rationale available."}\n\n`;
+        }
+      } else {
+        text += `> All security protocols satisfied. No policy violations detected.\n\n`;
+      }
 
       if (decisionObject.facts) {
         text += `### 📊 Facts Observed\n`;
@@ -93,9 +155,6 @@ export class GitHubReporterService {
       }
 
       if (decisionObject.advisor && decisionObject.advisor.status !== "ERROR") {
-        text += `### 💡 Zaxion Advisor Insights (Non-Gating)\n`;
-        text += `> ${decisionObject.advisor.rationale}\n\n`;
-        
         if (decisionObject.advisor.suggestedTestIntents?.length > 0) {
           text += `**Suggested Test Intents:**\n`;
           decisionObject.advisor.suggestedTestIntents.forEach(intent => {
@@ -105,25 +164,14 @@ export class GitHubReporterService {
         }
       }
     } else {
-      // Handle string-only decisions (like OVERRIDDEN_PASS) or partial objects
-      summary = `### ${title}\n${description}\n\n[📋 View Audit Log](${deepLink})`;
-      text += `> ${description}\n\n`;
-      text += `*This decision was manually authorized by an administrator and recorded in the Zaxion Governance ledger.*\n`;
-      
-      if (metadata.overridden_at) {
-        text += `**Authorized At:** ${metadata.overridden_at}\n`;
-      }
-      if (metadata.override_by) {
-        text += `**Authorized By:** ${metadata.override_by}\n`;
-      }
+       text += `> ${description}\n\n`;
     }
-
-    text += `---\n*This report was generated automatically by Zaxion-PR GATE. Decisions are deterministic and based on project-defined policies.*`;
 
     // --- STICKY COMMENT LOGIC ---
     if (prNumber) {
       try {
-        const commentBody = `${this.STICKY_MARKER}\n### 🛡️ Zaxion Policy Status: ${badge} **${decisionState}**\n\n${summary}\n\n---\n*Updated for commit \`${headSha.substring(0, 7)}\`*`;
+        // USE THE CONCISE SUMMARY for the comment body
+        const commentBody = `${this.STICKY_MARKER}\n## 🛡️ Zaxion Policy Status: ${badge} **${decisionState}**\n\n${summary}`;
 
         // 1. List comments to find existing sticky
         const { data: comments } = await this.octokit.rest.issues.listComments({
