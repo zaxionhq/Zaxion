@@ -173,8 +173,16 @@ export class FactIngestorService {
 
   /**
    * Fetches raw file content from GitHub (for full-content analysis)
+   * Note: This method should only be called for text files that have passed validation checks.
+   * Binary files and large files are filtered out before this step to mitigate DoS risks.
    */
   async _fetchFileContent(rawUrl) {
+    // SECURITY: Validate URL protocol to prevent SSRF
+    if (!rawUrl.startsWith('https://raw.githubusercontent.com/') && !rawUrl.startsWith('https://api.github.com/')) {
+      logger.warn({ rawUrl }, 'FactIngestor: Blocked suspicious file URL');
+      return null;
+    }
+
     const { data } = await axios.get(rawUrl, {
       headers: { Authorization: `Bearer ${this.token}` },
       responseType: 'arraybuffer',

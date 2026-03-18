@@ -51,8 +51,8 @@ export interface Violation {
   file?: string;
   line?: number;
   column?: number;
-  current_value?: any;
-  required_value?: any;
+  current_value?: unknown;
+  required_value?: unknown;
   explanation?: string;
   remediation?: string | {
     steps: string[];

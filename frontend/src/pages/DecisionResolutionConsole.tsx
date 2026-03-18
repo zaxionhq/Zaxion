@@ -641,7 +641,7 @@ const DecisionResolutionConsole = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {decisionData.advisor.suggestedTestIntents.map((intent: any, i: number) => (
+                   {decisionData.advisor.suggestedTestIntents.map((intent: { file: string; intent: string }, i: number) => (
                      <div key={i} className="group relative p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
                        <div className="space-y-2">
                          <div className="flex items-center justify-between">

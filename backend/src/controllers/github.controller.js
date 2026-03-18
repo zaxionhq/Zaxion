@@ -702,9 +702,9 @@ export default function githubControllerFactory(db) {
               });
             }
 
-            logger.log(`[GitHubController] Merge synced for decision ${decision.pr_decision_id}. Rows affected: ${decisionUpdate[0]}`);
+            log(`[GitHubController] Merge synced for decision ${decision.pr_decision_id}. Rows affected: ${decisionUpdate[0]}`);
           } catch (syncErr) {
-            logger.warn(`[GitHubController] Failed to sync merge status: ${syncErr.message}`);
+            warn(`[GitHubController] Failed to sync merge status: ${syncErr.message}`);
           }
 
           return res.status(200).json({
