@@ -238,7 +238,7 @@ export class PolicySimulationService {
       // ON-DEMAND ENRICHMENT: If depth is needed but missing, enrich it.
       if (requiresContent || requiresAst) {
         const hasContent = factData.changes?.files?.some(f => f.content);
-        const hasAst = factData.metadata?.ast_by_path;
+        const hasAst = factData.metadata?.ast_by_path || factData.changes?.files?.some(f => f.ast);
 
         if ((requiresContent && !hasContent) || (requiresAst && !hasAst)) {
           logger.info({ snapshotId: snapshot.id, requiresContent, requiresAst }, "PolicySimulation: On-demand enrichment triggered");

@@ -258,10 +258,76 @@ export function analyzeFile(content, filePath = '') {
     imports: [],
     exports: [],
     error: null,
-    status: 'success'
+    status: 'success',
+    semanticFacts: {
+      variableDeclarations: [],
+      functionCalls: [],
+      templateLiterals: [],
+      assignments: [],
+    }
   };
+
   traverse.default(ast, {
-    // ... basic traversal ...
+    VariableDeclarator(path) {
+      const id = path.node.id;
+      const init = path.node.init;
+      if (id.type === 'Identifier') {
+        const fact = {
+          name: id.name,
+          kind: path.parent.kind,
+          isConstant: path.parent.kind === 'const',
+          value: null,
+          type: init?.type || 'null'
+        };
+        if (init?.type === 'NumericLiteral' || init?.type === 'StringLiteral') {
+          fact.value = init.value;
+        } else if (init?.type === 'TemplateLiteral') {
+          fact.value = init.quasis.map(q => q.value.raw).join('${}');
+        }
+        result.semanticFacts.variableDeclarations.push(fact);
+      }
+    },
+    TemplateLiteral(path) {
+      const value = path.node.quasis.map(q => q.value.raw).join('${}');
+      result.semanticFacts.templateLiterals.push({
+        value,
+        isUrl: value.startsWith('http') || value.includes('://'),
+        expressionCount: path.node.expressions.length
+      });
+    },
+    FunctionDeclaration(path) {
+      result.functionCount++;
+    },
+    FunctionExpression(path) {
+      result.functionCount++;
+    },
+    ArrowFunctionExpression(path) {
+      result.functionCount++;
+    },
+    ClassMethod(path) {
+      result.functionCount++;
+    },
+    CallExpression(path) {
+      const callee = path.node.callee;
+      const name = callee.name || (callee.object?.name && callee.property?.name ? `${callee.object.name}.${callee.property.name}` : null);
+      if (name === 'describe' || name === 'it' || name === 'test') result.testCount++;
+      
+      let callName = 'anonymous';
+      if (callee.type === 'Identifier') callName = callee.name;
+      else if (callee.type === 'MemberExpression') {
+        callName = `${callee.object.name || 'expr'}.${callee.property.name || 'expr'}`;
+      }
+      result.semanticFacts.functionCalls.push({
+        name: callName,
+        arguments: path.node.arguments.map(arg => arg.type),
+        calleeType: callee.type
+      });
+    },
+    ImportDeclaration(path) {
+      result.importCount++;
+      const src = path.node.source?.value;
+      if (src) result.imports.push(src);
+    },
   });
   return result;
 }
