@@ -85,10 +85,18 @@ const DocsOverview = () => {
         </div>
 
         <div className="grid md:grid-cols-4 gap-4 relative">
-          <DocsStep number="01" title="Proposal" description="Developer submits a PR, proposing a state change to the institutional codebase." />
-          <DocsStep number="02" title="Extraction" description="Our AST engine parses the diff to extract deep structural facts without code execution." />
-          <DocsStep number="03" title="Trial" description="Extracted facts are validated against the active Policy Constitution for the repository." />
-          <DocsStep number="04" title="Verdict" description="A binary PASS/BLOCK is issued. All overrides require signed rationale for the audit trail." last />
+          <DocsStep number="01" title="Proposal">
+            Developer submits a PR, proposing a state change to the institutional codebase.
+          </DocsStep>
+          <DocsStep number="02" title="Extraction">
+            Our AST engine parses the diff to extract deep structural facts without code execution.
+          </DocsStep>
+          <DocsStep number="03" title="Trial">
+            Extracted facts are validated against the active Policy Constitution for the repository.
+          </DocsStep>
+          <DocsStep number="04" title="Verdict" last>
+            A binary PASS/BLOCK is issued. All overrides require signed rationale for the audit trail.
+          </DocsStep>
         </div>
       </section>
 
