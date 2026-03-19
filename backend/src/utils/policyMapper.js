@@ -7,8 +7,8 @@
 export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
   const policyMap = {
     'SEC-001': { type: 'security_patterns', patterns: ['no-hardcoded-secrets'] },
-    'SEC-002': { type: 'security_patterns', patterns: ['no-hardcoded-configuration'] },
-    'SEC-003': { type: 'security_patterns', patterns: ['no-magic-numbers'] },
+    'SEC-002': { type: 'hardcoded_urls' }, // Map to new semantic checker
+    'SEC-003': { type: 'no_magic_numbers' }, // Map to new semantic checker
     'SEC-004': { type: 'dependency_scan' },
     'SEC-005': { type: 'security_patterns', patterns: ['no-eval'] },
     'SEC-006': { type: 'security_patterns', patterns: ['no-unsafe-regex'] },

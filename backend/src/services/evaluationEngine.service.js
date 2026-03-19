@@ -148,6 +148,28 @@ const RULE_REMEDIATIONS = new Map([
     },
     documentation_link: `${DOCS_BASE}/policies`,
   }],
+  ['no_magic_numbers', {
+    explanation: 'Magic numbers obscure the intent of code and make it harder to maintain.',
+    remediation: {
+      steps: [
+        'Extract the number into a descriptive constant.',
+        'Use UPPER_SNAKE_CASE for constant names.',
+      ],
+      example: 'const MAX_RETRIES = 3;\nif (attempts > MAX_RETRIES) { ... }',
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
+  ['hardcoded_urls', {
+    explanation: 'Hardcoded URLs limit flexibility across environments and pose a security risk if they point to internal infrastructure.',
+    remediation: {
+      steps: [
+        'Move the URL to an environment variable.',
+        'Construct URLs dynamically using config objects.',
+      ],
+      example: 'const apiUrl = process.env.API_BASE_URL;',
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
 ]);
 
 /** Security pattern definitions: { pattern: RegExp, message: string, severity: 'BLOCK'|'WARN' } */
