@@ -6,91 +6,101 @@ import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsGettingStarted = () => {
   return (
-    <div className="space-y-12">
+    <div className="space-y-16">
       <div className="space-y-6">
-        <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-indigo-400 uppercase tracking-widest">
-          New User Guide
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-bold text-indigo-400 uppercase tracking-widest">
+          Deployment Guide
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-white leading-tight">
-          Getting Started with Zaxion
+        <h1 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+          Quick Start: Deploying Zaxion
         </h1>
         <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
-          Zaxion checks your code before it gets merged. You set rules (like “every PR must have tests” or “no secrets in code”), and Zaxion runs those checks on every Pull Request—or on code you paste, upload, or point to via a GitHub PR URL. No extra tools needed to understand it.
+          Zaxion is designed to be integrated into your engineering workflow in minutes. Whether you are testing a single policy or rolling out organizational governance, follow this guide to get started.
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-3">
         {[
           {
-            title: "Catch problems early",
-            desc: "Run checks on PRs, pasted code, uploaded files, or zips. See pass/fail and what to fix before merge.",
+            title: "1. Define Policies",
+            desc: "Translate your engineering handbook into executable JSON rules that define your architectural constitution.",
             icon: Shield
           },
           {
-            title: "Set your own rules",
-            desc: "Create policies in plain JSON: limit PR size, require tests, protect folders, block secrets, and more.",
+            title: "2. Simulate Impact",
+            desc: "Test your policies against existing PRs or code snippets to understand impact before enabling enforcement.",
             icon: CheckCircle2
           },
           {
-            title: "One dashboard",
-            desc: "Dashboard, Policy Simulator, Decisions, and Analytics live in one place. No jumping between apps.",
+            title: "3. Enforce Governance",
+            desc: "Activate policies on your repositories to automatically block non-compliant code and create audit trails.",
             icon: Terminal
           }
         ].map((item, i) => (
-          <div key={i} className="p-5 rounded-lg border border-white/5 bg-white/[0.01] space-y-3">
-            <item.icon className="h-5 w-5 text-indigo-400" />
-            <h3 className="text-sm font-bold text-slate-200">{item.title}</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+          <div key={i} className="p-6 rounded-2xl border border-white/5 bg-white/[0.02] space-y-4 hover:border-white/10 transition-colors">
+            <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+              <item.icon className="h-5 w-5 text-indigo-400" />
+            </div>
+            <h3 className="text-base font-bold text-white">{item.title}</h3>
+            <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </div>
 
-      <section className="space-y-8 pt-8 border-t border-white/5">
-        <h2 className="text-2xl font-bold text-white">What you can do in Zaxion</h2>
-        <div className="space-y-4">
-          <DocsStep number="01" title="Dashboard" to="/governance">
-            See trust score, override rate, and workflow impact. Quick view of how governance is doing.
+      <section className="space-y-10 pt-10 border-t border-white/5">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-white">Core Workflow Steps</h2>
+          <p className="text-slate-500">From initial setup to organization-wide governance.</p>
+        </div>
+        
+        <div className="space-y-6">
+          <DocsStep number="01" title="Access the Governance Dashboard" to="/governance">
+            Your central command for all governance activities. Monitor organizational health, override rates, and policy compliance from a single interface.
           </DocsStep>
-          <DocsStep number="02" title="Policy Impact Simulator" to="/governance">
-            Test a policy without merging anything. Pick a policy, then give it code via <strong>Upload file</strong>, <strong>Paste code</strong>, <strong>Upload zip</strong>, or <strong>GitHub PR URL</strong>. Click Analyze to see pass/fail and violations.
+          
+          <DocsStep number="02" title="Create Your First Policy" to="/governance">
+            Navigate to the Policy Library. Use our DSL to define rules like mandatory unit tests, secret detection, or architectural boundaries. Start with a template to move faster.
           </DocsStep>
-          <DocsStep number="03" title="Create a policy" to="/governance">
-            Click the + next to “Simulation Configuration,” name the policy, set scope (Global, Repo, or Branch), and paste <strong>Policy Rules (JSON)</strong>. Use the example formats (simple → advanced) in the dialog—e.g. PR size, coverage, file types, security paths, or security/code-quality scans.
+          
+          <DocsStep number="03" title="Run a Policy Simulation" to="/governance">
+            Before going live, use the **Impact Simulator**. Upload code, paste a snippet, or provide a GitHub PR URL to see exactly how your new policy would affect existing workflows.
           </DocsStep>
-          <DocsStep number="04" title="Decisions & Analytics" to="/governance/decisions">
-            View past decisions and override history. In Analytics, see violation hotspots and the full list of active policies with descriptions and affected paths.
+          
+          <DocsStep number="04" title="Activate & Monitor" to="/governance/decisions">
+            Once satisfied, enable the policy for specific repositories. Track all decisions and overrides in the **Audit Ledger** to maintain full transparency.
           </DocsStep>
         </div>
       </section>
 
-      <div className="pt-8">
+      <div className="flex items-center justify-between p-8 rounded-2xl border border-indigo-500/20 bg-indigo-500/5">
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold text-white">Ready for production?</h3>
+          <p className="text-sm text-slate-400 font-medium">Configure the GitHub App for automated PR enforcement.</p>
+        </div>
         <Link 
           to="/docs/quick-start" 
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-colors"
+          className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
         >
-          Next: Quick Start (step-by-step)
+          View Quick Start
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
       <DocsInlineFAQ
-        title="Getting started – FAQ"
+        title="Onboarding – FAQ"
         items={[
           {
-            question: 'Do I need to install anything in my repo to try Zaxion?',
-            answer:
-              'No. You can start by using the Policy Impact Simulator in observe mode with uploaded code, pasted snippets, or GitHub PR URLs. Installing the GitHub App is only required once you want Zaxion to enforce checks on real PRs.',
+            question: "Is there a free trial for enterprise features?",
+            answer: "Yes. Every new Zaxion account starts with a 14-day trial of our full Enterprise suite, including advanced policy simulation and SSO integration."
           },
           {
-            question: 'Can non-admin developers create and test policies?',
-            answer:
-              'Yes. Any user with access to the Governance Dashboard can create draft policies and run simulations. Only admins/owners should be able to actually enable a policy on real branches; everyone else submits the policy for approval instead of toggling enforcement themselves.',
+            question: "How do I invite my engineering team?",
+            answer: "You can manage team access via the Settings panel in the Governance Dashboard. We support both direct invitations and automated provisioning via SAML."
           },
           {
-            question: 'Will Zaxion slow down our existing CI/CD pipeline?',
-            answer:
-              'Evaluations are AST-based and deterministic. For most teams, a check completes in seconds and is comparable to a lightweight unit-test step—far faster than end-to-end suites or full builds.',
-          },
+            question: "Can I use Zaxion with private repositories?",
+            answer: "Absolutely. Zaxion is designed with a security-first architecture. For private repositories, we recommend using our GitHub App integration which uses short-lived tokens and never stores your source code."
+          }
         ]}
       />
     </div>
