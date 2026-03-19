@@ -33,7 +33,14 @@ const IGNORED_PATHS = [
 
 function shouldFetchContent(filePath) {
   // Wave 4 Parity Fix: Align with github.service.js ignore logic
-  if (IGNORED_PATHS.some(ignored => filePath.includes(`/${ignored}/`) || filePath.startsWith(`${ignored}/`) || filePath === ignored)) {
+  const isIgnored = IGNORED_PATHS.some(ignored => {
+    const isInsideDir = filePath.includes(`/${ignored}/`);
+    const isStartOfPath = filePath.startsWith(`${ignored}/`);
+    const isExactMatch = filePath === ignored;
+    return isInsideDir || isStartOfPath || isExactMatch;
+  });
+
+  if (isIgnored) {
     return false;
   }
   const ext = path.extname(filePath).toLowerCase();
