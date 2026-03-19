@@ -22,10 +22,11 @@ export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
     'GOV-003': { type: 'mandatory_review', min_approvals: 1 },
   };
 
-  const rules = policyMap[policyId];
-  if (!rules) {
+  if (!Object.prototype.hasOwnProperty.call(policyMap, policyId)) {
     return { type: 'core_enforcement', id: policyId, severity };
   }
+
+  const rules = policyMap[policyId];
 
   return {
     ...rules,
