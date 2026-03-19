@@ -228,7 +228,12 @@ export function buildImportGraph(files) {
     const path = file.path || file.filePath;
     const content = file.content;
     if (!path || !content) continue;
-    const ast = safeParse(content, path);
+    let ast;
+    try {
+      ast = parse(content, { ...PARSER_OPTIONS, sourceFilename: path });
+    } catch (e) {
+      continue;
+    }
     if (!ast) continue;
     const imports = [];
     traverse.default(ast, {
