@@ -165,6 +165,7 @@ const SECURITY_PATTERNS = [
  * Phase 5 Pillar 3: Evaluation Engine (The Judge)
  * A pure, deterministic engine that evaluates Facts against Policies.
  */
+
 export class EvaluationEngineService {
   constructor() {
     this.ENGINE_VERSION = '1.0.0';
@@ -238,6 +239,35 @@ export class EvaluationEngineService {
    * @returns {object} Evaluation Result
    */
   evaluate(factSnapshot, appliedPolicies) {
+    // V4: Enforce evaluation mode (STRICT vs BEST_EFFORT)
+    const evalMode = factSnapshot.evaluation_mode || 'STRICT';
+    
+    // Weighted Coverage Calculation
+    let weightedCoverage = 1.0;
+    let ingestionIntegrity = factSnapshot.ingestion_status?.complete === false ? 0.5 : 1.0;
+    let parserSuccessRate = factSnapshot.metadata?.parser_success_rate || 1.0;
+
+    if (factSnapshot.data?.changes?.files) {
+      let totalWeight = 0;
+      let parsedWeight = 0;
+      for (const f of factSnapshot.data.changes.files) {
+        const weight = f.path.includes('src/') || f.path.includes('core/') ? 10 : 1;
+        totalWeight += weight;
+        if (factSnapshot.metadata?.ast_by_path?.[f.path]?.status === 'success' || f.content) {
+          parsedWeight += weight;
+        }
+      }
+      if (totalWeight > 0) {
+        weightedCoverage = parsedWeight / totalWeight;
+      }
+    }
+
+    const confidence = weightedCoverage * ingestionIntegrity * parserSuccessRate;
+
+    // Strict Mode Rejection
+    if (evalMode === 'STRICT' && confidence < 0.95) {
+      throw new Error(`INCOMPLETE_DATA: Confidence score (${(confidence * 100).toFixed(1)}%) is below strict threshold of 95%`);
+    }
     const factData = factSnapshot?.data ?? {};
     const violatedPolicies = [];
     const policyResults = [];
@@ -386,9 +416,19 @@ export class EvaluationEngineService {
       }
     }
 
+    // V4 Deterministic Sort & Hashing
+    structuredViolations.sort((a, b) => {
+      const keyA = (a.file || '') + (a.line || 0) + a.rule_id;
+      const keyB = (b.file || '') + (b.line || 0) + b.rule_id;
+      return keyA.localeCompare(keyB);
+    });
+
+    for (const v of structuredViolations) {
+      v.hash = crypto.createHash('sha256').update(v.rule_id + (v.file || '') + (v.line || '') + (v.current_value || '')).digest('hex');
+    }
+
     return {
       result: finalResult, // Alias for backward compatibility / tests
-      final_verdict: finalResult,
       rationale,
       policy_results: policyResults,
       violations: structuredViolations,
@@ -399,6 +439,12 @@ export class EvaluationEngineService {
       })), // Alias for tests
       passes: structuredPasses,
       evaluation_hash: this._calculateHash(factSnapshot, appliedPolicies),
+      confidence: confidence,
+      system_health: {
+        degraded_mode: evalMode !== 'STRICT',
+        parser_success_rate: parserSuccessRate,
+        ingestion_integrity: ingestionIntegrity
+      },
       metadata: {
         evaluated_at: new Date().toISOString(),
         engine_version: this.ENGINE_VERSION,

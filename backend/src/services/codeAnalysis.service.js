@@ -263,7 +263,7 @@ export function runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine)
   const policies = [mockPolicy];
 
   // We should NOT auto-add global security baseline if the user is explicitly testing a specific policy,
-  // as it causes confusion (e.g. testing coverage blocks because of a console.log).
+  // as it causes confusion (e.g. testing coverage blocks because of a console output).
   // Only add it if no rules were provided (fallback).
   if (!draftRules || Object.keys(draftRules).length === 0) {
     policies.push({
@@ -271,7 +271,7 @@ export function runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine)
       policy_version_id: 'DRAFT_SECURITY',
       level: 'MANDATORY',
       rules_logic: { type: 'security_patterns' },
-      reason: 'Global security baseline',
+      reason: 'Global security baseline', 
     });
   }
 

@@ -1,5 +1,6 @@
 // src/services/github.service.js
 import axios from "axios";
+import { createGitHubClient } from "../utils/githubRateLimiter.js";
 import { githubServiceCallCounter } from "../utils/metrics.js";
 import path from "path";
 import logger from "../logger.js";
@@ -40,9 +41,10 @@ export async function listPulls(token, owner, repo, opts = {}) {
   if (!token) throw new Error("Authentication token is required.");
   const params = { state, per_page };
   if (head) params.head = head;
-  const { data } = await axios.get(
-    `${GH_API}/repos/${owner}/${repo}/pulls?${new URLSearchParams(params).toString()}`,
-    { headers: { Authorization: `Bearer ${token}` } }
+  
+  const client = createGitHubClient(token, 'LOW'); // Batch operation
+  const { data } = await client.get(
+    `/repos/${owner}/${repo}/pulls?${new URLSearchParams(params).toString()}`
   );
   return data;
 }
@@ -209,17 +211,30 @@ export async function fetchPrFilesWithContent(token, owner, repo, prNumber, opts
     if (!prNumber) throw new Error("PR number is required.");
 
     const maxFiles = opts.maxFiles && Number.isFinite(opts.maxFiles) ? Math.min(opts.maxFiles, 200) : 100;
-    const url = `${GH_API}/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=${maxFiles}`;
-    logger.info({ owner, repo, prNumber, url }, "Fetching PR files for content analysis");
+    const client = createGitHubClient(token, 'HIGH');
+    
+    // Pagination & Truncation Integrity (Phase 1 V4)
+    let page = 1;
+    let hasNext = true;
+    let allFiles = [];
 
-    const { data: files } = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      timeout: 15000,
-    });
+    while (hasNext) {
+      const url = `/repos/${owner}/${repo}/pulls/${prNumber}/files?per_page=100&page=${page}`;
+      const { data: files, headers } = await client.get(url);
+      
+      allFiles = allFiles.concat(files);
+      
+      const linkHeader = headers.link;
+      if (linkHeader && linkHeader.includes('rel="next"') && allFiles.length < maxFiles) {
+        page++;
+      } else {
+        hasNext = false;
+      }
+    }
 
     const results = [];
 
-    for (const file of files) {
+    for (const file of allFiles) {
       const filePath = file.filename;
       if (!filePath) continue;
 
@@ -233,8 +248,7 @@ export async function fetchPrFilesWithContent(token, owner, repo, prNumber, opts
       if (!rawUrl) continue;
 
       try {
-        const resp = await axios.get(rawUrl, {
-          headers: { Authorization: `Bearer ${token}` },
+        const resp = await client.get(rawUrl, {
           responseType: 'arraybuffer',
           timeout: 15000,
           maxContentLength: MAX_SIZE_BYTES,

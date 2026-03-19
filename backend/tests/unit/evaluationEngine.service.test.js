@@ -10,6 +10,7 @@ describe('EvaluationEngineService', () => {
 
   const mockFacts = {
     id: 'fact-123',
+    evaluation_mode: 'BEST_EFFORT', // Prevent strict rejection for empty mocks
     data: {
       changes: {
         total_files: 5,

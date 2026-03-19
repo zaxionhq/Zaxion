@@ -1,7 +1,7 @@
 import axios from 'axios';
 import path from 'path';
 import logger from '../logger.js';
-import { enrichSnapshotWithAst } from './astAnalyzer.service.js';
+import { enrichSnapshotWithAst, enrichSnapshotWithAstAsync } from './astAnalyzer.service.js';
 
 const GH_API = "https://api.github.com";
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -346,7 +346,7 @@ export class FactIngestorService {
 
     // 2. Add AST if needed
     if (opts.enrichAst) {
-      enrichSnapshotWithAst(factData);
+      await enrichSnapshotWithAstAsync(factData);
     }
 
     return factData;
