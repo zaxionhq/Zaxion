@@ -429,6 +429,7 @@ export class EvaluationEngineService {
 
     return {
       result: finalResult, // Alias for backward compatibility / tests
+      final_verdict: finalResult, // Primary for PolicyEngineService
       rationale,
       policy_results: policyResults,
       violations: structuredViolations,
