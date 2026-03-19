@@ -68,8 +68,28 @@ const RULE_REMEDIATIONS = new Map([
     },
     documentation_link: `${DOCS_BASE}/rules`,
   }],
-  ['code_quality', {
+  ['no-hardcoded-secrets', {
+    explanation: 'Hardcoded secrets (API keys, tokens, credentials) in source code are a major security risk as they can be easily discovered and exploited.',
+    remediation: {
+      steps: [
+        'Remove the hardcoded secret immediately.',
+        'Rotate the compromised credential if it was already committed.',
+        'Use environment variables or a dedicated secrets management system.',
+      ],
+      example: "const apiKey = process.env.API_KEY;",
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
+  ['no-console-logs-production', {
     explanation: 'Console logs and debugger statements should not be committed; they can leak information and block execution.',
+    remediation: {
+      steps: ['Remove logging statements before committing.', 'Use a proper logger or remove in production builds.'],
+      example: "// Use: logger.debug('message') or remove entirely",
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
+  ['code_quality', {
+    explanation: 'General code quality issues detected. Console logs and debugger statements should not be committed.',
     remediation: {
       steps: ['Remove logging statements before committing.', 'Use a proper logger or remove in production builds.'],
       example: "// Use: logger.debug('message') or remove entirely",
@@ -168,6 +188,35 @@ export class EvaluationEngineService {
       ['api', this._checkApi.bind(this)],
       ['testing_best_practices', this._checkTestingBestPractices.bind(this)],
     ]);
+  }
+
+  /**
+   * Wave 4: Requirements Detection
+   * Determines if a set of policies requires file content or AST data for evaluation.
+   */
+  getRequiredDataDepth(appliedPolicies) {
+    let requiresContent = false;
+    let requiresAst = false;
+
+    for (const policy of appliedPolicies) {
+      const type = policy.rules_logic?.type;
+      if (!type) continue;
+
+      if ([
+        'security_patterns', 'code_quality', 'complexity_metrics', 
+        'dependency_scan', 'reliability'
+      ].includes(type)) {
+        requiresContent = true;
+      }
+
+      if ([
+        'documentation', 'architecture', 'testing_best_practices', 'coverage'
+      ].includes(type)) {
+        requiresAst = true;
+      }
+    }
+
+    return { requiresContent, requiresAst };
   }
 
   /** Priority order for resolving policy conflicts (Higher value = Higher priority) */
@@ -279,11 +328,7 @@ export class EvaluationEngineService {
     const files = factData?.changes?.files || [];
     for (const pr of policyResults) {
       const ruleId = pr.policy_type;
-      const meta = RULE_REMEDIATIONS.get(ruleId) || {
-        explanation: 'Rule failed.',
-        remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
-        documentation_link: DOCS_BASE,
-      };
+      
       if (pr.verdict !== 'PASS') {
         const details = violatedPolicies.find(v => v.checker === ruleId) || {};
         let file = factData?.file_path || null;
@@ -297,6 +342,13 @@ export class EvaluationEngineService {
         const subViolations = details.violations || [];
         if (subViolations.length > 0) {
           for (const sv of subViolations) {
+            // Wave 4 Enhancement: Dynamic meta lookup per sub-violation (pattern)
+            const meta = (sv.policy && RULE_REMEDIATIONS.get(sv.policy)) || RULE_REMEDIATIONS.get(ruleId) || {
+              explanation: 'Rule failed.',
+              remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
+              documentation_link: DOCS_BASE,
+            };
+
             structuredViolations.push({
               rule_id: ruleId,
               severity: sv.severity || pr.verdict,
@@ -312,6 +364,11 @@ export class EvaluationEngineService {
             });
           }
         } else {
+          const meta = RULE_REMEDIATIONS.get(ruleId) || {
+            explanation: 'Rule failed.',
+            remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
+            documentation_link: DOCS_BASE,
+          };
           structuredViolations.push({
             rule_id: ruleId,
             severity: pr.verdict,
@@ -552,7 +609,8 @@ export class EvaluationEngineService {
             message: v.pattern, // Mapping pattern name to message for UI
             severity: v.severity === 'HIGH' ? 'BLOCK' : (v.severity === 'MEDIUM' ? 'WARN' : 'INFO'),
             file: v.file,
-            code: v.code
+            code: v.code,
+            policy: v.policy // Wave 4: Pass through specific policy name for UI meta lookup
         })),
       },
     };
@@ -690,7 +748,8 @@ export class EvaluationEngineService {
             line: v.line,
             file: v.file,
             message: v.pattern,
-            severity: v.severity === 'HIGH' ? 'BLOCK' : 'WARN'
+            severity: v.severity === 'HIGH' ? 'BLOCK' : 'WARN',
+            policy: v.policy // Wave 4: Pass through specific policy name for UI meta lookup
           })) 
       },
     };

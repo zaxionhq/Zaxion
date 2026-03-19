@@ -1,19 +1,44 @@
 import axios from 'axios';
 import path from 'path';
 import logger from '../logger.js';
+import { enrichSnapshotWithAst } from './astAnalyzer.service.js';
 
 const GH_API = "https://api.github.com";
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_LINES = 2000;
 const VALID_EXTENSIONS = new Set(['.js', '.ts', '.tsx', '.py', '.java', '.go', '.php', '.rb', '.cs', '.json', '.yaml', '.yml']);
-const IGNORED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.pdf', '.zip', '.exe', '.dll', '.lock']);
-const IGNORED_PATHS = ['node_modules', '.git', 'dist', 'build', 'vendor', 'package-lock.json', 'yarn.lock'];
+const IGNORED_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico',
+  '.pdf', '.zip', '.tar', '.gz', '.rar',
+  '.exe', '.dll', '.so', '.dylib', '.class',
+  '.lock', '.json-lock',
+  '.ttf', '.woff', '.woff2', '.mp4', '.mov', '.avi'
+]);
+const IGNORED_PATHS = [
+  'node_modules',
+  '.git',
+  '.env',
+  'dist',
+  'build',
+  'vendor',
+  'bin',
+  'obj',
+  'target',
+  'out',
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  'bun.lockb'
+];
 
 function shouldFetchContent(filePath) {
-  if (IGNORED_PATHS.some(p => filePath.includes(p))) return false;
+  // Wave 4 Parity Fix: Align with github.service.js ignore logic
+  if (IGNORED_PATHS.some(ignored => filePath.includes(`/${ignored}/`) || filePath.startsWith(`${ignored}/`) || filePath === ignored)) {
+    return false;
+  }
   const ext = path.extname(filePath).toLowerCase();
   if (IGNORED_EXTENSIONS.has(ext)) return false;
-  return VALID_EXTENSIONS.has(ext) || ext === '';
+  return VALID_EXTENSIONS.has(ext);
 }
 
 function isBinaryBuffer(buf) {
@@ -86,16 +111,25 @@ export class FactIngestorService {
           status: f.status,
           additions: f.additions,
           deletions: f.deletions,
-          is_test_file: this._isTestFile(f.filename),
+          is_test_file: false, // Initial value
         };
         const canFetch = shouldFetchContent(f.filename);
         if (opts.fetchContent && canFetch && f.raw_url) {
           try {
             const content = await this._fetchFileContent(f.raw_url);
-            if (content) fileObj.content = content;
+            if (content) {
+              fileObj.content = content;
+              // Re-evaluate is_test_file with content
+              fileObj.is_test_file = this._isTestFile(f.filename, content);
+            } else {
+              fileObj.is_test_file = this._isTestFile(f.filename);
+            }
           } catch (err) {
             logger.warn({ file: f.filename, err: err.message }, 'FactIngestor: Could not fetch file content');
+            fileObj.is_test_file = this._isTestFile(f.filename);
           }
+        } else {
+          fileObj.is_test_file = this._isTestFile(f.filename);
         }
         files.push(fileObj);
       }
@@ -229,7 +263,7 @@ export class FactIngestorService {
    * Deterministically identifies if a file is a test file based on naming conventions.
    * Authority: Phase 5 Pillar 5.1 Design.
    */
-  _isTestFile(filename) {
+  _isTestFile(filename, content = '') {
     const lowerPath = filename.toLowerCase();
     
     // 1. Check for standard test file patterns in filename
@@ -240,15 +274,21 @@ export class FactIngestorService {
 
     // 2. Check if file is inside a test directory
     const dirPatterns = ['tests/', 'test/', '__tests__/'];
-    return dirPatterns.some(dir => 
+    if (dirPatterns.some(dir => 
       lowerPath.startsWith(dir) || lowerPath.includes('/' + dir)
-    );
+    )) {
+      return true;
+    }
+
+    // Wave 4 Enhancement: Check content for test frameworks (matches codeAnalysis.service.js)
+    if (content) {
+      const code = content.slice(0, 2000);
+      return /describe\s*\(|it\s*\(|test\s*\(|jest\.|vitest\./i.test(code);
+    }
+
+    return false;
   }
 
-  /**
-   * Deterministically extracts all unique directory prefixes from the changed file paths.
-   * e.g. "src/auth/login.ts" -> ["src", "src/auth"]
-   */
   /**
    * Deterministically extracts all unique directory prefixes from the changed file paths.
    * e.g. "src/auth/login.ts" -> ["src", "src/auth"]
@@ -272,36 +312,54 @@ export class FactIngestorService {
 
   /**
    * Wave 4: Enrichment Logic
-   * Fetches file contents for an existing snapshot that only has metadata.
+   * Fetches file contents and/or AST for an existing snapshot or fact data object.
    */
-  async _enrichSnapshotWithContent(snapshot) {
-    const { repo_full_name, pr_number } = snapshot;
-    try {
-      const { data: filesData } = await this._fetchPRFiles(repo_full_name, pr_number);
-      const factData = snapshot.data;
-      const files = factData.changes.files;
+  async enrichFactData(factData, repoFullName, prNumber, opts = { fetchContent: true, enrichAst: true }) {
+    if (!factData || !factData.changes || !factData.changes.files) return factData;
 
-      for (const f of files) {
-        const matchingFile = filesData.find(fd => fd.filename === f.path);
-        if (matchingFile && matchingFile.raw_url && shouldFetchContent(f.path)) {
-          try {
-            const content = await this._fetchFileContent(matchingFile.raw_url);
-            if (content) f.content = content;
-          } catch (err) {
-            logger.warn({ file: f.path, err: err.message }, 'FactIngestor: Enrichment failed for file');
+    const files = factData.changes.files;
+    let hasContent = files.some(f => f.content);
+
+    // 1. Fetch Content if needed and missing
+    if (opts.fetchContent && !hasContent && repoFullName && prNumber) {
+      try {
+        const { data: filesData } = await this._fetchPRFiles(repoFullName, prNumber);
+        for (const f of files) {
+          const matchingFile = filesData.find(fd => fd.filename === f.path);
+          if (matchingFile && matchingFile.raw_url && shouldFetchContent(f.path)) {
+            try {
+              const content = await this._fetchFileContent(matchingFile.raw_url);
+              if (content) {
+                f.content = content;
+                f.is_test_file = this._isTestFile(f.path, content);
+              }
+            } catch (err) {
+              logger.warn({ file: f.path, err: err.message }, 'FactIngestor: Enrichment failed for file content');
+            }
           }
         }
+        factData.ingestion_status.ingested_at = new Date().toISOString();
+      } catch (error) {
+        logger.error({ error: error.message, repoFullName, prNumber }, "FactIngestor: PR files fetch failed during enrichment");
       }
-
-      factData.ingestion_status.ingested_at = new Date().toISOString();
-      snapshot.data = factData;
-      snapshot.changed('data', true);
-      await snapshot.save();
-
-      return snapshot;
-    } catch (error) {
-      logger.error({ error: error.message, repo_full_name, pr_number }, "FactIngestor: Enrichment failed");
-      return snapshot; // Return unenriched snapshot as fallback
     }
+
+    // 2. Add AST if needed
+    if (opts.enrichAst) {
+      enrichSnapshotWithAst(factData);
+    }
+
+    return factData;
+  }
+
+  async _enrichSnapshotWithContent(snapshot) {
+    const { repo_full_name, pr_number } = snapshot;
+    const factData = await this.enrichFactData(snapshot.data, repo_full_name, pr_number, { fetchContent: true, enrichAst: true });
+    
+    snapshot.data = factData;
+    snapshot.changed('data', true);
+    await snapshot.save();
+
+    return snapshot;
   }
 }

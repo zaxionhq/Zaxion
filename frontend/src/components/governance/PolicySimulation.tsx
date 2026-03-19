@@ -19,6 +19,10 @@ import { Link } from 'react-router-dom';
 import { CreatePolicyModal } from '@/components/governance/CreatePolicyModal';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface RulesLogic {
   type?: string;
@@ -1190,199 +1194,384 @@ export const PolicySimulation: React.FC = () => {
               <p className="text-xs">Configure and run a simulation to see projected enforcement results.</p>
             </div>
           ) : (
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Historical PRs Scanned</p>
-                  <p className="text-xl font-bold">{result.total_scanned}</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projected Blocks</p>
-                  <p className="text-xl font-bold text-red-500">{result.total_blocked}</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Block rate change</p>
-                  <p className="text-xl font-bold text-orange-500">
-                    {typeof result.blast_radius === 'number'
-                      ? `${result.blast_radius >= 0 ? '+' : ''}${(result.blast_radius * 100).toFixed(1)}%`
-                      : '—'}
-                  </p>
-                </div>
+            <div className="p-6 space-y-8 animate-in fade-in duration-500">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-muted/30 border-border/50 shadow-sm transition-all hover:shadow-md">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Historical PRs Scanned</p>
+                      <p className="text-2xl font-bold tracking-tight">{result.total_scanned}</p>
+                    </div>
+                    <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
+                      <Search className="h-5 w-5" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-border/50 shadow-sm transition-all hover:shadow-md">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Projected Blocks</p>
+                      <p className={cn("text-2xl font-bold tracking-tight", result.total_blocked > 0 ? "text-red-500" : "text-green-500")}>
+                        {result.total_blocked}
+                      </p>
+                    </div>
+                    <div className={cn("p-2 rounded-full", result.total_blocked > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500")}>
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-border/50 shadow-sm transition-all hover:shadow-md">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Block Rate Change</p>
+                      <p className={cn(
+                        "text-2xl font-bold tracking-tight",
+                        (result.blast_radius ?? 0) > 0 ? "text-orange-500" : "text-green-500"
+                      )}>
+                        {typeof result.blast_radius === 'number'
+                          ? `${result.blast_radius >= 0 ? '+' : ''}${(result.blast_radius * 100).toFixed(1)}%`
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className={cn("p-2 rounded-full", (result.blast_radius ?? 0) > 0 ? "bg-orange-500/10 text-orange-500" : "bg-green-500/10 text-green-500")}>
+                      <GitBranch className="h-5 w-5" />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <AlertCircle className="h-4 w-4 text-yellow-500" />
-                  Enforcement Insights
+              {/* Enforcement Insights */}
+              <div className="p-5 rounded-xl bg-muted/20 border border-border/50 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <AlertCircle className="h-24 w-24" />
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  This policy would have enforced {result.total_blocked} blocks across {result.total_scanned} pull requests.
-                  {typeof result.blast_radius === 'number' ? (
-                    result.blast_radius < 0 ? (
-                      <> Fewer PRs would be blocked with this policy (less friction).</>
-                    ) : result.blast_radius > 0 ? (
-                      <> More PRs would be blocked with this policy (more friction).</>
-                    ) : (
-                      <> No change in how many PRs would be blocked.</>
-                    )
-                  ) : null}
-                </p>
-                {result.summary && (result.summary.total_violations ?? 0) > 0 && (
-                  <p className="text-xs font-medium">
-                    Total violations: {result.summary.total_violations}
-                    {result.summary.violations_by_severity && (
-                      <span className="text-muted-foreground font-normal">
-                        {' '}(BLOCK: {result.summary.violations_by_severity.BLOCK ?? 0}, WARN: {result.summary.violations_by_severity.WARN ?? 0}
-                        {(result.summary.violations_by_severity.OBSERVE ?? 0) > 0 ? `, OBSERVE: ${result.summary.violations_by_severity.OBSERVE}` : ''})
-                      </span>
-                    )}
-                  </p>
-                )}
-                {result.summary?.policy_would_pass && result.total_scanned > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Policy would PASS for the simulated PRs.</p>
-                )}
-              </div>
-
-              {result.violations && result.violations.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Violations (with remediation)</div>
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {result.violations.slice(0, 50).map((v, i) => (
-                      <div key={`${v.rule_id}-${v.pr_number ?? i}-${i}`} className="rounded-lg border border-border/50 bg-muted/20 p-3 text-xs space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={v.severity === 'BLOCK' ? 'destructive' : 'secondary'} className="text-[10px]">
-                            {v.severity}
-                          </Badge>
-                          <span className="font-mono font-medium">{v.rule_id}</span>
-                          {v.pr_number != null && (
-                            <span className="text-muted-foreground">
-                              PR #{v.pr_number} · {v.repo}
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-medium">{v.message}</p>
-                        {v.file && (
-                          <p className="text-muted-foreground">
-                            File: {v.file}
-                            {(v.line != null || v.column != null) && (
-                              <span className="ml-1">(Line{v.line != null ? ` ${v.line}` : ''}{v.column != null ? `, col ${v.column}` : ''})</span>
-                            )}
-                          </p>
+                <div className="relative space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    Enforcement Insights
+                  </div>
+                  <div className="text-sm text-muted-foreground leading-relaxed">
+                    This policy would have enforced <span className="font-bold text-foreground">{result.total_blocked}</span> blocks across <span className="font-bold text-foreground">{result.total_scanned}</span> pull requests.
+                    {typeof result.blast_radius === 'number' ? (
+                      <p className="mt-1">
+                        {result.blast_radius < 0 ? (
+                          <span className="text-green-500 font-medium">Fewer PRs would be blocked with this policy, reducing friction in development.</span>
+                        ) : result.blast_radius > 0 ? (
+                          <span className="text-orange-500 font-medium">More PRs would be blocked with this policy, adding more enforcement checks.</span>
+                        ) : (
+                          <span>No change in how many PRs would be blocked.</span>
                         )}
-                        {(v.current_value != null || v.required_value != null) && (
-                          <p className="text-muted-foreground">
-                            Current: {v.current_value ?? '—'} → Required: {v.required_value ?? '—'}
-                          </p>
+                      </p>
+                    ) : null}
+                  </div>
+                  
+                  {result.summary && (result.summary.total_violations ?? 0) > 0 && (
+                    <div className="space-y-2 mt-4 pt-4 border-t border-border/50">
+                      <div className="flex items-center justify-between text-xs font-medium mb-1">
+                        <span>Severity Distribution</span>
+                        <span>{result.summary.total_violations} Total Violations</span>
+                      </div>
+                      <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-muted">
+                        {result.summary.violations_by_severity?.BLOCK && (
+                          <div 
+                            className="bg-red-500 h-full" 
+                            style={{ width: `${(result.summary.violations_by_severity.BLOCK / result.summary.total_violations) * 100}%` }}
+                            title={`BLOCK: ${result.summary.violations_by_severity.BLOCK}`}
+                          />
                         )}
-                        {v.explanation && <p className="text-muted-foreground">{v.explanation}</p>}
-                        {v.remediation?.steps && v.remediation.steps.length > 0 && (
-                          <div>
-                            <p className="font-medium text-muted-foreground mb-1">How to fix:</p>
-                            <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                              {v.remediation.steps.map((step, j) => (
-                                <li key={j}>{step}</li>
-                              ))}
-                            </ul>
-                          </div>
+                        {result.summary.violations_by_severity?.WARN && (
+                          <div 
+                            className="bg-yellow-500 h-full" 
+                            style={{ width: `${(result.summary.violations_by_severity.WARN / result.summary.total_violations) * 100}%` }}
+                            title={`WARN: ${result.summary.violations_by_severity.WARN}`}
+                          />
                         )}
-                        {v.remediation?.example && (
-                          <pre className="mt-1 p-2 rounded bg-muted/50 text-[10px] overflow-x-auto whitespace-pre-wrap font-mono">
-                            {v.remediation.example}
-                          </pre>
-                        )}
-                        {v.documentation_link && (
-                          <a
-                            href={v.documentation_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
-                          >
-                            Documentation <ExternalLink className="h-3 w-3" />
-                          </a>
+                        {result.summary.violations_by_severity?.OBSERVE && (
+                          <div 
+                            className="bg-blue-500 h-full" 
+                            style={{ width: `${(result.summary.violations_by_severity.OBSERVE / result.summary.total_violations) * 100}%` }}
+                            title={`OBSERVE: ${result.summary.violations_by_severity.OBSERVE}`}
+                          />
                         )}
                       </div>
-                    ))}
+                      <div className="flex items-center gap-4 text-[10px] font-medium uppercase tracking-tighter text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                          BLOCK: {result.summary.violations_by_severity?.BLOCK ?? 0}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                          WARN: {result.summary.violations_by_severity?.WARN ?? 0}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                          OBSERVE: {result.summary.violations_by_severity?.OBSERVE ?? 0}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {result.summary?.policy_would_pass && result.total_scanned > 0 && (
+                    <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-sm">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Policy would pass for all simulated PRs.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Violations Section with Accordion */}
+              {result.violations && result.violations.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold tracking-tight">Violations & Remediation</h3>
+                    <Badge variant="outline" className="font-mono text-[10px]">{result.violations.length} Findings</Badge>
                   </div>
+                  
+                  <Accordion type="single" collapsible className="w-full space-y-3 border-none">
+                    {result.violations.slice(0, 50).map((v, i) => (
+                      <AccordionItem 
+                        key={`${v.rule_id}-${v.pr_number ?? i}-${i}`} 
+                        value={`item-${i}`}
+                        className="rounded-lg border border-border/50 bg-card shadow-sm overflow-hidden"
+                      >
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30 transition-all group">
+                          <div className="flex flex-col items-start gap-1 text-left w-full">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={v.severity === 'BLOCK' ? 'destructive' : 'secondary'} className="text-[10px] h-4">
+                                {v.severity}
+                              </Badge>
+                              <span className="font-mono text-xs font-bold">{v.rule_id}</span>
+                              {v.pr_number != null && (
+                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  PR #{v.pr_number}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-sm font-medium leading-tight group-hover:text-primary transition-colors">{v.message}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4 pt-0 text-xs border-t border-border/50 bg-muted/5">
+                          <div className="space-y-4 pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Location</p>
+                                <div className="p-2 rounded bg-muted/50 font-mono text-[11px] border border-border/30">
+                                  {v.file ? (
+                                    <>
+                                      {v.file}
+                                      {(v.line != null || v.column != null) && (
+                                        <span className="text-muted-foreground block mt-1">
+                                          Line: {v.line ?? '—'} · Column: {v.column ?? '—'}
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : 'Not specified'}
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Values</p>
+                                <div className="p-2 rounded bg-muted/50 font-mono text-[11px] border border-border/30 space-y-1">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Current:</span>
+                                    <span className="text-red-400 truncate ml-2 max-w-[150px]">{v.current_value ?? '—'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Required:</span>
+                                    <span className="text-green-400 truncate ml-2 max-w-[150px]">{v.required_value ?? '—'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {v.explanation && (
+                              <div className="space-y-1.5">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Explanation</p>
+                                <p className="text-muted-foreground leading-relaxed">{v.explanation}</p>
+                              </div>
+                            )}
+
+                            {v.remediation?.steps && v.remediation.steps.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Remediation Steps</p>
+                                <div className="rounded-lg bg-green-500/5 border border-green-500/10 p-3">
+                                  <ul className="space-y-1.5">
+                                    {v.remediation.steps.map((step, j) => (
+                                      <li key={j} className="flex items-start gap-2">
+                                        <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+                                        <span className="text-muted-foreground">{step}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            )}
+
+                            {v.remediation?.example && (
+                              <div className="space-y-1.5">
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Code Example</p>
+                                <pre className="p-3 rounded-lg bg-slate-950 text-[11px] overflow-x-auto whitespace-pre-wrap font-mono border border-border/50 text-slate-300">
+                                  {v.remediation.example}
+                                </pre>
+                              </div>
+                            )}
+
+                            {v.documentation_link && (
+                              <div className="pt-2">
+                                <Button variant="link" size="sm" className="h-auto p-0 text-primary" asChild>
+                                  <a href={v.documentation_link} target="_blank" rel="noopener noreferrer">
+                                    View Full Documentation <ExternalLink className="ml-1 h-3 w-3" />
+                                  </a>
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </div>
               )}
 
+              {/* Per-PR Impact Section */}
               {result.per_pr_results && result.per_pr_results.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Per-PR impact (metadata)</div>
-                  <div className="rounded border border-border/50 overflow-hidden max-h-64 overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-muted/50 sticky top-0">
-                        <tr>
-                          <th className="text-left p-2 font-medium">PR</th>
-                          <th className="text-left p-2 font-medium">Repo</th>
-                          <th className="text-left p-2 font-medium">Title</th>
-                          <th className="text-left p-2 font-medium">Author</th>
-                          <th className="text-left p-2 font-medium">Branch</th>
-                          <th className="text-left p-2 font-medium">Verdict</th>
-                          <th className="text-left p-2 font-medium">Rationale</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                <div className="space-y-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-semibold tracking-tight">Per-PR Detailed Impact</h3>
+                    <Badge variant="secondary" className="text-[10px]">{result.per_pr_results.length} Snapshots</Badge>
+                  </div>
+                  
+                  <div className="rounded-xl border border-border/50 overflow-hidden bg-card/30">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead className="w-[100px]">PR</TableHead>
+                          <TableHead>Repository</TableHead>
+                          <TableHead className="hidden md:table-cell">Details</TableHead>
+                          <TableHead>Verdict</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {result.per_pr_results.map((pr, i) => (
-                          <tr key={`${pr.repo}-${pr.pr_number}-${i}`} className="border-t border-border/50">
-                            <td className="p-2 font-mono">PR #{pr.pr_number ?? i + 1}</td>
-                            <td className="p-2 font-mono text-muted-foreground max-w-[140px] truncate" title={pr.repo ?? undefined}>{pr.repo ?? '—'}</td>
-                            <td className="p-2 max-w-[180px] truncate" title={pr.pr_title ?? undefined}>{pr.pr_title ?? '—'}</td>
-                            <td className="p-2 text-muted-foreground">{pr.author ?? '—'}</td>
-                            <td className="p-2 text-muted-foreground">{pr.base_branch ?? '—'}</td>
-                            <td className="p-2">
-                              <Badge variant={pr.verdict === 'BLOCK' ? 'destructive' : 'secondary'} className="text-[10px]">
+                          <TableRow key={`${pr.repo}-${pr.pr_number}-${i}`} className="hover:bg-muted/20 transition-colors">
+                            <TableCell className="font-mono text-xs font-bold">
+                              PR #{pr.pr_number ?? i + 1}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-xs font-medium truncate max-w-[120px]" title={pr.repo ?? undefined}>
+                                  {pr.repo?.split('/').pop() ?? '—'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                                  {pr.repo ?? '—'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-medium truncate max-w-[200px]" title={pr.pr_title ?? undefined}>
+                                  {pr.pr_title ?? 'Untitled PR'}
+                                </span>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                  <span className="flex items-center gap-0.5"><GitBranch className="h-2.5 w-2.5" /> {pr.base_branch ?? 'main'}</span>
+                                  <span>·</span>
+                                  <span>{pr.author ?? 'unknown'}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={pr.verdict === 'BLOCK' ? 'destructive' : 'secondary'} className="text-[10px] h-5">
                                 {pr.verdict}
                               </Badge>
-                            </td>
-                            <td className="p-2 max-w-[200px] truncate text-muted-foreground">
-                              <div className="flex flex-col gap-1">
-                                <span className="font-medium text-slate-200">{pr.verdict === 'BLOCK' ? 'Policy Violation' : 'Compliant'}</span>
-                                <span className="text-[10px]" title={pr.rationale}>{pr.rationale}</span>
-                              </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <HoverCard>
+                                <HoverCardTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-80 p-4" align="end">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <h4 className="text-sm font-semibold">Policy Rationale</h4>
+                                      <Badge variant={pr.verdict === 'BLOCK' ? 'destructive' : 'secondary'} className="text-[10px]">
+                                        {pr.verdict}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
+                                      {pr.rationale}
+                                    </p>
+                                    {pr.violations && pr.violations.length > 0 && (
+                                      <div className="pt-2 border-t border-border/50">
+                                        <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Primary Violations</p>
+                                        <div className="space-y-1">
+                                          {pr.violations.slice(0, 3).map((v, idx) => (
+                                            <div key={idx} className="flex items-start gap-1.5 text-[10px]">
+                                              <div className="mt-1 h-1 w-1 rounded-full bg-red-500 shrink-0" />
+                                              <span className="text-muted-foreground line-clamp-1">{v.message}</span>
+                                            </div>
+                                          ))}
+                                          {pr.violations.length > 3 && (
+                                            <p className="text-[9px] text-primary italic">+{pr.violations.length - 3} more violations</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </HoverCardContent>
+                              </HoverCard>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Docs:</span>
-                  <Link to="/docs/policies" className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                    Policy format <ExternalLink className="h-3 w-3" />
-                  </Link>
-                  <Link to="/docs/rules" className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                    Rule types <ExternalLink className="h-3 w-3" />
-                  </Link>
-                  <Link to="/docs/examples" className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                    Examples <ExternalLink className="h-3 w-3" />
-                  </Link>
-                </div>
-                <div className="flex gap-2">
-                  {result?.report_html && (inputMode === 'repository' || inputMode === 'github_url') && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() => {
-                        const blob = new Blob([result.report_html!], { type: 'text/html' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `zaxion-interactive-report-${new Date().toISOString().slice(0, 10)}.html`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Interactive Report (HTML)
-                    </Button>
-                  )}
-                  {result && (
+              {/* Action Footer */}
+              <div className="pt-6 border-t border-border/50 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="font-semibold uppercase tracking-wider text-[10px]">Resources:</span>
+                    <div className="flex items-center gap-2">
+                      <Link to="/docs/policies" className="inline-flex items-center gap-1 text-primary hover:underline">
+                        Policy Format <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      <Separator orientation="vertical" className="h-3" />
+                      <Link to="/docs/rules" className="inline-flex items-center gap-1 text-primary hover:underline">
+                        Rule Types <ExternalLink className="h-3 w-3" />
+                      </Link>
+                      <Separator orientation="vertical" className="h-3" />
+                      <Link to="/docs/examples" className="inline-flex items-center gap-1 text-primary hover:underline">
+                        Examples <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {result?.report_html && (inputMode === 'repository' || inputMode === 'github_url') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                        onClick={() => {
+                          const blob = new Blob([result.report_html!], { type: 'text/html' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `zaxion-interactive-report-${new Date().toISOString().slice(0, 10)}.html`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Interactive Report
+                      </Button>
+                    )}
+                    
                     <Button
                       variant="outline"
                       size="sm"
@@ -1404,28 +1593,30 @@ export const PolicySimulation: React.FC = () => {
                         URL.revokeObjectURL(url);
                       }}
                     >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Report (JSON)
+                      <FileJson className="mr-2 h-4 w-4" />
+                      Export JSON
                     </Button>
-                  )}
-                  <Button variant="outline" size="sm" onClick={() => setResult(null)}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Re-test
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={handleDeployPolicy}
-                    disabled={isDeploying}
-                  >
-                    {isDeploying ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                    )}
-                    Enable Policy
-                  </Button>
+
+                    <Button variant="ghost" size="sm" onClick={() => setResult(null)}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Reset
+                    </Button>
+                    
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="bg-green-600 hover:bg-green-700 shadow-lg shadow-green-900/20"
+                      onClick={handleDeployPolicy}
+                      disabled={isDeploying}
+                    >
+                      {isDeploying ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                      )}
+                      Deploy Policy
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

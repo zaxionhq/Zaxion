@@ -97,12 +97,9 @@ export class PatternMatcherService {
         }
         
         // Check exclude patterns (like for console logs in tests)
-        if (this.isExcludedFile(filePath, policy.patterns)) {
-             // Logic to check exclude_patterns on the pattern object itself
-             // The config structure has exclude_patterns at the pattern level
-             if (pattern.exclude_patterns && this.isWhitelisted(filePath, { false_positive_whitelist: pattern.exclude_patterns })) {
-                 continue;
-             }
+        // The config structure has exclude_patterns at the pattern level
+        if (pattern.exclude_patterns && this.isWhitelisted(filePath, { false_positive_whitelist: pattern.exclude_patterns })) {
+            continue;
         }
 
         // Calculate line number
@@ -143,9 +140,10 @@ export class PatternMatcherService {
   }
   
   isExcludedFile(filePath, patterns) {
-      // Check if file path matches any exclusion patterns
-      // This logic depends on how specific the exclusion needs to be
-      return false; 
+    if (!filePath || !patterns) return false;
+    // We can't easily check 'patterns' here if it's the array of rules
+    // But we check exclude_patterns at the matchPattern level instead!
+    return false; 
   }
 
   /**

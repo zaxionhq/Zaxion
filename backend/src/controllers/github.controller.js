@@ -20,6 +20,11 @@ function getOctokit(token) {
   return new Octokit({ auth: token });
 }
 
+import { mapCorePolicyToRules } from "../utils/policyMapper.js";
+
+/**
+ * Controller for GitHub-related operations (Pillar 1).
+ */
 export default function githubControllerFactory(db) {
   return {
     /**
@@ -899,16 +904,14 @@ export default function githubControllerFactory(db) {
           if (!policy) return res.status(404).json({ error: "Policy not found" });
           const latestVersion = await policyService.getLatestPolicyVersion(db, policy_id);
           draftRules = latestVersion?.rules_logic || {};
+          log("GitHubController: Resolved UUID Policy", { policy_id, draftRules });
         } else {
           // Core Policy Handling
           const { CORE_POLICIES } = await import('../policies/corePolicies.js');
           policy = CORE_POLICIES.find(p => p.id === policy_id);
           if (!policy) return res.status(404).json({ error: "Core Policy not found" });
-          draftRules = {
-             type: "core_enforcement",
-             id: policy.id,
-             severity: policy.severity
-          };
+          draftRules = mapCorePolicyToRules(policy.id, policy.severity);
+          log("GitHubController: Resolved Core Policy Mapping", { policy_id, draftRules });
         }
 
         if (!draftRules || Object.keys(draftRules).length === 0) {

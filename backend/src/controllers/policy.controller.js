@@ -5,6 +5,9 @@ import { EvaluationEngineService } from '../services/evaluationEngine.service.js
 import * as codeAnalysis from '../services/codeAnalysis.service.js';
 import { generateChatResponse } from '../services/llm.service.js';
 import { CORE_POLICIES } from '../policies/corePolicies.js';
+import { log, error, warn } from '../utils/logger.js';
+
+import { mapCorePolicyToRules } from '../utils/policyMapper.js';
 
 const VALID_POLICY_TYPES = [
   'pr_size',
@@ -522,7 +525,8 @@ export default function policyControllerFactory(db) {
         target_repo_full_name,
         target_branch,
         days_back,
-        is_sandbox: true // FORCE SANDBOX
+        is_sandbox: true, // FORCE SANDBOX
+        github_token: req.user?.github_token // Wave 4: Pass token for on-demand enrichment
       });
 
       // Generate HTML Report immediately
@@ -609,15 +613,13 @@ export default function policyControllerFactory(db) {
         if (!policy) return res.status(404).json({ error: 'Policy not found' });
         const latestVersion = await policyService.getLatestPolicyVersion(db, policyId);
         draftRules = latestVersion?.rules_logic || {};
+        log('PolicyController: Resolved UUID Policy', { policyId, draftRules });
       } else {
         // Core Policy Handling
         policy = CORE_POLICIES.find(p => p.id === policyId);
         if (!policy) return res.status(404).json({ error: 'Core Policy not found' });
-        draftRules = {
-           type: "core_enforcement",
-           id: policy.id,
-           severity: policy.severity
-        };
+        draftRules = mapCorePolicyToRules(policy.id, policy.severity);
+        log('PolicyController: Resolved Core Policy Mapping', { policyId, draftRules });
       }
 
       if (!draftRules || Object.keys(draftRules).length === 0) {

@@ -126,13 +126,16 @@ export async function listUserRepos(token) {
 }
 
 const VALID_EXTENSIONS = new Set([
-  '.js', '.ts', '.tsx',
+  '.js', '.ts', '.tsx', '.jsx',
   '.py',
   '.java',
   '.go',
   '.php',
   '.rb',
-  '.cs'
+  '.cs',
+  '.json',
+  '.yaml',
+  '.yml'
 ]);
 
 const IGNORED_PATHS = [

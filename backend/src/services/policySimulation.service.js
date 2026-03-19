@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import logger from '../logger.js';
 import { Op } from 'sequelize';
+import { FactIngestorService } from './factIngestor.service.js';
 
 /**
  * Phase 6 Pillar 3: Policy Evolution & Simulation (The Blast Radius)
@@ -36,7 +37,8 @@ export class PolicySimulationService {
       target_repo_full_name,
       target_branch,
       days_back,
-      is_sandbox = false // Default to false, but should be enforced by controller
+      is_sandbox = false, // Default to false, but should be enforced by controller
+      github_token = null // Wave 4: Optional token for on-demand enrichment
     } = payload;
 
     // SANDBOX ENFORCEMENT
@@ -75,38 +77,12 @@ export class PolicySimulationService {
       } else {
         // It's a Core Policy ID, fetch from static definition
         const { CORE_POLICIES } = await import('../policies/corePolicies.js');
+        const { mapCorePolicyToRules } = await import('../utils/policyMapper.js');
         const corePolicy = CORE_POLICIES.find(p => p.id === policy_id);
         if (!corePolicy) throw new Error(`Core Policy ${policy_id} not found`);
         
-        // Map Core Policy to a rule structure the engine understands
-        // Hardcore Policy Mode (Wave 4) logic: 
-        // For simulation, we map the static core policy ID to the correct checker type.
-        const policyMap = {
-          'SEC-001': 'security_patterns',
-          'SEC-002': 'security_patterns',
-          'SEC-003': 'security_patterns',
-          'SEC-004': 'dependency_scan',
-          'SEC-005': 'security_patterns',
-          'SEC-006': 'security_patterns',
-          'SEC-007': 'security_patterns',
-          'SEC-008': 'security_patterns',
-          'REL-001': 'reliability',
-          'COD-001': 'code_quality',
-          'COD-002': 'documentation',
-          'GOV-001': 'pr_size',
-          'GOV-002': 'coverage',
-        };
-
-        rules = {
-           type: policyMap[corePolicy.id] || "core_enforcement",
-           id: corePolicy.id,
-           severity: corePolicy.severity,
-           // Force pattern matching context for security policies
-           ...( (corePolicy.id === 'SEC-001' || corePolicy.id === 'SEC-002' || corePolicy.id === 'SEC-003') && { patterns: 'all' }),
-           // Default parameters for core policies if not provided
-           ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
-           ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
-        };
+        rules = mapCorePolicyToRules(corePolicy.id, corePolicy.severity);
+        logger.info({ policy_id, rules }, "PolicySimulationService: Resolved Core Policy Mapping");
       }
     }
 
@@ -194,7 +170,7 @@ export class PolicySimulationService {
 
     try {
       // 4. Execute Simulation (The Snapshot Replayer)
-      const results = await this._executeSimulation(simulation, snapshots, rules, target_repo_full_name);
+      const results = await this._executeSimulation(simulation, snapshots, rules, target_repo_full_name, github_token);
 
       // 5. Update Record
       if (isUuid) {
@@ -222,7 +198,7 @@ export class PolicySimulationService {
   /**
    * Pillar 3.4.A: The Snapshot Replayer Logic
    */
-  async _executeSimulation(simulation, snapshots, draftRules, target_repo_full_name) {
+  async _executeSimulation(simulation, snapshots, draftRules, target_repo_full_name, github_token = null) {
     let newlyBlocked = 0;
     let newlyPassed = 0;
     let consistent = 0;
@@ -241,6 +217,10 @@ export class PolicySimulationService {
       reason: 'Simulation Run'
     };
 
+    // Wave 4: Detect required depth for simulation
+    const { requiresContent, requiresAst } = this.evaluationEngine.getRequiredDataDepth([mockAppliedPolicy]);
+    const ingestor = github_token ? new FactIngestorService(this.db, github_token) : null;
+
     for (const snapshot of snapshots) {
       const historicalDecision = await this.db.Decision.findOne({
         where: { fact_id: snapshot.id },
@@ -249,13 +229,30 @@ export class PolicySimulationService {
 
       // Unified Evaluation Logic (Wave 4 Fix): 
       // Always pass the full snapshot object to the engine. 
-      // The engine handles the extraction of .data or .fact_snapshot internally.
+      // The engine handles the extraction of .data or .fact_snapshot internally. 
       // We ensure the snapshot data is normalized for the engine's checkSecurityPatterns.
       // FIX: Handle Sequelize instances correctly by converting to plain object
       const plainSnapshot = snapshot.toJSON ? snapshot.toJSON() : snapshot;
+      const factData = plainSnapshot.data || plainSnapshot.fact_snapshot || plainSnapshot;
+
+      // ON-DEMAND ENRICHMENT: If depth is needed but missing, enrich it.
+      if (requiresContent || requiresAst) {
+        const hasContent = factData.changes?.files?.some(f => f.content);
+        const hasAst = factData.metadata?.ast_by_path;
+
+        if ((requiresContent && !hasContent) || (requiresAst && !hasAst)) {
+          logger.info({ snapshotId: snapshot.id, requiresContent, requiresAst }, "PolicySimulation: On-demand enrichment triggered");
+          const activeIngestor = ingestor || new FactIngestorService(this.db);
+          await activeIngestor.enrichFactData(factData, snapshot.repo_full_name, snapshot.pr_number, {
+            fetchContent: requiresContent,
+            enrichAst: requiresAst
+          });
+        }
+      }
+
       const normalizedSnapshot = {
         ...plainSnapshot,
-        data: plainSnapshot.data || plainSnapshot.fact_snapshot || plainSnapshot
+        data: factData
       };
 
       const simResult = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy]);
@@ -267,7 +264,7 @@ export class PolicySimulationService {
         totalBlocked++;
       }
 
-      const pullRequest = snapshot.data?.pull_request;
+      const pullRequest = factData?.pull_request;
       // FIX: Use 'violations' property from engine result, not 'structured_violations'
       const violations = simResult.violations || [];
       const passes = simResult.passes || [];
@@ -289,7 +286,7 @@ export class PolicySimulationService {
         rationale: simResult.rationale,
         pr_title: pullRequest?.title || historicalDecision?.pr_title || `PR #${snapshot.pr_number}`,
         author: pullRequest?.author?.username || historicalDecision?.author_handle || null,
-        base_branch: snapshot.data?.pull_request?.base_branch || historicalDecision?.base_branch || null,
+        base_branch: factData?.pull_request?.base_branch || historicalDecision?.base_branch || null,
         historical_result: historicalResult,
         ingested_at: snapshot.ingested_at,
         violations,

@@ -14,15 +14,32 @@ const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 const MAX_PASTE_SIZE_BYTES = 1024 * 1024; // 1MB for paste
 const MAX_ZIP_SIZE_BYTES = 50 * 1024 * 1024; // 50MB for zip
 const MAX_FILES_IN_ZIP = 500;
-const ALLOWED_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.json', '.yaml', '.yml']);
-const TEST_FILE_PATTERNS = ['.test.', '.spec.', '_test.', 'test_', '__tests__/', '/tests/'];
+
+// UNIFIED EXTENSIONS & IGNORES (Parity with github.service & factIngestor)
+const ALLOWED_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.go', '.php', '.rb', '.cs', '.json', '.yaml', '.yml']);
+const IGNORED_PATHS = [
+  'node_modules', '.git', '.env', 'dist', 'build', 'vendor', 'bin', 'obj', 'target', 'out',
+  'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb'
+];
+
+const TEST_FILE_PATTERNS = ['.test.', '.spec.', '_test.', 'test_'];
+const TEST_DIR_PATTERNS = ['tests/', 'test/', '__tests__/'];
 
 /**
  * Check if path or content looks like a test file.
  */
 function looksLikeTest(pathOrContent, content = '') {
-  const lower = (pathOrContent || '').toLowerCase();
-  if (TEST_FILE_PATTERNS.some(p => lower.includes(p))) return true;
+  const lowerPath = (pathOrContent || '').toLowerCase();
+  
+  // 1. Check filename patterns
+  if (TEST_FILE_PATTERNS.some(p => lowerPath.includes(p))) return true;
+  
+  // 2. Check directory patterns
+  if (TEST_DIR_PATTERNS.some(dir => lowerPath.startsWith(dir) || lowerPath.includes('/' + dir))) {
+    return true;
+  }
+
+  // 3. Check content
   const code = (content || '').slice(0, 2000);
   return /describe\s*\(|it\s*\(|test\s*\(|jest\.|vitest\./i.test(code);
 }
@@ -39,6 +56,11 @@ export function validateAndDecodeUpload(fileName, contentBase64) {
   const ext = path.extname(fileName).toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     const err = new Error(`Invalid file type. Allowed: ${[...ALLOWED_EXTENSIONS].join(', ')}`);
+    err.statusCode = 400;
+    throw err;
+  }
+  if (IGNORED_PATHS.some(ignored => fileName.includes(`/${ignored}/`) || fileName.startsWith(`${ignored}/`) || fileName === ignored)) {
+    const err = new Error(`File path is ignored by security rules.`);
     err.statusCode = 400;
     throw err;
   }
@@ -114,7 +136,13 @@ export function validateAndDecodeZip(contentBase64) {
   for (const entry of entries) {
     const name = entry.entryName.replace(/^[^/]+\//, '').replace(/\\/g, '/');
     const ext = path.extname(name).toLowerCase();
+    
+    // Check unified ignore logic
     if (!ALLOWED_EXTENSIONS.has(ext)) continue;
+    if (IGNORED_PATHS.some(ignored => name.includes(`/${ignored}/`) || name.startsWith(`${ignored}/`) || name === ignored)) {
+      continue;
+    }
+
     let content;
     try {
       content = entry.getData().toString('utf8');
@@ -209,9 +237,6 @@ export function buildSyntheticSnapshot(payload) {
       test_files_changed_count: isTest ? 1 : 0,
       path_prefixes: filePath.split('/').slice(0, -1).filter(Boolean),
     },
-    // For security pattern checker and line numbers
-    file_content: content,
-    file_path: filePath,
   };
   enrichSnapshotWithAst(factData);
 
@@ -236,16 +261,17 @@ export function runCodeAnalysis(syntheticSnapshot, draftRules, evaluationEngine)
     reason: 'Code analysis',
   };
   const policies = [mockPolicy];
-  // Always run security pattern check when any file has content (upload/paste/zip)
-  const hasContent = syntheticSnapshot.data?.file_content ||
-    syntheticSnapshot.data?.changes?.files?.some(f => f.content);
-  if (hasContent) {
+
+  // We should NOT auto-add global security baseline if the user is explicitly testing a specific policy,
+  // as it causes confusion (e.g. testing coverage blocks because of a console.log).
+  // Only add it if no rules were provided (fallback).
+  if (!draftRules || Object.keys(draftRules).length === 0) {
     policies.push({
-      policy_id: 'code-analysis',
+      policy_id: 'code-analysis-global-security',
       policy_version_id: 'DRAFT_SECURITY',
       level: 'MANDATORY',
       rules_logic: { type: 'security_patterns' },
-      reason: 'Security scan',
+      reason: 'Global security baseline',
     });
   }
 
