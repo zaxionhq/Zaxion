@@ -11,6 +11,10 @@ const CLAUDE_API_KEY = env.get("CLAUDE_API_KEY") || "";
 const NVIDIA_API_KEY = env.get("NVIDIA_API_KEY") || "";
 const OPENROUTER_API_KEY = env.get("OPENROUTER_API_KEY") || "";
 
+const GEMINI_MODEL = env.get("GEMINI_MODEL") || "gemini-1.5-flash";
+const CLAUDE_MODEL = env.get("CLAUDE_MODEL") || "claude-3-5-sonnet-20240620";
+const NVIDIA_MODEL = env.get("NVIDIA_MODEL") || "meta/llama-3.1-405b-instruct";
+
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -23,7 +27,7 @@ let geminiModel = null;
 if (LLM_PROVIDER === "gemini" && GEMINI_API_KEY) {
   genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
   geminiModel = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: GEMINI_MODEL,
     safetySettings: [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -123,7 +127,7 @@ function buildExplanationPrompt(file, contextFiles = []) {
 async function sendToProvider(prompt, opts = {}) {
   switch (LLM_PROVIDER) {
     case "gemini": {
-      if (!geminiModel) throw new Error("Gemini API Key missing.");
+      if (!geminiModel) throw new Error("Gemini API Key missing or provider not initialized.");
       const gResult = await geminiModel.generateContent(prompt);
       return gResult.response.text();
     }
@@ -131,11 +135,15 @@ async function sendToProvider(prompt, opts = {}) {
     case "claude": {
       if (!CLAUDE_API_KEY) throw new Error("Claude API Key missing.");
       const cRes = await axios.post(CLAUDE_API_URL, {
-        model: "claude-3-5-sonnet-20240620",
+        model: CLAUDE_MODEL,
         max_tokens: opts.max_tokens || 2048,
         messages: [{ role: "user", content: prompt }]
       }, {
-        headers: { "x-api-key": CLAUDE_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" }
+        headers: { 
+          "x-api-key": CLAUDE_API_KEY, 
+          "anthropic-version": "2023-06-01", 
+          "content-type": "application/json" 
+        }
       });
       return cRes.data.content[0].text;
     }
@@ -143,12 +151,15 @@ async function sendToProvider(prompt, opts = {}) {
     case "nvidia": {
       if (!NVIDIA_API_KEY) throw new Error("NVIDIA API Key missing.");
       const nRes = await axios.post(NVIDIA_API_URL, {
-        model: "meta/llama-3.1-405b-instruct",
+        model: NVIDIA_MODEL,
         messages: [{ role: "user", content: prompt }],
         max_tokens: opts.max_tokens || 2048,
         temperature: opts.temperature ?? 0.2,
       }, {
-        headers: { "Authorization": `Bearer ${NVIDIA_API_KEY}`, "Accept": "application/json" }
+        headers: { 
+          "Authorization": `Bearer ${NVIDIA_API_KEY}`, 
+          "Accept": "application/json" 
+        }
       });
       return nRes.data.choices[0].message.content;
     }
@@ -216,9 +227,28 @@ export async function generateChatResponse(prompt) {
   return { message: response.trim(), suggestedCode: "", recommendations: [] };
 }
 
+export class LlmService {
+  async generateSummaries({ files = [], repo = null, user = null } = {}) {
+    return generateSummaries({ files, repo, user });
+  }
+
+  async generateTestCode({ file, summary, framework = "jest", contextFiles = [] } = {}) {
+    return generateTestCode({ file, summary, framework, contextFiles });
+  }
+
+  async generateExplanation({ file, contextFiles = [] } = {}) {
+    return generateExplanation({ file, contextFiles });
+  }
+
+  async generateChatResponse(prompt) {
+    return generateChatResponse(prompt);
+  }
+}
+
 export default {
   generateSummaries,
   generateTestCode,
   generateChatResponse,
   generateExplanation,
+  LlmService
 };

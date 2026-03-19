@@ -47,6 +47,11 @@ const schema = z.object({
   CLAUDE_API_KEY: z.string().optional(),
   NVIDIA_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
+
+  // LLM Model Names
+  GEMINI_MODEL: z.string().default("gemini-1.5-flash"),
+  CLAUDE_MODEL: z.string().default("claude-3-5-sonnet-20240620"),
+  NVIDIA_MODEL: z.string().default("meta/llama-3.1-405b-instruct"),
   
   REDIS_URL: z.string().default("redis://localhost:6379"),
 

@@ -108,6 +108,65 @@ export async function analyzeFileAsync(content, filePath = '') {
     return result;
   }
 
+  // Wave 5: Deep AST Semantic Analysis
+  const semanticFacts = {
+    variableDeclarations: [], // { name, value, type, isConstant, kind }
+    functionCalls: [], // { name, arguments, calleeType }
+    templateLiterals: [], // { value, expressions, isUrl }
+    assignments: [], // { left, right, type }
+  };
+
+  traverse.default(ast, {
+    VariableDeclarator(path) {
+      const id = path.node.id;
+      const init = path.node.init;
+      if (id.type === 'Identifier') {
+        const fact = {
+          name: id.name,
+          kind: path.parent.kind, // const, let, var
+          isConstant: path.parent.kind === 'const',
+          value: null,
+          type: init?.type || 'null'
+        };
+
+        if (init?.type === 'NumericLiteral') {
+          fact.value = init.value;
+        } else if (init?.type === 'StringLiteral') {
+          fact.value = init.value;
+        } else if (init?.type === 'TemplateLiteral') {
+          fact.value = init.quasis.map(q => q.value.raw).join('${}');
+        }
+        semanticFacts.variableDeclarations.push(fact);
+      }
+    },
+    CallExpression(path) {
+      const callee = path.node.callee;
+      let name = 'anonymous';
+      if (callee.type === 'Identifier') name = callee.name;
+      else if (callee.type === 'MemberExpression') {
+        const obj = callee.object.name || 'expression';
+        const prop = callee.property.name || 'expression';
+        name = `${obj}.${prop}`;
+      }
+      
+      semanticFacts.functionCalls.push({
+        name,
+        arguments: path.node.arguments.map(arg => arg.type),
+        calleeType: callee.type
+      });
+    },
+    TemplateLiteral(path) {
+      const value = path.node.quasis.map(q => q.value.raw).join('${}');
+      semanticFacts.templateLiterals.push({
+        value,
+        isUrl: value.startsWith('http') || value.includes('://'),
+        expressionCount: path.node.expressions.length
+      });
+    },
+  });
+
+  result.semanticFacts = semanticFacts;
+
   traverse.default(ast, {
     FunctionDeclaration(path) {
       result.functionCount++;

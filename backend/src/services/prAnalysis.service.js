@@ -4,6 +4,7 @@ import { Octokit } from "@octokit/rest";
 import { DiffAnalyzerService } from "./diffAnalyzer.service.js";
 import { PolicyEngineService } from "./policyEngine.service.js";
 import { AdvisorService } from "./advisor.service.js";
+import { LlmService } from "./llm.service.js";
 import { GitHubReporterService } from "./githubReporter.service.js";
 import githubAppService from "./githubApp.service.js";
 import env from "../config/env.js";
@@ -29,7 +30,7 @@ export class PrAnalysisService {
     // Initialize sub-services with the dynamic token/octokit
     const diffAnalyzer = new DiffAnalyzerService(token);
     const policyEngine = new PolicyEngineService(octokit, db);
-    const advisor = new AdvisorService(); // Best-effort intelligence
+    const advisor = new AdvisorService(new LlmService()); // Pass LlmService for Phase 2 Refiner
     const reporter = new GitHubReporterService(octokit);
 
     // Transaction for DB operations

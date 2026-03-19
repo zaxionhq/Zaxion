@@ -188,7 +188,91 @@ export class EvaluationEngineService {
       ['performance', this._checkPerformance.bind(this)],
       ['api', this._checkApi.bind(this)],
       ['testing_best_practices', this._checkTestingBestPractices.bind(this)],
+      ['no_magic_numbers', this._checkNoMagicNumbers.bind(this)],
+      ['hardcoded_urls', this._checkHardcodedUrls.bind(this)],
     ]);
+  }
+
+  /**
+   * Checker: No Magic Numbers (Semantic/AST aware)
+   */
+  _checkNoMagicNumbers(facts, rules) {
+    const files = facts.changes?.files || [];
+    const violations = [];
+    const isTestFile = (path) => path.includes('.test.') || path.includes('.spec.') || path.includes('/tests/');
+
+    for (const f of files) {
+      if (isTestFile(f.path)) continue; // Whitelist test files
+
+      const semantic = f.ast?.semanticFacts || facts.metadata?.ast_by_path?.[f.path]?.semanticFacts;
+      if (!semantic) continue;
+
+      // Check variable declarations
+      for (const decl of semantic.variableDeclarations) {
+        if (decl.type === 'NumericLiteral') {
+          // If it's a named constant (UPPER_CASE) or clearly descriptive, it's NOT a magic number
+          const isDescriptive = /^[A-Z0-9_]+$/.test(decl.name) || decl.name.toLowerCase().includes('port') || decl.name.toLowerCase().includes('timeout');
+          if (decl.isConstant && isDescriptive) continue;
+
+          violations.push({
+            file: f.path,
+            message: `Magic number '${decl.value}' assigned to '${decl.name}'. Use a descriptive named constant instead.`,
+            severity: 'WARN',
+            actual: decl.value,
+            expected: 'Named constant'
+          });
+        }
+      }
+    }
+
+    return violations.length > 0 
+      ? { verdict: 'WARN', message: 'Magic numbers detected in non-test code.', details: { violations } }
+      : { verdict: 'PASS', message: 'No magic numbers found.' };
+  }
+
+  /**
+   * Checker: Hardcoded URLs (Semantic/AST aware)
+   */
+  _checkHardcodedUrls(facts, rules) {
+    const files = facts.changes?.files || [];
+    const violations = [];
+
+    for (const f of files) {
+      const semantic = f.ast?.semanticFacts || facts.metadata?.ast_by_path?.[f.path]?.semanticFacts;
+      if (!semantic) continue;
+
+      // Check template literals
+      for (const template of semantic.templateLiterals) {
+        if (template.isUrl && template.expressionCount === 0) {
+          // Pure hardcoded string URL
+          violations.push({
+            file: f.path,
+            message: `Hardcoded URL found: '${template.value}'. Use environment variables for dynamic URLs.`,
+            severity: 'BLOCK',
+            actual: template.value,
+            expected: 'Dynamic URL'
+          });
+        }
+        // If template.expressionCount > 0, it's dynamic - ALLOWED
+      }
+
+      // Check string literals in declarations
+      for (const decl of semantic.variableDeclarations) {
+        if (decl.type === 'StringLiteral' && (decl.value?.startsWith('http') || decl.value?.includes('://'))) {
+          violations.push({
+            file: f.path,
+            message: `Hardcoded URL found in variable '${decl.name}'. Use environment variables instead.`,
+            severity: 'BLOCK',
+            actual: decl.value,
+            expected: 'Environment variable'
+          });
+        }
+      }
+    }
+
+    return violations.length > 0 
+      ? { verdict: 'BLOCK', message: 'Hardcoded URLs detected.', details: { violations } }
+      : { verdict: 'PASS', message: 'No hardcoded URLs found.' };
   }
 
   /**
@@ -205,13 +289,13 @@ export class EvaluationEngineService {
 
       if ([
         'security_patterns', 'code_quality', 'complexity_metrics', 
-        'dependency_scan', 'reliability'
+        'dependency_scan', 'reliability', 'hardcoded_urls'
       ].includes(type)) {
         requiresContent = true;
       }
 
       if ([
-        'documentation', 'architecture', 'testing_best_practices', 'coverage'
+        'documentation', 'architecture', 'testing_best_practices', 'coverage', 'no_magic_numbers'
       ].includes(type)) {
         requiresAst = true;
       }
@@ -275,11 +359,20 @@ export class EvaluationEngineService {
     // 1. Detect Escape Hatches (@zaxion-bypass)
     const bypassMap = this._detectBypasses(factData);
 
+    // Phase 3: HITL (Human-in-the-loop) Override Awareness
+    // Check if there are previous valid overrides for this evaluation hash
+    const activeOverrides = factSnapshot.active_overrides || [];
+    const hitlFeedback = {
+      has_prior_override: activeOverrides.length > 0,
+      override_categories: activeOverrides.map(o => o.category)
+    };
+
     logger.info({ 
       snapshotId: factSnapshot.id, 
       policyCount: appliedPolicies.length,
       engineVersion: this.ENGINE_VERSION,
-      bypassesDetected: bypassMap.size
+      bypassesDetected: bypassMap.size,
+      hitlOverrideFound: hitlFeedback.has_prior_override
     }, "EvaluationEngine: Starting deterministic evaluation");
 
     // 2. Sort policies by priority for conflict resolution
@@ -425,6 +518,16 @@ export class EvaluationEngineService {
 
     for (const v of structuredViolations) {
       v.hash = crypto.createHash('sha256').update(v.rule_id + (v.file || '') + (v.line || '') + (v.current_value || '')).digest('hex');
+      
+      // Phase 3: Confidence Scoring (AST Depth + HITL + Mode)
+      let baseConfidence = confidence;
+      if (v.rule_id === 'no_magic_numbers' || v.rule_id === 'hardcoded_urls') {
+        baseConfidence *= 1.1; // AST-based rules have higher intrinsic confidence
+      }
+      if (hitlFeedback.has_prior_override && hitlFeedback.override_categories.includes('FALSE_POSITIVE')) {
+        baseConfidence *= 0.5; // Prior FP override significantly reduces confidence
+      }
+      v.confidence_score = Math.min(1.0, baseConfidence);
     }
 
     return {
