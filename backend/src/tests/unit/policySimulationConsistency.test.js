@@ -53,7 +53,7 @@ describe('PolicySimulationService Consistency Test', () => {
     expect(result.results.summary.total_blocked_count).toBe(1);
     expect(result.results.summary.policy_would_block).toBe(true);
     expect(result.results.per_pr_results[0].verdict).toBe('BLOCK');
-    expect(result.results.per_pr_results[0].rationale).toContain('security pattern(s) found');
+    expect(result.results.per_pr_results[0].rationale).toContain('Hardcoded secrets detected');
   });
 
   it('URL Mode Simulation should block same input data', async () => {
