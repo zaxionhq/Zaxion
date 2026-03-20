@@ -4,10 +4,12 @@
  * This service is "best-effort" and must not influence the deterministic decision.
  */
 import * as logger from "../utils/logger.js";
+import { PatchGeneratorService } from "./patchGenerator.service.js";
 
 export class AdvisorService {
   constructor(llmService) {
     this.llmService = llmService;
+    this.patchGenerator = new PatchGeneratorService();
   }
 
   /**
@@ -25,35 +27,55 @@ export class AdvisorService {
       // 1. Risk Assessment (Derivative intelligence)
       const riskLevel = isBlocked ? "HIGH" : (isWarned ? "MEDIUM" : "LOW");
 
-      // Phase 2: Secondary Refiner Layer (Claude/Gemini/Nvidia)
-      // This layer reviews deterministic violations to detect false positives
+      // Phase 2: Secondary Refiner Layer & Phase 8.3 Style Embedding
       let confidenceScore = 0.85;
       let refinementRationale = "";
+      let styleAlignmentScore = 1.0;
       
       if (this.llmService && (isBlocked || isWarned)) {
         try {
           const refinerPrompt = this._buildRefinerPrompt(decision, prContext);
           const aiResponse = await this.llmService.generateChatResponse(refinerPrompt);
           
-          // Parse AI response for confidence and false positive detection
-          // Expected format: { confidence: 0.9, isFalsePositive: false, rationale: "..." }
           if (aiResponse && aiResponse.message) {
             const parsed = this._parseRefinerResponse(aiResponse.message);
             confidenceScore = parsed.confidence || confidenceScore;
             refinementRationale = parsed.rationale || "";
+            styleAlignmentScore = parsed.styleAlignmentScore !== undefined ? parsed.styleAlignmentScore : 1.0;
             
             if (parsed.isFalsePositive && decision.decision === "BLOCK") {
-              // We don't change the deterministic verdict here (Advisor is non-gating),
-              // but we mark it for the UI/Human-in-the-loop.
               decision.advisor_flags = {
                 potential_false_positive: true,
                 ai_confidence: confidenceScore,
-                ai_rationale: refinementRationale
+                ai_rationale: refinementRationale,
+                style_alignment: styleAlignmentScore
               };
             }
           }
         } catch (llmErr) {
           logger.warn("[AdvisorService] Refiner layer failed:", llmErr.message);
+        }
+      }
+
+      // Phase 8.4: Proactive Patch Generation
+      const generatedPatches = [];
+      if (decision.violations && decision.violations.length > 0 && prContext.files) {
+        for (const violation of decision.violations) {
+          if (violation.severity === 'BLOCK') {
+            const fileData = prContext.files.find(f => f.filename === violation.file);
+            if (fileData && fileData.content) {
+              const patch = await this.patchGenerator.generatePatch(violation, fileData.content);
+              if (patch) {
+                generatedPatches.push({
+                  rule_id: violation.rule_id,
+                  file: violation.file,
+                  patch
+                });
+                // Attach to the violation object for the UI
+                violation.suggested_patch = patch;
+              }
+            }
+          }
         }
       }
 
@@ -93,9 +115,11 @@ export class AdvisorService {
       return {
         riskAssessment: {
           level: riskLevel,
-          confidence: confidenceScore
+          confidence: confidenceScore,
+          styleAlignmentScore // Phase 8.3 Check
         },
         suggestedTestIntents,
+        generatedPatches, // Phase 8.4 Payload
         rationale: refinementRationale || rationale,
         status: "SUCCESS",
         timestamp: new Date().toISOString()
@@ -139,7 +163,8 @@ Output ONLY a JSON object in this format:
 {
   "isFalsePositive": boolean,
   "confidence": number,
-  "rationale": "string"
+  "rationale": "string",
+  "styleAlignmentScore": number // 0.0 to 1.0 indicating how well this code matches enterprise standards
 }`;
   }
 
@@ -156,6 +181,6 @@ Output ONLY a JSON object in this format:
     } catch (e) {
       logger.warn("[AdvisorService] Failed to parse refiner JSON:", e.message);
     }
-    return { isFalsePositive: false, confidence: 0.85, rationale: "" };
+    return { isFalsePositive: false, confidence: 0.85, rationale: "", styleAlignmentScore: 1.0 };
   }
 }

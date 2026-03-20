@@ -113,10 +113,19 @@ export async function analyzeFileAsync(content, filePath = '') {
     variableDeclarations: [], // { name, value, type, isConstant, kind }
     functionCalls: [], // { name, arguments, calleeType }
     templateLiterals: [], // { value, expressions, isUrl }
-    assignments: [], // { left, right, type }
+    assignments: [], // { left, rightType }
+    regexLiterals: [], // string representation
   };
 
   traverse.default(ast, {
+    AssignmentExpression(path) {
+      const left = path.node.left.name || (path.node.left.property?.name) || 'unknown';
+      const rightType = path.node.right.type;
+      semanticFacts.assignments.push({ left, rightType });
+    },
+    RegExpLiteral(path) {
+      semanticFacts.regexLiterals.push(path.node.pattern);
+    },
     VariableDeclarator(path) {
       const id = path.node.id;
       const init = path.node.init;
@@ -157,10 +166,20 @@ export async function analyzeFileAsync(content, filePath = '') {
     },
     TemplateLiteral(path) {
       const value = path.node.quasis.map(q => q.value.raw).join('${}');
+      let parentName = 'unknown';
+      if (path.parent.type === 'VariableDeclarator' && path.parent.id.type === 'Identifier') {
+        parentName = path.parent.id.name;
+      } else if (path.parent.type === 'AssignmentExpression' && path.parent.left.type === 'Identifier') {
+        parentName = path.parent.left.name;
+      } else if (path.parent.type === 'ObjectProperty' && path.parent.key.type === 'Identifier') {
+        parentName = path.parent.key.name;
+      }
+      
       semanticFacts.templateLiterals.push({
         value,
         isUrl: value.startsWith('http') || value.includes('://'),
-        expressionCount: path.node.expressions.length
+        expressionCount: path.node.expressions.length,
+        parentName
       });
     },
   });
@@ -264,10 +283,19 @@ export function analyzeFile(content, filePath = '') {
       functionCalls: [],
       templateLiterals: [],
       assignments: [],
+      regexLiterals: [],
     }
   };
 
   traverse.default(ast, {
+    AssignmentExpression(path) {
+      const left = path.node.left.name || (path.node.left.property?.name) || 'unknown';
+      const rightType = path.node.right.type;
+      result.semanticFacts.assignments.push({ left, rightType });
+    },
+    RegExpLiteral(path) {
+      result.semanticFacts.regexLiterals.push(path.node.pattern);
+    },
     VariableDeclarator(path) {
       const id = path.node.id;
       const init = path.node.init;
@@ -289,10 +317,20 @@ export function analyzeFile(content, filePath = '') {
     },
     TemplateLiteral(path) {
       const value = path.node.quasis.map(q => q.value.raw).join('${}');
+      let parentName = 'unknown';
+      if (path.parent.type === 'VariableDeclarator' && path.parent.id.type === 'Identifier') {
+        parentName = path.parent.id.name;
+      } else if (path.parent.type === 'AssignmentExpression' && path.parent.left.type === 'Identifier') {
+        parentName = path.parent.left.name;
+      } else if (path.parent.type === 'ObjectProperty' && path.parent.key.type === 'Identifier') {
+        parentName = path.parent.key.name;
+      }
+
       result.semanticFacts.templateLiterals.push({
         value,
         isUrl: value.startsWith('http') || value.includes('://'),
-        expressionCount: path.node.expressions.length
+        expressionCount: path.node.expressions.length,
+        parentName
       });
     },
     FunctionDeclaration(path) {

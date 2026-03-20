@@ -6,14 +6,14 @@
  */
 export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
   const policyMap = {
-    'SEC-001': { type: 'security_patterns', patterns: ['no-hardcoded-secrets'] },
-    'SEC-002': { type: 'hardcoded_urls' }, // Map to new semantic checker
-    'SEC-003': { type: 'no_magic_numbers' }, // Map to new semantic checker
+    'SEC-001': { type: 'no_hardcoded_secrets' }, // Semantic Engine
+    'SEC-002': { type: 'hardcoded_urls' }, // Semantic Engine
+    'SEC-003': { type: 'no_magic_numbers' }, // Semantic Engine
     'SEC-004': { type: 'dependency_scan' },
-    'SEC-005': { type: 'security_patterns', patterns: ['no-eval'] },
-    'SEC-006': { type: 'security_patterns', patterns: ['no-unsafe-regex'] },
-    'SEC-007': { type: 'security_patterns', patterns: ['no-sql-injection'] },
-    'SEC-008': { type: 'security_patterns', patterns: ['no-xss'] },
+    'SEC-005': { type: 'no_eval' }, // Semantic Engine
+    'SEC-006': { type: 'no_unsafe_regex' }, // Semantic Engine
+    'SEC-007': { type: 'no_sql_injection' }, // Semantic Engine
+    'SEC-008': { type: 'no_xss' }, // Semantic Engine
     'REL-001': { type: 'reliability' },
     'COD-001': { type: 'code_quality' },
     'COD-002': { type: 'documentation' },

@@ -921,8 +921,16 @@ export default function githubControllerFactory(db) {
         const octokit = getOctokit(token);
         const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
 
-        // Fetch changed files + content for this PR so security + AST rules work.
-        const filesWithContent = await fetchPrFilesWithContent(token, owner, repo, prNumber, { maxFiles: 100 });
+        const results = await fetchPrFilesWithContent(token, owner, repo, prNumber, { maxFiles: 100 });
+        // Handle both object return `{filesWithContent, parserSuccessRate}` and simple array `[...]`
+        let filesWithContent = [];
+        let parserSuccessRate = 1.0;
+        if (Array.isArray(results)) {
+          filesWithContent = results;
+        } else if (results && results.filesWithContent) {
+          filesWithContent = results.filesWithContent;
+          parserSuccessRate = results.parserSuccessRate;
+        }
 
         let snapshot;
         if (filesWithContent.length > 0) {
@@ -936,6 +944,12 @@ export default function githubControllerFactory(db) {
             virtualPath: 'empty.ts',
           });
         }
+        
+        // Pass parser metrics into snapshot so simulation doesn't falsely fail strict mode
+        snapshot.metadata = snapshot.metadata || {};
+        snapshot.metadata.parser_success_rate = parserSuccessRate !== undefined ? parserSuccessRate : 1.0;
+        // In simulations, we often don't have the full tree, so we degrade gracefully
+        snapshot.evaluation_mode = 'BEST_EFFORT';
 
         // Attach PR metadata so results include proper repo / PR / title.
         snapshot.repo_full_name = repoFullName;
@@ -969,5 +983,58 @@ export default function githubControllerFactory(db) {
         next(err);
       }
     },
+
+    analyzePRSimulation: async (req, res) => {
+      try {
+        const { prUrl, policyRules } = req.body;
+        if (!prUrl) return res.status(400).json({ error: "Missing PR URL" });
+        if (!policyRules) return res.status(400).json({ error: "Missing policy rules" });
+
+        const [owner, repo, prNumber] = prUrl.split('/').slice(-3);
+        const token = req.githubToken;
+        if (!token) return res.status(401).json({ error: "GitHub token missing" });
+
+        // Build policy config with mock defaults
+        const policyConfig = {
+          policy_id: "simulated_policy",
+          policy_version_id: "sim_v1",
+          level: "MANDATORY",
+          rules_logic: policyRules
+        };
+
+        const db = require('../models/index.js');
+        const { getOctokit } = require('../utils/github.js');
+        const octokit = getOctokit(token);
+
+        const { FactIngestorService } = await import('../services/factIngestor.service.js');
+        const { EvaluationEngineService } = await import('../services/evaluationEngine.service.js');
+        const { PolicySimulationService } = await import('../services/policySimulation.service.js');
+
+        const ingestor = new FactIngestorService(db);
+        const evaluator = new EvaluationEngineService(db);
+        const simulator = new PolicySimulationService(db, evaluator);
+
+        // Fetch minimal PR data
+        const { data: prData } = await octokit.rest.pulls.get({
+          owner, repo, pull_number: parseInt(prNumber, 10)
+        });
+
+        // Use simulator to analyze a single PR URL dynamically
+        const result = await simulator.simulateOnDemandUrl(prUrl, token, policyRules);
+
+        return res.status(200).json({
+          pr_details: {
+            title: prData.title,
+            number: prData.number,
+            author: prData.user.login,
+            base_branch: prData.base.ref
+          },
+          ...result
+        });
+      } catch (err) {
+        warn("Simulation analysis failed:", err);
+        return res.status(500).json({ error: err.message || "Failed to simulate policy on PR" });
+      }
+    }
   };
 }

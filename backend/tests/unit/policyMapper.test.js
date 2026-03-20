@@ -2,10 +2,19 @@ import { jest } from '@jest/globals';
 import { mapCorePolicyToRules } from '../../src/utils/policyMapper.js';
 
 describe('PolicyMapper', () => {
-  test('should map SEC-001 to security_patterns with no-hardcoded-secrets', () => {
+  test('should map SEC-001 to no_hardcoded_secrets', () => {
     const rules = mapCorePolicyToRules('SEC-001');
-    expect(rules.type).toBe('security_patterns');
-    expect(rules.patterns).toEqual(['no-hardcoded-secrets']);
+    expect(rules.type).toBe('no_hardcoded_secrets');
+  });
+
+  test('should map SEC-002 to hardcoded_urls', () => {
+    const rules = mapCorePolicyToRules('SEC-002');
+    expect(rules.type).toBe('hardcoded_urls');
+  });
+
+  test('should map SEC-003 to no_magic_numbers', () => {
+    const rules = mapCorePolicyToRules('SEC-003');
+    expect(rules.type).toBe('no_magic_numbers');
   });
 
   test('should map GOV-001 to pr_size with max_files: 20', () => {
