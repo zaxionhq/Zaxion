@@ -1,19 +1,23 @@
-# Zaxion: Autonomous PR Governance Infrastructure 🛡️
+# Zaxion: Autonomous AI PR Governance Infrastructure 🛡️
 
-[![Status](https://img.shields.io/badge/Status-Phase_5_Completed-success)](file:///c:/Users/hamza/OneDrive/Desktop/hamza/Zaxion/docs/PHASE_5_LOCK.md)
+[![Status](https://img.shields.io/badge/Status-Phase_9_Active-success)](file:///c:/Users/hamza/OneDrive/Desktop/hamza/Zaxion/ZAXION_PHASE_9_LLM_NATIVE.md)
 [![License](https://img.shields.io/badge/License-Enterprise_SaaS-blue)](file:///c:/Users/hamza/OneDrive/Desktop/hamza/Zaxion/LICENSE)
 
-**Zaxion** is an AI-native governance platform that transforms passive engineering documentation into active code guardrails. By integrating directly into your development workflow, Zaxion ensures that every Pull Request aligns with your organization's non-negotiable architectural and security standards.
+**Zaxion** is an AI-native governance platform that transforms passive engineering documentation into active code guardrails. By combining **Deep Semantic AST Analysis** with **LLM-Native Architectural Reasoning**, Zaxion ensures that every Pull Request aligns with your organization's non-negotiable architectural, security, and stylistic standards at the level of a Staff Engineer.
 
 ---
 
-## �️ What is Zaxion?
-Zaxion is an **Autonomous PR Governor**. Unlike standard linters that focus on syntax, Zaxion understands the **context and intent** of code changes. It acts as a "Virtual Senior Engineer" that automatically evaluates every PR against a set of hierarchical policies, issuing binding verdicts to block non-compliant code before it merges.
+## ⚙️ What is Zaxion?
+Zaxion is an **Autonomous PR Governor** designed to rival human review quality (like OpenAI Codex or Claude Code). 
+It goes beyond simple linting or regex scanning by:
+1. Understanding the **Abstract Syntax Tree (AST)** of your code (data flow, variable assignment, taint tracking).
+2. Utilizing an **LLM-Native Policy Engine** (Claude/Gemini/Nvidia) to enforce plain-English "vibe" and architectural rules.
+3. Operating as a "Virtual Senior Engineer" that not only blocks non-compliant code but automatically generates `git apply` compatible patches to fix it.
 
 ## 🎯 Who is it for?
 - **Engineering Leaders (CTOs/VPs):** Who want to ensure high-level standards are enforced across the entire organization without manual overhead.
 - **Open Source Maintainers:** Who need to protect their projects from technical debt and low-quality contributions.
-- **Enterprise Security Teams:** Who require automated, deterministic verification of security policies (e.g., "all auth changes must have tests").
+- **Enterprise Security Teams:** Who require automated, semantic verification of security policies (e.g., catching deep SQLi and XSS vulnerabilities).
 
 ## 🛠️ The Problem (Precision)
 Modern engineering teams suffer from **"Documentation Drift."**
@@ -21,22 +25,25 @@ Modern engineering teams suffer from **"Documentation Drift."**
 2. **Reviewer Fatigue:** Human reviewers miss architectural risks because they are focused on business logic or typos.
 3. **Inconsistent Standards:** Different teams or individuals apply rules with varying degrees of strictness, leading to a fragmented and fragile codebase.
 
-**Zaxion solves this by making governance a hard requirement, not a suggestion.**
+**Zaxion solves this by making governance a hard requirement, not a suggestion, and providing the AI-driven patches to fix it.**
 
-## �️ High-Level Architecture
-Zaxion is built on a decoupled, deterministic architecture to ensure absolute reliability:
+## 🏗️ High-Level Architecture
+Zaxion is built on a hybrid Deterministic + LLM architecture:
 
-1. **Fact Ingestion:** A formal **GitHub App** listens for PR events and extracts metadata/code changes via webhooks.
-2. **Analysis Engine:** Utilizes Abstract Syntax Tree (AST) parsing to understand the *logic* of the change, not just the text.
-3. **Evaluation Engine:** A stateless, pure function evaluates facts against your repository-specific or organization-wide policies.
-4. **Enforcement Layer:** Communicates back to GitHub to block merges or provide instant, educational feedback to the developer.
-5. **Security Isolation:** Operates on a **"Fetch-Analyze-Discard"** model. Code is processed in-memory and wiped immediately after a decision is issued.
+1. **Fact Ingestion:** A GitHub App listens for PR events and extracts metadata/code changes.
+2. **Semantic Reasoning Engine:** Utilizes Babel AST parsing to track variable scopes, template literals, and cross-file dependencies.
+3. **Hybrid Evaluation Engine:** 
+   - *Deterministic Core*: Fast, stateless AST rules for strict security (No hardcoded secrets, no eval).
+   - *LLM-Native Evaluator*: RAG-powered Claude/Gemini checks for high-level architectural patterns.
+4. **Proactive Patch Generator:** Automatically writes the code to fix the violation.
+5. **Human-in-the-loop (HITL):** Learns from developer overrides to automatically adjust confidence scores and reduce false positives to <5%.
 
 ## ✨ Key Features
-- **Deterministic Gates:** We never use AI to "guess" if a PR should be blocked; we use AI only to help developers fix the specific policy violations.
+- **Semantic Precision:** We don't just regex your code. We build an AST and understand taint tracking, dynamic template literals, and scoping.
+- **Auto-Remediation:** When Zaxion blocks a PR, it writes the `git patch` to fix it.
 - **Zero-Retention Privacy:** Your intellectual property never stays on our servers.
 - **Stateless Authentication:** High-performance **JWT-based identity management** ensures speed and scalability.
-- **Portable Policies:** Define your rules as code (YAML/JSON) directly in your repository.
+- **Portable Policies:** Define your rules as code (YAML/JSON/Natural Language) directly in your repository.
 
 ---
 
