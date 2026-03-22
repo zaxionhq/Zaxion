@@ -68,11 +68,6 @@ Zaxion will now automatically listen for every Pull Request event in your select
 
 ---
 
-## 🛠️ Self-Hosting (Optional)
-If you are an enterprise that requires Zaxion to run within your own infrastructure, please refer to our [Self-Hosting Guide](docs/SELF_HOSTING.md) for instructions on setting up the Node.js backend, Redis worker, and PostgreSQL database.
-
----
-
 ## 🛡️ Security & Compliance
 - **AES-256 Encryption:** All metadata at rest and in transit is encrypted.
 - **Audit Trails:** Every decision is logged in an immutable ledger for compliance auditing.
