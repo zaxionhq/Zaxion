@@ -106,57 +106,150 @@ const LandingPage = () => {
             </div>
             
             <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[0.9]">
-              Catch Bugs <br />
-              <span className="gradient-text">Before They Ship.</span>
+              Find Hardcoded Secrets <br />
+              <span className="gradient-text">In Every PR. Automatically.</span>
             </h1>
 
             <div className="mb-8">
               <p className="text-lg md:text-2xl font-bold text-white/80">
-                Automate Code Review for High-Risk Code. 
-                <span className="text-neon-cyan block md:inline md:ml-2">Block bugs, not velocity.</span>
+                Install on GitHub. Check 31 code standards automatically.
+                <span className="text-neon-cyan block md:inline md:ml-2">Block bad PRs before merge. Set up in 30 seconds.</span>
               </p>
             </div>
-    
-            <p className="text-lg text-white/40 max-w-2xl mb-12 leading-relaxed font-medium">
-              Automatically blocks risky PRs until they meet your standards. No more bugs. No more tech debt. Ship faster with confidence.
-            </p>
 
             <div className="flex flex-col items-center gap-6">
               <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
-                Install GitHub App (Free)
+                Install on GitHub - Free
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton>
               
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-[10px] font-black tracking-[0.2em] uppercase text-white/20">
-                  Takes 5 Minutes • No Credit Card Required
-                </p>
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-wrap justify-center gap-4 md:gap-8">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
+                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-white/60">Always Free</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
+                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-white/60">No credit card</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
+                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-white/60">30-second setup</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Hero Artifact */}
-            <div className="mt-24 w-full flex justify-center opacity-100">
-              <GovernanceRecordCard />
+            {/* Hero Artifact - MAIN PROOF */}
+            <div className="mt-24 w-full flex flex-col items-center gap-8">
+              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl glass-panel border-red-500/30 bg-red-500/5 animate-pulse">
+                <AlertTriangle className="h-6 w-6 text-red-500" />
+                <span className="text-lg font-black tracking-tight text-white">Zaxion caught 8 security bugs</span>
+              </div>
+              <div className="relative group">
+                <div className="absolute -inset-4 bg-neon-cyan/10 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                <img 
+                  src="/github-pr-comment-proof.png"
+                  alt="Zaxion catching security bugs in a GitHub PR" 
+                  className="rounded-xl border border-white/10 shadow-2xl relative z-10 max-w-4xl w-full transition-transform duration-500 hover:scale-[1.02] cursor-zoom-in"
+                />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION 2 — The Problem */}
-        <section id="problem" className="py-32 bg-white/[0.01] border-y border-white/5">
+        {/* SECTION 2 — Zaxion in Action */}
+        <section className="py-32 bg-white/[0.01] border-y border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="max-w-5xl mx-auto text-center mb-16">
+              <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">Zaxion in Action</h2>
+              <p className="text-xl text-white/40">Real-time protection for your codebase.</p>
+            </div>
+            
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6">
+                {[
+                  { 
+                    label: "SECURITY", 
+                    title: "Found Hardcoded Secret", 
+                    desc: "Zaxion detected a GitHub Personal Access Token being committed in plain text.",
+                    color: "red"
+                  },
+                  { 
+                    label: "SECURITY", 
+                    title: "SQL Injection Blocked", 
+                    desc: "Identified raw SQL query using unsanitized user input in the data layer.",
+                    color: "orange"
+                  },
+                  { 
+                    label: "QUALITY", 
+                    title: "Production Console Log", 
+                    desc: "Flagged console.log statements that shouldn't reach production code.",
+                    color: "cyan"
+                  }
+                ].map((item, i) => (
+                  <div key={i} className="p-6 rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/10 transition-colors">
+                    <div className={cn("text-[10px] font-black tracking-widest uppercase mb-2", `text-${item.color}-500`)}>
+                      {item.label}
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                    <p className="text-white/40 text-sm">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="glass-panel p-4 rounded-2xl border-white/10 overflow-hidden">
+                <img src="/zaxion-action-screenshot.png" alt="Zaxion PR Comment Action" className="rounded-lg shadow-2xl transition-transform duration-500 hover:scale-110 cursor-zoom-in" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 3 — 31 Policies */}
+        <section className="py-32 border-b border-white/5">
+          <div className="container mx-auto px-6">
+            <div className="max-w-4xl mx-auto text-center mb-20">
+              <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">31 Policies</h2>
+              <p className="text-xl text-white/40">Comprehensive coverage for every aspect of your code.</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              {[
+                { name: "Security", count: 8, icon: Shield },
+                { name: "Architecture", count: 3, icon: Code2 },
+                { name: "Quality", count: 6, icon: ListChecks },
+                { name: "Testing", count: 3, icon: CheckCircle2 },
+                { name: "Performance", count: 3, icon: Cpu },
+                { name: "Other", count: 3, icon: ListChecks }
+              ].map((cat, i) => (
+                <div key={i} className="glass-panel p-6 rounded-xl border-white/5 flex flex-col items-center text-center group hover:border-neon-cyan/30 transition-colors">
+                  <cat.icon className="h-8 w-8 text-neon-cyan mb-4 group-hover:scale-110 transition-transform" />
+                  <div className="text-2xl font-black mb-1">{cat.count}</div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{cat.name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 4 — The Cost of Missing One Bug */}
+        <section id="problem" className="py-32 bg-white/[0.01] border-b border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight">Why PR Quality Gates Fail</h2>
+              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight text-center">The Cost of Missing One Bug</h2>
               <div className="space-y-12">
                 {[
                   { title: "Senior engineers are drowning in manual reviews", desc: "Manual code review is a bottleneck. Senior engineers spend hours catching basic logic errors instead of building core architecture." },
                   { title: "Critical bugs slip through the cracks", desc: "High-risk changes (like payments or auth) often get the same level of scrutiny as simple CSS tweaks, leading to production disasters." },
-                  { title: "Tech debt accumulates silently", desc: "Without automated enforcement, inconsistent patterns and 'quick fixes' become permanent fixtures in your codebase." }
+                  { title: "Inconsistent Standards", desc: "Every reviewer has a different 'vibe'. Zaxion ensures your engineering handbook is enforced mathematically on every single PR." }
                 ].map((item, i) => (
-                  <div key={i} className="flex gap-6 items-start group">
-                    <div className="w-1 h-12 bg-white/10 group-hover:bg-neon-cyan transition-colors shrink-0 mt-1" />
+                  <div key={i} className="flex gap-8 group">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-white/10 flex items-center justify-center text-neon-cyan font-black group-hover:border-neon-cyan/50 transition-colors">
+                      0{i+1}
+                    </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-2">{item.title}</h3>
-                      <p className="text-white/40 text-lg leading-relaxed">{item.desc}</p>
+                      <h3 className="text-2xl font-bold mb-3 group-hover:text-neon-cyan transition-colors">{item.title}</h3>
+                      <p className="text-white/40 text-lg leading-relaxed font-medium">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -165,94 +258,65 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* SECTION 3 — Start Small (Moved & Renamed) */}
-        <section className="py-32 border-b border-white/5 bg-black/20">
+        {/* SECTION 5 — The Zaxion Advantage */}
+        <section id="advantage" className="py-32 border-b border-white/5">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-black mb-8 text-center tracking-tight">Start Small, Scale Gradually</h2>
-              <p className="text-white/40 text-center mb-16 max-w-2xl mx-auto text-sm">
-                Zaxion isn't a "flip the switch" tool. You can introduce it gradually to your team's workflow.
-              </p>
-              <div className="grid md:grid-cols-3 gap-8">
-                {[
-                  { mode: "OBSERVE ONLY", desc: "Passive monitoring. Zaxion records decisions in the background to baseline current architectural compliance without affecting velocity." },
-                  { mode: "WARN ONLY", desc: "Policy socialization. Signals are visible to developers as advisories, allowing teams to adjust to new standards before enforcement." },
-                  { mode: "FULL ENFORCEMENT", desc: "Guaranteed Compliance. Decisions are binding. PRs cannot be merged without meeting your team's defined safety standards." }
-                ].map((item, i) => (
-                  <div key={i} className="p-8 rounded-xl border border-white/5 bg-white/[0.01] space-y-4">
-                    <div className="text-[10px] font-mono text-neon-cyan font-bold tracking-widest">{item.mode}</div>
-                    <p className="text-sm text-white/50 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 4 — Use Cases (New) */}
-        <section id="use-cases" className="py-32 container mx-auto px-6">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">Built for Real Scenarios</h2>
-            <p className="text-white/40 text-lg">Four ways Zaxion protects your production environment today.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {[
-              { 
-                title: "Prevent Payment Bugs", 
-                desc: "Automatically block any PR that modifies payment logic without accompanying integration tests or senior approval.",
-                icon: Shield
-              },
-              { 
-                title: "Enforce Architecture", 
-                desc: "Ensure that 'Domain' services never import 'Infrastructure' helpers, keeping your clean architecture clean.",
-                icon: Code2
-              },
-              { 
-                title: "Security Guardrails", 
-                desc: "Instantly flag and block PRs that use insecure patterns like raw SQL queries or unvalidated user input.",
-                icon: Lock
-              },
-              { 
-                title: "API Contract Safety", 
-                desc: "Prevent breaking changes to your public API by enforcing versioning and compatibility checks on every diff.",
-                icon: Zap
-              }
-            ].map((item, i) => (
-              <GlassCard key={i} className="p-8">
-                <item.icon className="h-8 w-8 text-neon-cyan mb-6" />
-                <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                <p className="text-white/40 leading-relaxed">{item.desc}</p>
-              </GlassCard>
-            ))}
-          </div>
-        </section>
-
-        {/* SECTION 5 — The Zaxion Advantage (Renamed Pillars) */}
-        <section id="advantage" className="py-24 md:py-32 bg-white/[0.01] border-y border-white/5">
-          <div className="container mx-auto px-6">
-            <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl md:text-5xl font-black mb-16 md:mb-24 text-center tracking-tight">The Zaxion Advantage</h2>
-              <div className="grid md:grid-cols-3 gap-12 md:gap-24">
-                {[
-                  {
-                    title: "FASTER REVIEWS",
-                    desc: "Automate the repetitive parts of code review so your team can focus on complex architecture and business logic."
-                  },
-                  {
-                    title: "ZERO REGRESSIONS",
-                    desc: "Ensure every fix stays fixed with automated policy enforcement that never sleeps and never misses a detail."
-                  },
-                  {
-                    title: "CLEAR STANDARDS",
-                    desc: "Turn your engineering handbook into executable code that guides every contributor, from junior to senior."
-                  }
-                ].map((pillar, i) => (
-                  <div key={i} className="space-y-8 text-center md:text-left">
-                    <div className="text-[10px] font-mono tracking-[0.4em] text-neon-cyan/60 uppercase">Benefit 0{i+1}</div>
-                    <h3 className="text-4xl font-black tracking-tighter leading-tight">{pillar.title}</h3>
-                    <p className="text-white/40 leading-relaxed font-medium">{pillar.desc}</p>
-                  </div>
-                ))}
+              <h2 className="text-4xl md:text-6xl font-black mb-24 text-center tracking-tight">The Zaxion Advantage</h2>
+              
+              <div className="grid md:grid-cols-2 gap-16 items-center mb-32">
+                <div className="space-y-8">
+                  {[
+                    { 
+                      title: "Policy Simulator", 
+                      desc: "Test new policies against historical PRs to see the impact before you enable them.",
+                      icon: Scale
+                    },
+                    { 
+                      title: "Shadow Running", 
+                      desc: "Run rules in the background to gather data without blocking your team's workflow.",
+                      icon: Ban
+                    },
+                    { 
+                      title: "Immutable Audit Trail", 
+                      desc: "A tamper-proof record of every governance decision, perfect for SOC2 and security audits.",
+                      icon: Shield
+                    },
+                    { 
+                      title: "Dynamic Risk Scoring", 
+                      desc: "Automatically adjust enforcement levels based on the sensitivity of the files being changed.",
+                      icon: AlertTriangle
+                    },
+                    { 
+                      title: "Semantic Code Understanding", 
+                      desc: "Zaxion understands your code's logic using AST analysis, going far beyond simple regex checks.",
+                      icon: Code2
+                    }
+                  ].map((feature, i) => (
+                    <div key={i} className="flex gap-6 group">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-white/10 flex items-center justify-center text-neon-cyan group-hover:border-neon-cyan/50 transition-colors">
+                        <feature.icon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold mb-1 group-hover:text-neon-cyan transition-colors">{feature.title}</h4>
+                        <p className="text-white/40 text-sm leading-relaxed">{feature.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="relative group">
+                  <div className="absolute -inset-10 bg-neon-cyan/5 blur-[100px] rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <GlassCard className="p-4 relative z-10 overflow-hidden">
+                    <img src="/policy-simulator-preview.png" alt="Policy Simulator Feature" className="rounded-lg transition-transform duration-700 hover:scale-110 cursor-zoom-in" />
+                    <div className="mt-4 p-4 bg-black/40 rounded-lg border border-white/5 relative z-20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
+                        <span className="text-[10px] font-mono text-neon-cyan uppercase">Simulator Active</span>
+                      </div>
+                      <p className="text-xs text-white/40">Visualizing the projected impact of 31 policies across 1,402 historical PRs.</p>
+                    </div>
+                  </GlassCard>
+                </div>
               </div>
 
               {/* Live Audit Trail Integration */}
@@ -395,8 +459,8 @@ const LandingPage = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-end">
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-8 w-auto" />
+              <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-8 w-auto transition-transform duration-500 group-hover:scale-110" />
                 <span className="text-xl font-black tracking-tighter">
                   ZAXION<span className="text-neon-cyan">.</span>
                 </span>
