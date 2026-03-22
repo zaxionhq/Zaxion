@@ -212,9 +212,47 @@ export class PrAnalysisService {
         const versionStr = decisionObject.policy_version || 'v1.0.0';
         const versionInt = parseInt(versionStr.replace(/[^0-9]/g, '')) || 1;
 
-        const policyVersion = await db.PolicyVersion.findOne({
+        let policyVersion = await db.PolicyVersion.findOne({
           where: { version_number: versionInt }
         });
+
+        // FIXED: If policy version doesn't exist, create a default one to ensure the record is saved
+        if (!policyVersion) {
+          logger.warn(`[PrAnalysisService] [trace:${traceId}] PolicyVersion ${versionInt} not found. Creating a fallback one.`);
+          
+          // Ensure a system user exists
+          let systemUser = await db.User.findOne({ where: { username: 'zaxion-system' } });
+          if (!systemUser) {
+            systemUser = await db.User.create({
+              githubId: 'zaxion-system',
+              username: 'zaxion-system',
+              role: 'admin'
+            });
+          }
+
+          // Ensure a default policy exists
+          let defaultPolicy = await db.Policy.findOne({ where: { name: 'Default PR Policy' } });
+          if (!defaultPolicy) {
+            defaultPolicy = await db.Policy.create({
+              name: 'Default PR Policy',
+              scope: 'ORG',
+              target_id: owner,
+              owning_role: 'ADMIN',
+              status: 'APPROVED',
+              is_enabled: true,
+              created_by: systemUser.id
+            });
+          }
+
+          policyVersion = await db.PolicyVersion.create({
+            policy_id: defaultPolicy.id,
+            version_number: versionInt,
+            enforcement_level: 'MANDATORY',
+            rules_logic: {},
+            created_by: systemUser.id,
+            description: 'Auto-generated fallback policy version'
+          });
+        }
 
         if (policyVersion) {
           // 2. Create Fact Snapshot
@@ -233,7 +271,7 @@ export class PrAnalysisService {
             policy_version_id: policyVersion.id,
             fact_id: factSnapshot.id,
             result: decisionObject.decision === 'OVERRIDDEN_PASS' ? 'PASS' : decisionObject.decision,
-            rationale: decisionObject.decisionReason,
+            rationale: decisionObject.decisionReason || 'Analyzed by Zaxion Engine',
             evaluation_hash: decisionObject.evaluation_hash || null,
             github_check_run_id: checkRunId || null,
             author_handle: prDetails.user.login,
