@@ -26,6 +26,7 @@ export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
     return { type: 'core_enforcement', id: policyId, severity };
   }
 
+  // eslint-disable-next-line security/detect-object-injection
   const rules = policyMap[policyId];
 
   return {
