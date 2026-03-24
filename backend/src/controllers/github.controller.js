@@ -1002,8 +1002,7 @@ export default function githubControllerFactory(db) {
           rules_logic: policyRules
         };
 
-        const db = require('../models/index.js');
-        const { getOctokit } = require('../utils/github.js');
+        // Use the db instance passed to the factory instead of requiring models directly
         const octokit = getOctokit(token);
 
         const { FactIngestorService } = await import('../services/factIngestor.service.js');
