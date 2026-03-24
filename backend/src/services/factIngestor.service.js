@@ -51,7 +51,7 @@ function shouldFetchContent(filePath) {
 function isBinaryBuffer(buf) {
   const len = Math.min(buf.length, 1024);
 
-  // eslint-disable-next-line security/detect-object-injection
+  
   for (let i = 0; i < len; i++) if (buf[i] === 0) return true;
   return false;
 }
