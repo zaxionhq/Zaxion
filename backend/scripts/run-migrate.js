@@ -24,8 +24,14 @@ if (!databaseUrl) {
   databaseUrl = `postgres://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
 }
 
+// Neon and some other providers require sslmode=require
+if ((databaseUrl.includes('neon.tech') || databaseUrl.includes('railway.app')) && !databaseUrl.includes('sslmode=')) {
+  databaseUrl += (databaseUrl.includes('?') ? '&' : '?') + 'sslmode=require';
+}
+
 // Use npx to run sequelize-cli, which is more robust in different environments (Docker/Railway)
-const sequelizeCliCommand = `npx sequelize-cli db:migrate --url "${databaseUrl}" --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
+// We avoid using --url here because it can bypass the dialectOptions (SSL) defined in config.cjs
+const sequelizeCliCommand = `npx sequelize-cli db:migrate --config src/config/config.cjs --migrations-path src/migrations --models-path src/models`;
 
 try {
   logger.info('Running Sequelize migrations...');
@@ -35,6 +41,7 @@ try {
     cwd: path.resolve(__dirname, '..'), // Set CWD to the backend directory
     env: {
       ...process.env,
+      PGSSLMODE: (databaseUrl.includes('neon.tech') || databaseUrl.includes('railway.app')) ? 'require' : process.env.PGSSLMODE,
       // DATABASE_URL is now passed via --url, so no need to explicitly pass individual vars here
     },
   });
