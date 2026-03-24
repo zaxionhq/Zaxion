@@ -13,9 +13,14 @@ if (databaseUrl) {
     logging: env.get("NODE_ENV") === "development" ? (msg) => logger.debug(msg) : false,
     pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
     dialectOptions: {
-      ssl: databaseUrl.includes("railway.app") || databaseUrl.includes("up.railway.app") ? {
+      ssl: (
+        databaseUrl.includes("railway.app") || 
+        databaseUrl.includes("neon.tech") || 
+        databaseUrl.includes("sslmode=require") ||
+        databaseUrl.includes("ssl=true")
+      ) ? {
         require: true,
-        rejectUnauthorized: false // Required for Railway's self-signed certs
+        rejectUnauthorized: false
       } : false
     }
   });
