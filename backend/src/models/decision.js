@@ -78,6 +78,11 @@ export default (sequelize) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      repo_full_name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Full name of the repository (owner/repo) for dashboard filtering',
+      },
     },
     {
       sequelize,

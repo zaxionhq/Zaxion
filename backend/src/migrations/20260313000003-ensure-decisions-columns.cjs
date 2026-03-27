@@ -14,7 +14,8 @@ module.exports = {
         ADD COLUMN IF NOT EXISTS base_branch TEXT,
         ADD COLUMN IF NOT EXISTS risk_score INTEGER DEFAULT 0,
         ADD COLUMN IF NOT EXISTS is_merged BOOLEAN DEFAULT FALSE NOT NULL,
-        ADD COLUMN IF NOT EXISTS merged_at TIMESTAMPTZ;
+        ADD COLUMN IF NOT EXISTS merged_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS repo_full_name TEXT;
     `);
     }
 ,
@@ -22,6 +23,7 @@ module.exports = {
   async down(queryInterface) {
     await queryInterface.sequelize.query(`
       ALTER TABLE IF EXISTS "Decisions"
+        DROP COLUMN IF EXISTS repo_full_name,
         DROP COLUMN IF EXISTS merged_at,
         DROP COLUMN IF EXISTS is_merged,
         DROP COLUMN IF EXISTS risk_score,
