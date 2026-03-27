@@ -645,14 +645,8 @@ export class EvaluationEngineService {
       
       if (pr.verdict !== 'PASS') {
         const details = violatedPolicies.find(v => v.checker === ruleId) || {};
-        let defaultFile = factData?.file_path || null;
-        
-        // Use the first file in the PR as a default if none specified
-        if (!defaultFile && analyzedFiles.size > 0) {
-          defaultFile = Array.from(analyzedFiles)[0];
-        }
-
         const subViolations = details.violations || [];
+        
         if (subViolations.length > 0) {
           for (const sv of subViolations) {
             // Wave 4 Enhancement: Dynamic meta lookup per sub-violation (policy property)
@@ -666,7 +660,7 @@ export class EvaluationEngineService {
               rule_id: ruleId,
               severity: sv.severity || pr.verdict,
               message: sv.message || pr.message,
-              file: sv.file || defaultFile || undefined,
+              file: sv.file || factData?.file_path || (analyzedFiles.size > 0 ? Array.from(analyzedFiles)[0] : undefined),
               line: sv.line,
               column: sv.column,
               current_value: sv.actual || details.actual,
@@ -682,17 +676,37 @@ export class EvaluationEngineService {
             remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
             documentation_link: DOCS_BASE,
           };
-          structuredViolations.push({
-            rule_id: ruleId,
-            severity: pr.verdict,
-            message: pr.message,
-            file: defaultFile || undefined,
-            current_value: details.actual,
-            required_value: details.expected || 'Safe pattern',
-            explanation: meta.explanation,
-            remediation: meta.remediation,
-            documentation_link: meta.documentation_link,
-          });
+
+          // If no sub-violations, but we have a generic "actual" that lists multiple files, split it
+          const actualStr = String(details.actual || '');
+          if (actualStr.includes(',') && !actualStr.includes('{')) {
+            const fileList = actualStr.split(',').map(s => s.trim()).filter(Boolean);
+            for (const f of fileList) {
+              structuredViolations.push({
+                rule_id: ruleId,
+                severity: pr.verdict,
+                message: pr.message,
+                file: f,
+                current_value: f,
+                required_value: details.expected || 'Safe pattern',
+                explanation: meta.explanation,
+                remediation: meta.remediation,
+                documentation_link: meta.documentation_link,
+              });
+            }
+          } else {
+            structuredViolations.push({
+              rule_id: ruleId,
+              severity: pr.verdict,
+              message: pr.message,
+              file: factData?.file_path || (analyzedFiles.size > 0 ? Array.from(analyzedFiles)[0] : undefined),
+              current_value: details.actual,
+              required_value: details.expected || 'Safe pattern',
+              explanation: meta.explanation,
+              remediation: meta.remediation,
+              documentation_link: meta.documentation_link,
+            });
+          }
         }
       } else {
         structuredPasses.push({ rule_id: ruleId, message: pr.message });
