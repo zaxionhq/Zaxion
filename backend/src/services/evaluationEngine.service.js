@@ -830,7 +830,7 @@ export class EvaluationEngineService {
               severity: 'HIGH',
               message: `Required coverage: ${(minCoverageRatio * 100).toFixed(0)}%, Actual: ${(ratio * 100).toFixed(1)}%`,
               actual: `${(ratio * 100).toFixed(1)}%`,
-              expected: `${(minCoverageRatio * 100).toFixed(0)}%`
+              expected: `>= ${(minCoverageRatio * 100).toFixed(0)}%`
             }]
           },
         };
@@ -853,7 +853,7 @@ export class EvaluationEngineService {
             severity: 'HIGH',
             message: `Required at least ${minTests} test file(s), but found ${testFilesCount}.`,
             actual: `${testFilesCount}`,
-            expected: `${minTests}`
+            expected: `>= ${minTests}`
           }]
         },
       };
