@@ -396,9 +396,9 @@ export class EvaluationEngineService {
         violations.push({
           file: f.path,
           message: issue.message,
-          severity: issue.severity,
+          severity: issue.severity || 'BLOCK',
           actual: issue.actual,
-          expected: 'Safe pattern'
+          policy: ruleId, // Pass the specific policy ID for remediation lookup
         });
       }
     }
@@ -636,24 +636,27 @@ export class EvaluationEngineService {
     const structuredViolations = [];
     const structuredPasses = [];
     const files = factData?.changes?.files || [];
+
+    // Track all files that have been analyzed
+    const analyzedFiles = new Set(files.map(f => f.path || f));
+
     for (const pr of policyResults) {
       const ruleId = pr.policy_type;
       
       if (pr.verdict !== 'PASS') {
         const details = violatedPolicies.find(v => v.checker === ruleId) || {};
-        let file = factData?.file_path || null;
-        if (!file && details.actual && typeof details.actual === 'string' && details.actual.includes(',')) {
-          file = details.actual.split(',')[0].trim();
-        } else if (!file && details.actual) {
-          file = details.actual;
-        } else if (!file && files.length > 0) {
-          file = files.map(f => f.path || f).join(', ');
+        let defaultFile = factData?.file_path || null;
+        
+        // Use the first file in the PR as a default if none specified
+        if (!defaultFile && analyzedFiles.size > 0) {
+          defaultFile = Array.from(analyzedFiles)[0];
         }
+
         const subViolations = details.violations || [];
         if (subViolations.length > 0) {
           for (const sv of subViolations) {
-            // Wave 4 Enhancement: Dynamic meta lookup per sub-violation (pattern)
-            const meta = (sv.policy && RULE_REMEDIATIONS.get(sv.policy)) || RULE_REMEDIATIONS.get(ruleId) || {
+            // Wave 4 Enhancement: Dynamic meta lookup per sub-violation (policy property)
+            const meta = RULE_REMEDIATIONS.get(sv.policy) || RULE_REMEDIATIONS.get(ruleId) || {
               explanation: 'Rule failed.',
               remediation: { steps: ['Review the policy and fix the reported issue.'], example: '' },
               documentation_link: DOCS_BASE,
@@ -663,11 +666,11 @@ export class EvaluationEngineService {
               rule_id: ruleId,
               severity: sv.severity || pr.verdict,
               message: sv.message || pr.message,
-              file: sv.file || file || undefined,
+              file: sv.file || defaultFile || undefined,
               line: sv.line,
               column: sv.column,
-              current_value: details.actual,
-              required_value: details.expected,
+              current_value: sv.actual || details.actual,
+              required_value: sv.expected || details.expected || 'Safe pattern',
               explanation: meta.explanation,
               remediation: meta.remediation,
               documentation_link: meta.documentation_link,
@@ -683,9 +686,9 @@ export class EvaluationEngineService {
             rule_id: ruleId,
             severity: pr.verdict,
             message: pr.message,
-            file: file || undefined,
+            file: defaultFile || undefined,
             current_value: details.actual,
-            required_value: details.expected,
+            required_value: details.expected || 'Safe pattern',
             explanation: meta.explanation,
             remediation: meta.remediation,
             documentation_link: meta.documentation_link,
@@ -693,6 +696,19 @@ export class EvaluationEngineService {
         }
       } else {
         structuredPasses.push({ rule_id: ruleId, message: pr.message });
+      }
+    }
+
+    // Wave 5: Global "Observe" Context for all analyzed files
+    // This ensures that even files without violations are listed in the report
+    for (const filePath of analyzedFiles) {
+      const hasViolation = structuredViolations.some(v => v.file === filePath);
+      if (!hasViolation) {
+        structuredPasses.push({
+          rule_id: 'context_aware_observation',
+          file: filePath,
+          message: 'Analyzed and verified: No policy violations found in this file.'
+        });
       }
     }
 
