@@ -825,6 +825,13 @@ export class EvaluationEngineService {
             fact_path: 'metadata.ast_coverage_ratio',
             expected: `>= ${(minCoverageRatio * 100).toFixed(0)}%`,
             actual: `${(ratio * 100).toFixed(1)}% (${astTestCount} tests / ${astFunctionCount} functions)`,
+            violations: [{
+              policy: 'coverage',
+              severity: 'HIGH',
+              message: `Required coverage: ${(minCoverageRatio * 100).toFixed(0)}%, Actual: ${(ratio * 100).toFixed(1)}%`,
+              actual: `${(ratio * 100).toFixed(1)}%`,
+              expected: `${(minCoverageRatio * 100).toFixed(0)}%`
+            }]
           },
         };
       }
@@ -841,6 +848,13 @@ export class EvaluationEngineService {
           fact_path: 'metadata.test_files_changed_count',
           expected: `>= ${minTests}`,
           actual: `${testFilesCount}`,
+          violations: [{
+            policy: 'coverage',
+            severity: 'HIGH',
+            message: `Required at least ${minTests} test file(s), but found ${testFilesCount}.`,
+            actual: `${testFilesCount}`,
+            expected: `${minTests}`
+          }]
         },
       };
     }
@@ -1058,8 +1072,11 @@ export class EvaluationEngineService {
         details: {
             fact_path: 'dependency_scan',
             expected: 'No vulnerable dependencies',
-            actual: violations.length,
-            violations: violations
+            actual: `${violations.length} vulnerabilities`,
+            violations: violations.map(v => ({
+              ...v,
+              policy: v.policy || 'dependency_scan'
+            }))
         }
     };
   }

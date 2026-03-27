@@ -277,7 +277,8 @@ export class PrAnalysisService {
             author_handle: prDetails.user.login,
             pr_title: prDetails.title,
             base_branch: baseRef,
-            risk_score: (decisionObject.advisor?.riskAssessment?.confidence || 0) * 100
+            risk_score: (decisionObject.advisor?.riskAssessment?.confidence || 0) * 100,
+            repo_full_name: `${owner}/${repo}` // Ensure repo name is stored for filtering
           });
           
           logger.log(`[PrAnalysisService] [trace:${traceId}] action: GOVERNANCE_SYNC_SUCCESS`);
