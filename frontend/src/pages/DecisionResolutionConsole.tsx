@@ -76,15 +76,15 @@ const DecisionResolutionConsole = () => {
     return baseData;
   }, [latestDecision]);
 
-  // Fetch decision when context is available and user is logged in
+  // Fetch decision when context is available
   useEffect(() => {
-    if (user && pOwner && pRepo && pPr) {
-      const prNumber = parseInt(pPr);
+    if (pOwner && pRepo && pPr) {
+      const prNumber = parseInt(pPr);`  `
       if (!isNaN(prNumber)) {
         fetchLatestDecision(pOwner, pRepo, prNumber);
       }
     }
-  }, [user, pOwner, pRepo, pPr, fetchLatestDecision]);
+  }, [pOwner, pRepo, pPr, fetchLatestDecision]);
 
   const handleGitHubConnect = () => {
     const currentUrl = window.location.pathname + window.location.search;
@@ -153,60 +153,43 @@ const DecisionResolutionConsole = () => {
     }));
   };
 
-  // Auth Overlay
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-3xl overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-full h-1 bg-neon-cyan/50" />
-          <CardHeader className="text-center pt-10">
-            <div className="flex justify-center mb-6">
-              <img src="/zaxion-guard.png" alt="Zaxion Guard Logo" className="h-28 w-auto object-contain drop-shadow-[0_0_15px_rgba(0,255,255,0.3)]" />
-            </div>
-            <CardTitle className="text-2xl font-black text-white uppercase tracking-tight">Zaxion Governance</CardTitle>
-            <CardDescription className="text-white/40 font-medium px-6">
-              {sessionLoading ? 'Verifying credentials...' : 'Authenticate to review PR compliance decisions.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-10">
-              <GitHubButton 
-                variant="hero" 
-                size="lg" 
-                onClick={handleGitHubConnect}
-                className="w-full gap-3 bg-neon-cyan text-black hover:bg-neon-cyan/90 rounded-2xl font-bold py-6"
-                disabled={sessionLoading}
-              >
-                {sessionLoading ? 'Authenticating...' : 'Sign in with GitHub'}
-              </GitHubButton>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Missing PR Context State
+  // Main content rendering
   if (!pOwner || !pRepo || !pPr) {
     return (
-      <div className="min-h-screen bg-[#0B0F1A] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-3xl overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-full h-1 bg-amber-500/50" />
-          <CardHeader className="text-center pt-10">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                <AlertTriangle className="h-10 w-10 text-amber-500" />
+      <div className="min-h-screen bg-[#0B0F1A] text-white selection:bg-neon-cyan/30">
+        <header className="border-b border-white/5 bg-white/[0.01] backdrop-blur-md sticky top-0 z-50">
+          <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+            <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate('/')}>
+              <img src="/zaxion-guard.png" alt="Zaxion Guard" className="h-10 w-auto drop-shadow-[0_0_8px_rgba(0,255,255,0.2)]" />
+              <div className="h-6 w-px bg-white/10 mx-2" />
+              <div className="flex flex-col">
+                <span className="text-xs font-black tracking-widest text-neon-cyan uppercase leading-none mb-1">Zaxion Guard</span>
+                <span className="text-[10px] font-mono text-white/40 uppercase tracking-tighter leading-none">Governance System</span>
               </div>
             </div>
-            <CardTitle className="text-2xl font-black text-white uppercase tracking-tight">No PR Context</CardTitle>
-            <CardDescription className="text-white/40 font-medium">
-              Zaxion must be accessed through a Pull Request link.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center pb-10">
-            <Badge variant="outline" className="text-amber-500 border-amber-500/30 font-mono">
-              400: Missing Parameters
-            </Badge>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+            </div>
+          </div>
+        </header>
+        <div className="flex items-center justify-center p-6 mt-20">
+          <Card className="w-full max-w-md bg-white/[0.02] border-white/10 backdrop-blur-3xl">
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
+              </div>
+              <CardTitle className="text-2xl font-black text-white uppercase tracking-tight">Context Missing</CardTitle>
+              <CardDescription className="text-white/40 font-medium">
+                Zaxion must be accessed through a Pull Request link.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-10">
+              <Badge variant="outline" className="text-amber-500 border-amber-500/30 font-mono">
+                400: Missing Parameters
+              </Badge>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -219,21 +202,44 @@ const DecisionResolutionConsole = () => {
         <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-neon-purple/5 blur-[120px] rounded-full" />
       </div>
 
-      <nav className="relative z-10 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/')}>
-            <img src="/zaxion-guard.png" alt="Zaxion Guard Logo" className="h-10 w-auto object-contain transition-transform group-hover:scale-105" />
-            <span className="font-black tracking-tighter text-lg uppercase">Zaxion <span className="text-neon-cyan">Guard</span></span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-white/40 uppercase tracking-widest">
-              <Activity className="h-3 w-3 text-neon-cyan" />
-              Governance System
+      {/* Header */}
+      <header className="relative z-20 border-b border-white/5 bg-white/[0.01] backdrop-blur-xl sticky top-0">
+        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4 cursor-pointer group" onClick={() => navigate('/')}>
+            <img src="/zaxion-guard.png" alt="Zaxion Guard" className="h-10 w-auto transition-transform group-hover:scale-105" />
+            <div className="h-6 w-px bg-white/10 mx-2" />
+            <div className="flex flex-col">
+              <span className="text-xs font-black tracking-widest text-neon-cyan uppercase leading-none mb-1">Zaxion Guard</span>
+              <span className="text-[10px] font-mono text-white/40 uppercase tracking-tighter leading-none">Governance System</span>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {!user && !sessionLoading && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleGitHubConnect}
+                className="border-neon-cyan/30 text-neon-cyan hover:bg-neon-cyan/10 rounded-xl font-bold hidden md:flex"
+              >
+                Log in to Resolve
+              </Button>
+            )}
             <ThemeToggle />
           </div>
         </div>
-      </nav>
+      </header>
+
+      {/* Auth Prompt Banner for unauthenticated users */}
+      {!user && !sessionLoading && (
+        <div className="relative z-20 bg-amber-500/10 border-b border-amber-500/20 py-3 text-center">
+          <p className="text-xs font-medium text-amber-500 flex items-center justify-center gap-2">
+            <Lock className="h-3 w-3" />
+            Public View: Authentication required to apply overrides or manage policies.
+          </p>
+        </div>
+      )}
+
 
       <main className="relative z-10 container max-w-5xl mx-auto px-6 py-16 md:py-24">
         <div className="space-y-16">
@@ -744,126 +750,144 @@ const DecisionResolutionConsole = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Scale className="h-5 w-5 text-neon-cyan" />
-                <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">Limited Allowed Actions</h2>
+                <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40">
+                  {user ? 'Governance Control Console' : 'Governance Status (Read-Only)'}
+                </h2>
               </div>
-              <div className="flex items-center gap-3">
-                <Button 
-                  onClick={handleMergeSubmit}
-                  disabled={isMerging || isPrLoading || !isPassed}
-                  className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
-                    isPassed
-                      ? 'bg-green-600 hover:bg-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.2)]'
-                      : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
-                  }`}
-                >
-                  {isMerging ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {isPassed ? 'Merge Pull Request' : 'Merge Blocked'}
-                </Button>
-                 
-                 <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
-                   <DialogTrigger asChild>
-                     <Button 
-                       disabled={!isBlocked || isPrLoading}
-                       className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
-                         isBlocked 
-                           ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]' 
-                           : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
-                       }`}
-                     >
-                       <Shield className="h-4 w-4" />
-                       Request Override
-                     </Button>
-                   </DialogTrigger>
-                   <DialogContent className="bg-[#0B0F1A] border-white/10 rounded-3xl backdrop-blur-3xl">
-                     <DialogHeader className="space-y-4">
-                       <div className="flex items-center gap-3">
-                         <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                           <Shield className="h-5 w-5 text-amber-500" />
-                         </div>
-                         <DialogTitle className="text-xl font-black text-white uppercase tracking-tight">Administrative Override</DialogTitle>
-                       </div>
-                       <DialogDescription className="text-white/40 text-sm leading-relaxed">
-                         You are about to authorize a manual bypass of the governance block for PR #{pPr}. 
-                         This action will be permanently recorded in the immutable audit log.
-                       </DialogDescription>
-                     </DialogHeader>
-                     <div className="py-8 space-y-6">
-                       <div className="space-y-4">
-                         <div className="grid grid-cols-2 gap-4">
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Exception Category</label>
-                             <Select value={category} onValueChange={setCategory}>
-                               <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
-                                 <SelectValue placeholder="Select category" />
-                               </SelectTrigger>
-                               <SelectContent className="bg-[#0B0F1A] border-white/10">
-                                 <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
-                                 <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
-                                 <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
-                                 <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
-                               </SelectContent>
-                             </Select>
-                           </div>
-                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Override TTL</label>
-                             <Select value={ttlHours} onValueChange={setTtlHours}>
-                               <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
-                                 <SelectValue placeholder="Select TTL" />
-                               </SelectTrigger>
-                               <SelectContent className="bg-[#0B0F1A] border-white/10">
-                                 <SelectItem value="1">1 Hour</SelectItem>
-                                 <SelectItem value="4">4 Hours</SelectItem>
-                                 <SelectItem value="12">12 Hours</SelectItem>
-                                 <SelectItem value="24">24 Hours (Standard)</SelectItem>
-                                 <SelectItem value="168">7 Days (Long-term)</SelectItem>
-                               </SelectContent>
-                             </Select>
-                           </div>
-                         </div>
-                         <div className="space-y-2">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification (Required)</label>
-                          <Textarea 
-                            placeholder="Provide a detailed reason for this governance exception..."
-                            className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
-                            value={justification}
-                            onChange={(e) => setJustification(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                          />
-                           <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
-                         </div>
-                       </div>
-                       <DialogFooter className="gap-3">
-                         <Button 
-                           variant="ghost" 
-                           onClick={() => setIsOverrideDialogOpen(false)}
-                           className="text-white/40 hover:text-white"
-                         >
-                           Cancel
-                         </Button>
-                         <Button 
-                           onClick={handleOverrideSubmit}
-                           disabled={justification.length < 10 || isSubmitting}
-                           className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
-                         >
-                           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                           Authorize Override
-                         </Button>
-                       </DialogFooter>
-                     </div>
-                   </DialogContent>
-                 </Dialog>
 
-                 <Button 
-                   variant="outline" 
-                   onClick={() => setIsAcknowledged(true)}
-                   disabled={isAcknowledged}
-                   className={`h-10 px-6 rounded-xl gap-2 transition-all border-white/10 ${isAcknowledged ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-white/5 text-white/60 hover:text-white'}`}
-                 >
-                   {isAcknowledged ? <CheckCircle2 className="h-4 w-4" /> : <Info className="h-4 w-4" />}
-                   {isAcknowledged ? 'Decision Acknowledged' : 'Acknowledge Decision'}
-                 </Button>
-               </div>
-             </div>
+              {user ? (
+                <div className="flex items-center gap-3 animate-in fade-in zoom-in-95 duration-500">
+                  <Button 
+                    onClick={handleMergeSubmit}
+                    disabled={isMerging || isPrLoading || !isPassed}
+                    className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
+                      isPassed
+                        ? 'bg-green-600 hover:bg-green-700 text-white shadow-[0_0_20px_rgba(34,197,94,0.2)]'
+                        : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+                    }`}
+                  >
+                    {isMerging ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                    {isPassed ? 'Merge Pull Request' : 'Merge Blocked'}
+                  </Button>
+                   
+                  <Dialog open={isOverrideDialogOpen} onOpenChange={setIsOverrideDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        disabled={!isBlocked || isPrLoading}
+                        className={`h-10 px-8 rounded-xl font-bold gap-2 transition-all ${
+                          isBlocked 
+                            ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_20px_rgba(245,158,11,0.2)]' 
+                            : 'bg-white/5 text-white/20 border border-white/5 cursor-not-allowed'
+                        }`}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Request Override
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-[#0B0F1A] border-white/10 rounded-3xl backdrop-blur-3xl">
+                      <DialogHeader className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <Shield className="h-5 w-5 text-amber-500" />
+                          </div>
+                          <DialogTitle className="text-xl font-black text-white uppercase tracking-tight">Administrative Override</DialogTitle>
+                        </div>
+                        <DialogDescription className="text-white/40 text-sm leading-relaxed">
+                          You are about to authorize a manual bypass of the governance block for PR #{pPr}. 
+                          This action will be permanently recorded in the immutable audit log.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-8 space-y-6">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Exception Category</label>
+                              <Select value={category} onValueChange={setCategory}>
+                                <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0B0F1A] border-white/10">
+                                  <SelectItem value="BUSINESS_EXCEPTION">Business Exception</SelectItem>
+                                  <SelectItem value="EMERGENCY_PRODUCTION_FIX">Emergency Production Fix</SelectItem>
+                                  <SelectItem value="FALSE_POSITIVE">False Positive</SelectItem>
+                                  <SelectItem value="LEGACY_REFACTOR">Legacy Refactor (Non-functional)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Override TTL</label>
+                              <Select value={ttlHours} onValueChange={setTtlHours}>
+                                <SelectTrigger className="bg-black/20 border-white/10 text-white rounded-xl focus:ring-neon-cyan/50">
+                                  <SelectValue placeholder="Select TTL" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0B0F1A] border-white/10">
+                                  <SelectItem value="1">1 Hour</SelectItem>
+                                  <SelectItem value="4">4 Hours</SelectItem>
+                                  <SelectItem value="12">12 Hours</SelectItem>
+                                  <SelectItem value="24">24 Hours (Standard)</SelectItem>
+                                  <SelectItem value="168">7 Days (Long-term)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-white/30">Justification (Required)</label>
+                           <Textarea 
+                             placeholder="Provide a detailed reason for this governance exception..."
+                             className="bg-black/20 border-white/10 text-white rounded-xl min-h-[120px] focus:ring-neon-cyan/50"
+                             value={justification}
+                             onChange={(e) => setJustification(e.target.value)}
+                             onKeyDown={handleKeyDown}
+                           />
+                            <p className="text-[9px] text-white/20 italic">Minimum 10 characters required for audit compliance.</p>
+                          </div>
+                        </div>
+                        <DialogFooter className="gap-3">
+                          <Button 
+                            variant="ghost" 
+                            onClick={() => setIsOverrideDialogOpen(false)}
+                            className="text-white/40 hover:text-white"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            onClick={handleOverrideSubmit}
+                            disabled={justification.length < 10 || isSubmitting}
+                            className="bg-amber-500 hover:bg-amber-600 text-black font-bold px-8 rounded-xl gap-2 transition-all"
+                          >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                            Authorize Override
+                          </Button>
+                        </DialogFooter>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsAcknowledged(true)}
+                    disabled={isAcknowledged}
+                    className={`h-10 px-6 rounded-xl gap-2 transition-all border-white/10 ${isAcknowledged ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-white/5 text-white/60 hover:text-white'}`}
+                  >
+                    {isAcknowledged ? <CheckCircle2 className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                    {isAcknowledged ? 'Decision Acknowledged' : 'Acknowledge Decision'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+                    <Lock className="h-3 w-3 text-amber-500" />
+                    Authentication Required for Actions
+                  </div>
+                  <Button 
+                    onClick={handleGitHubConnect}
+                    className="h-10 px-6 rounded-xl bg-neon-cyan/10 hover:bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30 font-bold transition-all"
+                  >
+                    Log in to Resolve
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-8 rounded-3xl bg-white/[0.03] border border-white/10 hover:border-neon-cyan/40 transition-all group relative overflow-hidden">

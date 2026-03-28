@@ -40,13 +40,13 @@ export default function githubRoutesFactory(db) {
   // Create PR with test cases
   router.get(
     "/repos/:owner/:repo/pr/:prNumber/decision",
-    requireGithub,
+    requireLoginSoft, // Changed from requireGithub to allow public access
     githubController.getLatestDecision
   );
 
   router.get(
     "/decisions/:decisionId",
-    requireGithub,
+    requireLoginSoft, // Changed from requireGithub to allow public access
     githubController.getDecisionById
   );
 
