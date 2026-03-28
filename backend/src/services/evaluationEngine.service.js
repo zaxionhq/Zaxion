@@ -633,7 +633,7 @@ export class EvaluationEngineService {
     const rationale = this._generateRationale(finalResult, policyResults);
 
     // 6. Structured violations/passes for simulation UI (spec-aligned)
-    const structuredViolations = [];
+    const rawStructuredViolations = [];
     const structuredPasses = [];
     const files = factData?.changes?.files || [];
 
@@ -656,7 +656,7 @@ export class EvaluationEngineService {
               documentation_link: DOCS_BASE,
             };
 
-            structuredViolations.push({
+            rawStructuredViolations.push({
               rule_id: ruleId,
               severity: sv.severity || pr.verdict,
               message: sv.message || pr.message,
@@ -682,7 +682,7 @@ export class EvaluationEngineService {
           if (actualStr.includes(',') && !actualStr.includes('{')) {
             const fileList = actualStr.split(',').map(s => s.trim()).filter(Boolean);
             for (const f of fileList) {
-              structuredViolations.push({
+              rawStructuredViolations.push({
                 rule_id: ruleId,
                 severity: pr.verdict,
                 message: pr.message,
@@ -695,7 +695,7 @@ export class EvaluationEngineService {
               });
             }
           } else {
-            structuredViolations.push({
+            rawStructuredViolations.push({
               rule_id: ruleId,
               severity: pr.verdict,
               message: pr.message,
@@ -711,6 +711,42 @@ export class EvaluationEngineService {
       } else {
         structuredPasses.push({ rule_id: ruleId, message: pr.message });
       }
+    }
+
+    // Task 1: Deduplicate violations to prevent repetitive reports
+    // Group identical violations across multiple files
+    const deduplicatedMap = new Map();
+    const structuredViolations = [];
+
+    for (const v of rawStructuredViolations) {
+      // Create a unique key for the violation content (ignoring the specific file/line)
+      const contentKey = `${v.rule_id}|${v.message}|${v.explanation}`;
+      
+      if (deduplicatedMap.has(contentKey)) {
+        const existing = deduplicatedMap.get(contentKey);
+        // If it's a new file, add it to the list
+        if (!existing.files.includes(v.file)) {
+          existing.files.push(v.file);
+        }
+        // Update summary counts
+        existing.count++;
+      } else {
+        deduplicatedMap.set(contentKey, {
+          ...v,
+          files: [v.file],
+          count: 1
+        });
+      }
+    }
+
+    // Convert map back to array and format for UI
+    for (const v of deduplicatedMap.values()) {
+      if (v.files.length > 1) {
+        // Multi-file violation: Update the file and message to show grouping
+        v.file = `${v.files[0]} (+${v.files.length - 1} more files)`;
+        v.message = `[${v.files.length} occurrences] ${v.message}`;
+      }
+      structuredViolations.push(v);
     }
 
     // Wave 5: Global "Observe" Context for all analyzed files
