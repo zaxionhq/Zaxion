@@ -1,6 +1,6 @@
 // src/routes/github.routes.js
 import { Router } from "express";
-import { requireGithub } from "../middleware/auth.js";
+import { requireGithub, requireLoginSoft } from "../middleware/auth.js";
 import githubControllerFactory from "../controllers/github.controller.js";
 import authControllerFactory from "../controllers/auth.controller.js";
 import { validate } from "../middleware/zodValidate.js";

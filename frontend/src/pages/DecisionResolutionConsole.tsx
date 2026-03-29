@@ -79,7 +79,7 @@ const DecisionResolutionConsole = () => {
   // Fetch decision when context is available
   useEffect(() => {
     if (pOwner && pRepo && pPr) {
-      const prNumber = parseInt(pPr);`  `
+      const prNumber = parseInt(pPr);
       if (!isNaN(prNumber)) {
         fetchLatestDecision(pOwner, pRepo, prNumber);
       }

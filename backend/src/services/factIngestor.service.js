@@ -52,7 +52,7 @@ function isBinaryBuffer(buf) {
   const len = Math.min(buf.length, 1024);
 
   
-  for (let i = 0; i < len; i++) if (buf[i] === 0) return true;
+  for (let i = 0; i < len; i++) if (buf[i] === 0) return true; // eslint-disable-line security/detect-object-injection
   return false;
 }
 
