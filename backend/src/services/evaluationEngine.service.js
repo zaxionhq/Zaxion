@@ -713,38 +713,60 @@ export class EvaluationEngineService {
       }
     }
 
-    // Task 1: Deduplicate violations to prevent repetitive reports
-    // Group identical violations across multiple files
+    // Enterprise-Grade De-duplication: Group by [File + PolicyType + Pattern]
     const deduplicatedMap = new Map();
     const structuredViolations = [];
 
     for (const v of rawStructuredViolations) {
-      // Create a unique key for the violation content (ignoring the specific file/line)
-      const contentKey = `${v.rule_id}|${v.message}|${v.explanation}`;
+      // Normalize message for pattern recognition (removes specific values)
+      const normalizedMessage = (v.message || '')
+        .replace(/['"][^'"]+['"]/g, '***')
+        .replace(/assigned to [a-zA-Z0-9_$]+/g, 'assigned to [variable]')
+        .replace(/found [0-9]+/g, 'found [count]')
+        .replace(/ratio [0-9.]+/g, 'ratio [value]');
+
+      // UNIQUE KEY: File-Centric (v.file is now part of the key)
+      const contentKey = `${v.file}|${v.rule_id}|${normalizedMessage}|${v.explanation}`;
       
       if (deduplicatedMap.has(contentKey)) {
         const existing = deduplicatedMap.get(contentKey);
-        // If it's a new file, add it to the list
-        if (!existing.files.includes(v.file)) {
-          existing.files.push(v.file);
+        
+        // Collect unique line numbers for this specific file
+        if (v.line && !existing.lines.includes(v.line)) {
+          existing.lines.push(v.line);
         }
-        // Update summary counts
+        
+        // Update occurrence count for this file
         existing.count++;
       } else {
         deduplicatedMap.set(contentKey, {
           ...v,
-          files: [v.file],
-          count: 1
+          lines: v.line ? [v.line] : [],
+          count: 1,
+          originalMessage: v.message
         });
       }
     }
 
-    // Convert map back to array and format for UI
+    // Convert map back to array and format per-file summaries
     for (const v of deduplicatedMap.values()) {
-      if (v.files.length > 1) {
-        // Multi-file violation: Update the file and message to show grouping
-        v.file = `${v.files[0]} (+${v.files.length - 1} more files)`;
-        v.message = `[${v.files.length} occurrences] ${v.message}`;
+      if (v.count > 1) {
+        const uniqueLines = [...new Set(v.lines)].filter(Boolean).sort((a, b) => {
+          const aNum = parseInt(a);
+          const bNum = parseInt(b);
+          if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+          return String(a).localeCompare(String(b));
+        });
+
+        // Update the line display for this file
+        if (uniqueLines.length > 0) {
+          v.line = uniqueLines.length > 3 
+            ? `${uniqueLines.slice(0, 3).join(', ')} (+${uniqueLines.length - 3} more)`
+            : uniqueLines.join(', ');
+        }
+
+        // Update the message to show frequency within this file
+        v.message = `[${v.count} occurrences] ${v.originalMessage || v.message}`;
       }
       structuredViolations.push(v);
     }
