@@ -52,6 +52,9 @@ All colors MUST be HSL.
     --shadow-elegant: 0 4px 20px -10px hsl(263 93% 65% / 0.1);
     --shadow-glow: 0 0 15px hsl(263 93% 65% / 0.15);
     
+    --glass: 0 0% 100% / 0.4;
+    --glass-border: 240 6% 90% / 0.5;
+    
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -90,6 +93,9 @@ All colors MUST be HSL.
     --code-bg: 220 13% 14%;
     --success: 142 76% 46%;
     --warning: 38 92% 60%;
+
+    --glass: 220 13% 11% / 0.5;
+    --glass-border: 220 13% 18% / 0.5;
   }
 }
 
@@ -114,6 +120,14 @@ All colors MUST be HSL.
   
   .bg-code-bg {
     background: hsl(var(--code-bg));
+  }
+
+  .bg-glass {
+    background: hsl(var(--glass));
+  }
+
+  .border-glass-border {
+    border-color: hsl(var(--glass-border));
   }
 
   .glass-panel {

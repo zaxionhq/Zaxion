@@ -6,15 +6,15 @@ import DocsInlineFAQ from '../../components/docs/DocsInlineFAQ';
 
 const DocsGettingStarted = () => {
   return (
-    <div className="space-y-16">
+    <div className="space-y-16 text-foreground transition-colors duration-300">
       <div className="space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[11px] font-bold text-indigo-400 uppercase tracking-widest">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-bold text-primary uppercase tracking-widest">
           Deployment Guide
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground leading-tight">
           Quick Start: Deploying Zaxion
         </h1>
-        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
+        <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
           Zaxion is designed to be integrated into your engineering workflow in minutes. Whether you are testing a single policy or rolling out organizational governance, follow this guide to get started.
         </p>
       </div>
@@ -37,20 +37,20 @@ const DocsGettingStarted = () => {
             icon: Terminal
           }
         ].map((item, i) => (
-          <div key={i} className="p-6 rounded-2xl border border-white/5 bg-white/[0.02] space-y-4 hover:border-white/10 transition-colors">
-            <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-              <item.icon className="h-5 w-5 text-indigo-400" />
+          <div key={i} className="p-6 rounded-2xl border border-border bg-card/50 space-y-4 hover:border-primary/30 transition-colors shadow-sm">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <item.icon className="h-5 w-5 text-primary" />
             </div>
-            <h3 className="text-base font-bold text-white">{item.title}</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+            <h3 className="text-base font-bold text-foreground/90">{item.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </div>
 
-      <section className="space-y-10 pt-10 border-t border-white/5">
+      <section className="space-y-10 pt-10 border-t border-border">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white">Core Workflow Steps</h2>
-          <p className="text-slate-500">From initial setup to organization-wide governance.</p>
+          <h2 className="text-2xl font-bold text-foreground">Core Workflow Steps</h2>
+          <p className="text-muted-foreground/60 font-medium">From initial setup to organization-wide governance.</p>
         </div>
         
         <div className="space-y-6">
@@ -72,14 +72,14 @@ const DocsGettingStarted = () => {
         </div>
       </section>
 
-      <div className="flex items-center justify-between p-8 rounded-2xl border border-indigo-500/20 bg-indigo-500/5">
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold text-white">Ready for production?</h3>
-          <p className="text-sm text-slate-400 font-medium">Configure the GitHub App for automated PR enforcement.</p>
+      <div className="flex flex-col sm:flex-row items-center justify-between p-8 rounded-2xl border border-primary/20 bg-primary/5 gap-6">
+        <div className="space-y-1 text-center sm:text-left">
+          <h3 className="text-lg font-bold text-foreground">Ready for production?</h3>
+          <p className="text-sm text-muted-foreground font-medium">Configure the GitHub App for automated PR enforcement.</p>
         </div>
         <Link 
           to="/docs/quick-start" 
-          className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
         >
           View Quick Start
           <ArrowRight className="h-4 w-4" />

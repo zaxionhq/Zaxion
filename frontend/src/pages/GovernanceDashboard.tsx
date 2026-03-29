@@ -39,9 +39,9 @@ const GovernanceDashboard: React.FC = () => {
 
   if (sessionLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center space-y-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-12 w-12 text-primary animate-spin" />
-        <p className="text-white/40 font-mono text-xs uppercase tracking-[0.2em]">
+        <p className="text-muted-foreground font-mono text-xs uppercase tracking-[0.2em]">
           Verifying Institutional Credentials...
         </p>
       </div>

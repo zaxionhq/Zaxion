@@ -10,6 +10,7 @@ import { NeonButton } from '@/components/ui/neon-button';
 import { Input } from '@/components/ui/input';
 import { api, ApiError } from '@/lib/api';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const Waitlist = () => {
   const navigate = useNavigate();
@@ -37,43 +38,49 @@ const Waitlist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white selection:bg-neon-cyan/30 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground selection:bg-neon-cyan/30 flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
       {/* Background depth layers */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/10 blur-[120px] rounded-full" />
-        <div className="absolute inset-0 radial-bg opacity-50" />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/5 dark:bg-neon-purple/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 dark:bg-neon-cyan/10 blur-[120px] rounded-full animate-pulse delay-700" />
+        <div className="absolute inset-0 radial-bg opacity-30 dark:opacity-50" />
+      </div>
+
+      <div className="absolute top-8 left-8 z-10 flex items-center gap-4">
+        <div 
+          className="flex items-center gap-2 cursor-pointer group"
+          onClick={() => navigate('/')}
+        >
+          <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-110" />
+          <span className="text-xl font-black tracking-tighter hidden sm:block ml-1">
+            ZAXION<span className="text-neon-cyan">.</span>
+          </span>
+        </div>
+        <ThemeToggle />
       </div>
 
       <div className="relative z-10 w-full max-w-md text-center">
-        <div 
-          className="inline-flex items-center gap-2 mb-12 cursor-pointer group"
-          onClick={() => navigate('/')}
-        >
-          <img src="/zaxion-full.png" alt="Zaxion" className="h-16 md:h-20 w-auto object-contain brightness-0 invert group-hover:opacity-80 transition-opacity" />
-        </div>
-
         {!submitted ? (
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight text-foreground">
                 Join the <br />
                 <span className="gradient-text">Zaxion Waitlist.</span>
               </h1>
-              <p className="text-white/40 text-sm font-medium">
+              <p className="text-muted-foreground text-sm font-medium">
                 Designed for security and platform teams implementing deterministic PR governance.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative group">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-white/20 group-focus-within:text-neon-cyan transition-colors">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground/20 group-focus-within:text-neon-cyan transition-colors">
                   <Mail className="h-4 w-4" />
                 </div>
                 <Input 
                   type="email" 
                   placeholder="Engineering email address" 
-                  className="pl-12 h-14 bg-white/[0.02] border-white/10 focus:border-neon-cyan/50 focus:ring-neon-cyan/20 transition-all rounded-xl text-sm font-medium"
+                  className="pl-12 h-14 bg-card/50 border-border focus:border-neon-cyan/50 focus:ring-neon-cyan/20 transition-all rounded-xl text-sm font-medium"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -96,37 +103,39 @@ const Waitlist = () => {
                 )}
               </NeonButton>
               
-              <div className="pt-6 grid grid-cols-2 gap-4 border-t border-white/5">
+              <div className="pt-6 grid grid-cols-2 gap-4 border-t border-border">
                 {[
-                  "Enterprise-focused",
-                  "Governance-first"
-                ].map((tag, i) => (
-                  <span key={i} className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">{tag}</span>
+                  { label: 'Security Protocols', count: '31+' },
+                  { label: 'Platform Ready', count: '100%' }
+                ].map((item, i) => (                    <div key={i} className="text-center space-y-1">
+                    <span className="block text-xl font-black text-foreground">{item.count}</span>
+                    <span className="block text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">{item.label}</span>
+                  </div>
                 ))}
               </div>
             </form>
           </div>
         ) : (
-          <div className="p-12 rounded-xl border border-white/5 bg-white/[0.01] space-y-6">
-            <div className="w-16 h-16 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center mx-auto mb-4">
-              <Shield className="h-8 w-8 text-neon-cyan" />
+          <div className="space-y-8 animate-in fade-in zoom-in duration-500">
+            <div className="w-20 h-20 rounded-2xl glass-panel border-border flex items-center justify-center mx-auto shadow-neon-cyan/20 shadow-lg">
+              <Shield className="h-10 w-10 text-neon-cyan" />
             </div>
-            <h2 className="text-2xl font-black tracking-tight">Request Received</h2>
-            <p className="text-white/40 text-sm leading-relaxed">
-              We have recorded your interest. Our team filters for architectural fit and will reach out if we see a match for the current design partner cohort.
-            </p>
-            <NeonButton variant="glass" color="cyan" className="w-full" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Landing
+            <div className="space-y-4">
+              <h2 className="text-3xl font-black tracking-tight text-foreground">Protocol Accepted.</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed font-medium">
+                We've verified your registration. Your engineering identity is now queued for early institutional access.
+              </p>
+            </div>
+            <NeonButton 
+              variant="glass" 
+              color="cyan" 
+              className="px-8"
+              onClick={() => navigate('/')}
+            >
+              Return to Command
             </NeonButton>
           </div>
         )}
-      </div>
-
-      <div className="fixed bottom-12 left-0 right-0 z-10 text-center">
-        <p className="text-[10px] font-black tracking-[0.3em] uppercase text-white/10">
-          Zaxion Governance Protocol • Phase 7 Stability
-        </p>
       </div>
     </div>
   );

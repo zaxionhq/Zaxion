@@ -49,10 +49,10 @@ const records: AuditRecord[] = [
 export const GovernanceAuditTrail = () => {
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 mb-6">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border mb-6">
         <div className="flex items-center gap-2">
           <Shield className="h-3 w-3 text-neon-cyan" />
-          <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Live Registry Interface</span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Live Registry Interface</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
@@ -64,7 +64,7 @@ export const GovernanceAuditTrail = () => {
         {records.map((record, i) => (
           <div 
             key={i} 
-            className="group relative p-4 rounded-lg border border-white/5 bg-white/[0.01] hover:border-white/10 transition-colors overflow-hidden"
+            className="group relative p-4 rounded-lg border border-border bg-card/50 hover:border-neon-cyan/30 transition-colors overflow-hidden shadow-sm"
           >
             {/* Status Indicator Bar */}
             <div className={cn(
@@ -76,39 +76,32 @@ export const GovernanceAuditTrail = () => {
 
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-bold text-white/80">{record.id}</span>
+                  <span className="text-xs font-mono font-bold text-foreground/80">{record.id}</span>
                   <span className={cn(
                     "text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-tighter",
-                    record.type === 'BLOCKED' ? "bg-red-500/10 text-red-400" : 
+                    record.type === 'BLOCKED' ? "bg-red-500/10 text-red-500" : 
                     record.type === 'PASSED' ? "bg-neon-cyan/10 text-neon-cyan" : 
-                    record.type === 'WARNED' ? "bg-amber-500/10 text-amber-400" : "bg-neon-purple/10 text-neon-purple"
+                    record.type === 'WARNED' ? "bg-amber-500/10 text-amber-500" : "bg-neon-purple/10 text-neon-purple"
                   )}>
                     {record.type}
                   </span>
-                <span className="text-[10px] font-mono text-white/20">{record.law}</span>
+                <span className="text-[10px] font-mono text-muted-foreground/50">{record.law}</span>
               </div>
-              <span className="text-[9px] font-mono text-white/10">{record.timestamp}</span>
+              <span className="text-[9px] font-mono text-muted-foreground/30">{record.timestamp}</span>
             </div>
 
-            <p className="text-xs text-white/40 leading-relaxed font-medium mb-3 pl-2">
+            <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3 pl-2">
               {record.rationale}
             </p>
 
             <div className="flex items-center justify-between pl-2">
               <div className="flex items-center gap-2">
-                <span className="text-[8px] font-mono text-white/10 uppercase tracking-widest">Integrity Hash:</span>
-                <span className="text-[8px] font-mono text-white/30 uppercase">{record.hash}</span>
+                <span className="text-[8px] font-mono text-muted-foreground/20 uppercase tracking-widest">Integrity Hash:</span>
+                <span className="text-[8px] font-mono text-muted-foreground/40 uppercase">{record.hash}</span>
               </div>
-              <ArrowRight className="h-3 w-3 text-white/5 group-hover:text-white/20 transition-colors" />
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="pt-6 text-center">
-        <p className="text-[9px] font-mono text-white/20 uppercase tracking-[0.4em]">
-          Longitudinal Audit Retention Active
-        </p>
       </div>
     </div>
   );

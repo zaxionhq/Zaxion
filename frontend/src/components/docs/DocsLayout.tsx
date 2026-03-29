@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const DocsLayout = () => {
   const location = useLocation();
@@ -119,28 +120,26 @@ const DocsLayout = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#050505] text-slate-200 overflow-hidden">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden transition-colors duration-300">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0">
-        <div className="p-6 border-b border-white/5">
+      <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
+        <div className="p-6 border-b border-border">
           <Link to="/" className="flex items-center gap-3.5 group">
             <img 
               src="/zaxion-logo.png" 
               alt="Zaxion" 
               className="h-8 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" 
             />
-            <span className="font-bold tracking-tight text-sm text-slate-200 group-hover:text-white transition-colors uppercase">
-              ZAXION <span className="text-slate-500 font-medium lowercase italic">Docs</span>
+            <span className="font-bold tracking-tight text-sm text-foreground group-hover:text-primary transition-colors uppercase">
+              ZAXION <span className="text-muted-foreground font-medium lowercase italic">Docs</span>
             </span>
           </Link>
           
           <div className="mt-4 flex items-center justify-between">
-            <div className="text-[10px] font-mono text-slate-400 font-medium tracking-wider bg-white/5 px-2 py-0.5 rounded border border-white/5">
+            <div className="text-[10px] font-mono text-muted-foreground font-medium tracking-wider bg-muted px-2 py-0.5 rounded border border-border">
               v1.0.0-BETA
             </div>
-            <div className="text-[10px] font-mono text-slate-600 uppercase tracking-widest">
-              STABLE
-            </div>
+            <ThemeToggle />
           </div>
         </div>
 
@@ -148,7 +147,7 @@ const DocsLayout = () => {
           <nav className="space-y-8">
             {menuGroups.map((group, i) => (
               <div key={i} className="space-y-3">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-600 px-4">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60 px-4">
                   {group.label}
                 </h4>
                 <div className="space-y-1">
@@ -164,13 +163,13 @@ const DocsLayout = () => {
                             className={cn(
                               "flex-1 flex items-center gap-3 px-4 py-1.5 text-xs font-medium rounded-md transition-all",
                               isActive 
-                                ? "bg-white/5 text-white border border-white/5" 
-                                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.02]"
+                                ? "bg-primary/10 text-primary border border-primary/20" 
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                           >
                             <item.icon className={cn(
                               "h-3.5 w-3.5 shrink-0 transition-colors",
-                              isActive ? "text-indigo-400" : "group-hover:text-slate-300"
+                              isActive ? "text-primary" : "group-hover:text-foreground"
                             )} />
                             {item.title}
                           </Link>
@@ -181,7 +180,7 @@ const DocsLayout = () => {
                                 e.preventDefault();
                                 toggleExpand(item.title);
                               }}
-                              className="absolute right-2 p-1 text-slate-600 hover:text-slate-400 transition-colors"
+                              className="absolute right-2 p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
                             >
                               <ChevronDown className={cn(
                                 "h-3 w-3 transition-transform duration-200",
@@ -192,7 +191,7 @@ const DocsLayout = () => {
                         </div>
 
                         {item.children && isExpanded && (
-                          <div className="ml-9 border-l border-white/5 space-y-1 mt-1">
+                          <div className="ml-9 border-l border-border space-y-1 mt-1">
                             {item.children.map((child, k) => {
                               const isChildActive = location.pathname + location.hash === child.path;
                               
@@ -202,12 +201,12 @@ const DocsLayout = () => {
                                   to={child.path}
                                   className={cn(
                                     "flex items-center gap-2 px-4 py-1 text-[11px] font-medium transition-colors relative group",
-                                    isChildActive ? "text-indigo-400" : "text-slate-600 hover:text-slate-300"
+                                    isChildActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                                   )}
                                 >
                                   <div className={cn(
                                     "absolute left-0 w-2 h-[1px]",
-                                    isChildActive ? "bg-indigo-400/50" : "bg-white/5"
+                                    isChildActive ? "bg-primary/50" : "bg-border"
                                   )} />
                                   {child.title}
                                   <ChevronRight className={cn(
@@ -228,22 +227,22 @@ const DocsLayout = () => {
           </nav>
         </ScrollArea>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-border">
           <a 
             href="mailto:zaxionhq@gmail.com" 
-            className="flex items-center justify-between p-3 rounded-lg bg-white/[0.01] border border-white/5 hover:border-white/10 transition-all group"
+            className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border hover:border-primary/30 transition-all group"
           >
             <div className="space-y-0.5">
-              <div className="text-[10px] font-bold text-slate-400">Support</div>
-              <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">Core Protocol</div>
+              <div className="text-[10px] font-bold text-muted-foreground">Support</div>
+              <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">Core Protocol</div>
             </div>
-            <ExternalLink className="h-3 w-3 text-slate-600 group-hover:text-slate-400 transition-colors" />
+            <ExternalLink className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
           </a>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden relative bg-[#050505]">
+      <main className="flex-1 overflow-hidden relative bg-background">
         <ScrollArea className="h-full">
           <div className="container max-w-3xl mx-auto px-12 py-16 relative z-10">
             <Outlet />
