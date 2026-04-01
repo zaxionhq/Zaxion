@@ -23,6 +23,8 @@ const schema = z.object({
 
   // --- Database ---
   DB_NAME: z.string().optional(),
+  DB_USER: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
   APP_DB_USER: z.string().optional(),
   APP_DB_PASSWORD: z.string().optional(),
   DB_HOST: z.string().optional(),
@@ -70,29 +72,38 @@ const schema = z.object({
   RESEND_API_KEY: z.string().optional(),
   // Default to Resend's testing domain if no custom domain is configured
   EMAIL_FROM: z.string().default("founder@zaxion.dev"),
+
+  // --- Founder / Admin ---
+  FOUNDER_GITHUB_USERNAME: z.string().default("Kaandizz"),
 })
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments
   if (env.NODE_ENV !== "test") {
     // If DATABASE_URL is not provided, we must have individual fields
     if (!env.DATABASE_URL) {
-      if (!env.DB_NAME) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_NAME"], message: "Required in non-test environment if DATABASE_URL is missing" });
-      if (!env.APP_DB_USER) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_USER"], message: "Required in non-test environment if DATABASE_URL is missing" });
-      if (!env.APP_DB_PASSWORD) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_PASSWORD"], message: "Required in non-test environment if DATABASE_URL is missing" });
-      if (!env.DB_HOST) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_HOST"], message: "Required in non-test environment if DATABASE_URL is missing" });
+      const dbUser = env.APP_DB_USER || env.DB_USER;
+      const dbPass = env.APP_DB_PASSWORD || env.DB_PASSWORD;
+      if (!env.DB_NAME) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_NAME"], message: "Required if DATABASE_URL is missing" });
+      if (!dbUser) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_USER"], message: "Required if DATABASE_URL is missing" });
+      if (!dbPass) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["APP_DB_PASSWORD"], message: "Required if DATABASE_URL is missing" });
+      if (!env.DB_HOST) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["DB_HOST"], message: "Required if DATABASE_URL is missing" });
     }
   }
 })
 .transform((env) => {
   const isDev = env.NODE_ENV === "development";
   const effectiveDbHost = (isDev && env.LOCAL_DB_HOST) ? env.LOCAL_DB_HOST : env.DB_HOST;
+  const effectiveDbUser = env.APP_DB_USER || env.DB_USER;
+  const effectiveDbPass = env.APP_DB_PASSWORD || env.DB_PASSWORD;
   
   return {
     ...env,
     DB_HOST: effectiveDbHost,
+    DB_USER: effectiveDbUser,
+    DB_PASSWORD: effectiveDbPass,
     DATABASE_URL: env.DATABASE_URL ?? (
-      (env.APP_DB_USER && env.APP_DB_PASSWORD && effectiveDbHost && env.DB_NAME) 
-        ? `postgres://${env.APP_DB_USER}:${env.APP_DB_PASSWORD}@${effectiveDbHost}:${env.DB_PORT}/${env.DB_NAME}`
+      (effectiveDbUser && effectiveDbPass && effectiveDbHost && env.DB_NAME) 
+        ? `postgres://${effectiveDbUser}:${effectiveDbPass}@${effectiveDbHost}:${env.DB_PORT}/${env.DB_NAME}`
         : undefined
     )
   };
@@ -112,7 +123,6 @@ if (!parsed.success) {
 
 // 2. Extract Data (No partial recovery with error objects)
 const data = parsed.success ? parsed.data : process.env;
-const dataMap = new Map(Object.entries(data));
 
 /**
  * Enterprise Config Export
@@ -125,7 +135,7 @@ const env = {
    * Getter for individual keys (legacy support)
    */
   get: (k) => {
-    return dataMap.get(k);
+    return data[k] || process.env[k];
   },
 };
 

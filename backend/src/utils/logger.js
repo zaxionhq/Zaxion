@@ -60,6 +60,10 @@ const logger = winston.createLogger({
   ],
 });
 
+export const info = (msg, data = {}) => {
+  logger.info(msg, data);
+};
+
 export const log = (msg, data = {}) => {
   logger.info(msg, data);
 };
