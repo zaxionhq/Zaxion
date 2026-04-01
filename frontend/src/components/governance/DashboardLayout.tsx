@@ -33,7 +33,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     { label: 'Analytics', icon: BarChart3, path: '/governance/analytics' },
     { label: 'Policy Library', icon: Shield, path: '/governance/policy-library' },
     { label: 'Core Policies', icon: Shield, path: '/governance/core-policies' },
-    // { label: 'Settings', icon: Settings, path: '/governance/settings' },
+    ...(user?.is_founder ? [{ label: 'Founder Console', icon: Settings, path: '/admin/founder-console' }] : []),
   ];
 
   return (

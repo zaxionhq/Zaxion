@@ -29,7 +29,7 @@ export const GovernanceRecordCard: React.FC<GovernanceRecordCardProps> = ({ clas
       {/* Body */}
       <div className="p-6 md:p-8 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5">+
             <span className="text-[10px] font-mono uppercase text-muted-foreground/40 tracking-wider">Policy Violated</span>
             <div className="flex flex-col gap-1">
               <p className="text-sm font-bold text-destructive/80 bg-destructive/5 px-2 py-1 rounded border border-destructive/10 w-fit">coverage-auth-required</p>

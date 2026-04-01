@@ -18,6 +18,7 @@ const GovernanceAnalytics = lazy(() => import("./pages/GovernanceAnalytics"));
 const GovernanceSettings = lazy(() => import("./pages/GovernanceSettings"));
 const GovernancePolicyLibrary = lazy(() => import("./pages/GovernancePolicyLibrary"));
 const GovernanceCorePolicies = lazy(() => import("./pages/GovernanceCorePolicies"));
+const FounderConsole = lazy(() => import("./pages/FounderConsole"));
 
 // Documentation Pages Lazy Load
 const DocsLayout = lazy(() => import("./components/docs/DocsLayout"));
@@ -93,6 +94,7 @@ const App = () => (
                 <Route path="/governance/policy-library" element={<GovernancePolicyLibrary />} />
                 <Route path="/governance/core-policies" element={<GovernanceCorePolicies />} />
                 <Route path="/governance/settings" element={<GovernanceSettings />} />
+                <Route path="/admin/founder-console" element={<FounderConsole />} />
                 
                 {/* Comprehensive Setup Guide (Global Access) */}
                 <Route path="/documentation" element={<DocsLayout />}>

@@ -12,6 +12,8 @@ interface User {
   displayName?: string;
   email?: string;
   provider: string;
+  role?: string;
+  is_founder?: boolean;
 }
 
 interface SessionState {
