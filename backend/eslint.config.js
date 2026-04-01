@@ -77,6 +77,7 @@ export default [
       "src/parsers/pythonAST.parser.js",
       "src/services/codeAnalyzer.service.js",
       "src/services/patternMatcher.service.js",
+      "src/services/admin.service.js",
     ],
     rules: {
       "security/detect-unsafe-regex": "off",

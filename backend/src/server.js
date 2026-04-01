@@ -1,10 +1,18 @@
-// src/server.js
-log("🚀 [BOOTSTRAP] Zaxion server starting...");
-
 import env from "./config/env.js";
 import sequelize from "./config/sequelize.js";
-import { log, error as logError, warn } from "./utils/logger.js";
+import { log as logLib, error as logError, warn } from "./utils/logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
+
+const log = (msg) => {
+  console.log(msg);
+  logLib(msg);
+};
+
+log("🚀 [BOOTSTRAP] Zaxion server starting...");
+log("✅ [BOOTSTRAP] env.js loaded");
+log("✅ [BOOTSTRAP] sequelize.js loaded");
+log("✅ [BOOTSTRAP] logger imports loaded");
+log("✅ [BOOTSTRAP] models/index.js loaded");
 
 log("📦 [BOOTSTRAP] Imports completed. Initializing database...");
 
@@ -13,7 +21,9 @@ const db = await initDb();
 log("✅ [BOOTSTRAP] Database initialized (models loaded)");
 
 // Dynamically import app *after* db is loaded, and pass db to it
+log("⏳ [BOOTSTRAP] Loading app.js...");
 const { default: createApp } = await import("./app.js");
+log("✅ [BOOTSTRAP] app.js loaded");
 const app = createApp(db); // Pass the initialized db to the app factory
 log("✅ [BOOTSTRAP] Express application created");
 
@@ -56,8 +66,10 @@ async function assertDatabaseConnectionOk() {
       
       // In dev only, sync models for convenience. In production, use migrations.
       if (NODE_ENV !== "production") {
-        await db.sequelize.sync({ force: false, alter: true });
-        log("✅ Sequelize sync completed (dev mode)");
+        // Disable automatic sync as it causes issues with Postgres ENUMs and defaults.
+        // Rely on migrations for schema changes.
+        // await db.sequelize.sync({ force: false, alter: false });
+        log("⏩ Skipping Sequelize sync (use migrations instead)");
       }
       return; // Success!
     } catch (err) {
@@ -92,40 +104,48 @@ function shutdown(server) {
   });
 }
 
-import { initPrAnalysisWorker } from "./workers/prAnalysis.worker.js";
-// Explicitly load and start the email worker
-import { emailWorker } from "./workers/email.worker.js"; 
-
 async function startServer() {
-  log("🚀 [SERVER] Starting bootstrap sequence...");
-  
-  // Ensure worker is running
-  if (!emailWorker.isRunning()) {
-      log("⚠️ [EmailWorker] Worker was not running. Starting it manually...");
-      // BullMQ workers start automatically, but this log confirms we checked.
-  } else {
-      log("✅ [EmailWorker] Worker is active and listening.");
-  }
-
-  await assertDatabaseConnectionOk();
-
-  // Initialize PR Analysis Worker (PR Gate)
-  log("⚙️ [WORKER] Initializing PR Analysis Worker...");
   try {
-    initPrAnalysisWorker();
-    log("✅ [WORKER] PR Analysis Worker initialized");
+    log("🚀 [SERVER] Starting bootstrap sequence...");
+    
+    // Explicitly load and start the workers dynamically to break potential circular dependencies
+    log("⏳ [BOOTSTRAP] Loading workers...");
+    const { emailWorker } = await import("./workers/email.worker.js");
+    const { initPrAnalysisWorker } = await import("./workers/prAnalysis.worker.js");
+    log("✅ [BOOTSTRAP] Workers loaded");
+
+    // Ensure worker is running
+    if (!emailWorker.isRunning()) {
+        log("⚠️ [EmailWorker] Worker was not running. Starting it manually...");
+        // BullMQ workers start automatically, but this log confirms we checked.
+    } else {
+        log("✅ [EmailWorker] Worker is active and listening.");
+    }
+
+    await assertDatabaseConnectionOk();
+
+    // Initialize PR Analysis Worker (PR Gate)
+    log("⚙️ [WORKER] Initializing PR Analysis Worker...");
+    try {
+      initPrAnalysisWorker();
+      log("✅ [WORKER] PR Analysis Worker initialized");
+    } catch (err) {
+      logError("❌ [WORKER] Failed to initialize PR Analysis Worker", err);
+      // We don't exit process here, as API should still work even if worker fails (though Gate is down)
+    }
+
+    const server = app.listen(PORT, () => {
+      log(`🚀 [SERVER] Zaxion Governance Engine running on port ${PORT}`);
+      log(`📍 [SERVER] Health check: http://localhost:${PORT}/health`);
+      log(`📍 [SERVER] Metrics: http://localhost:${PORT}/metrics`);
+    });
+
+    process.on("SIGTERM", () => shutdown(server));
+    process.on("SIGINT", () => shutdown(server));
   } catch (err) {
-    logError("❌ [WORKER] Failed to initialize PR Analysis Worker", err);
-    // We don't exit process here, as API should still work even if worker fails (though Gate is down)
+    logError("❌ [SERVER] Fatal error during bootstrap:", err);
+    process.exit(1);
   }
-
-  log(`🌐 [SERVER] Starting HTTP listener on port: ${PORT}`);
-  const server = app.listen(PORT, () => {
-    log(`🚀 [SERVER] Zaxion Protocol LIVE on http://localhost:${PORT} (env: ${NODE_ENV})`);
-  });
-
-  process.on("SIGTERM", () => shutdown(server));
-  process.on("SIGINT", () => shutdown(server));
 }
 
 startServer();

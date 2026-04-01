@@ -240,6 +240,7 @@ export class EvaluationEngineService {
     this.patternMatcher = new PatternMatcherService();
     this.complexityMetrics = new ComplexityMetricsService();
     this.dependencyScanner = new DependencyScannerService();
+    logger.info("EvaluationEngineService constructor finished");
     // Registry of deterministic checkers
     this.checkers = new Map([
       ['coverage', this._checkCoverage.bind(this)],
