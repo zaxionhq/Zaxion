@@ -24,9 +24,9 @@ export async function logAuthEvent(userId, eventType, outcome, details = {}) {
     if (db && db.AuditEvent) {
       await db.AuditEvent.create({
         eventType: 'AUTH',
-        action: eventType,
+        action: String(eventType || 'UNKNOWN'),
         actorId: userId,
-        targetId: userId,
+        targetId: userId ? String(userId) : null,
         metadata: { outcome, ...details }
       });
     }
@@ -61,6 +61,7 @@ export async function logAuthorizationEvent(userId, role, requiredRoles, outcome
         eventType: 'AUTHORIZATION',
         action: 'ACCESS_CHECK',
         actorId: userId,
+        targetId: details.resourceId ? String(details.resourceId) : null,
         metadata: { role, requiredRoles, outcome, ...details }
       });
     }
@@ -95,9 +96,9 @@ export async function logResourceEvent(userId, eventType, resourceType, resource
     if (db && db.AuditEvent) {
       await db.AuditEvent.create({
         eventType: 'RESOURCE',
-        action: eventType,
+        action: String(eventType || 'UNKNOWN'),
         actorId: userId,
-        targetId: resourceId,
+        targetId: resourceId ? String(resourceId) : null,
         metadata: { resourceType, outcome, ...details }
       });
     }

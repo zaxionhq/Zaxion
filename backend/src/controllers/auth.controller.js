@@ -286,11 +286,7 @@ const authController = (db) => {
         });
         
         // Log the logout event
-        await logAuthEvent(db, {
-          userId: user.id,
-          action: 'logout',
-          details: { method: 'manual' }
-        });
+        await logAuthEvent(user.id, 'LOGOUT', 'SUCCESS', { method: 'manual' });
       }
       
       // Clear all auth cookies
@@ -312,7 +308,13 @@ const authController = (db) => {
   async function me(req, res) {
     try {
       if (req.user) {
-        return res.status(200).json({ user: req.user });
+        const isFounder = req.user.role === 'admin' && req.user.username === env.FOUNDER_GITHUB_USERNAME;
+        return res.status(200).json({ 
+          user: {
+            ...req.user.toJSON(),
+            is_founder: isFounder
+          } 
+        });
       }
 
       return res.status(401).json({ error: "Not logged in" });

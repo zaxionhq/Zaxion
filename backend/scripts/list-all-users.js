@@ -16,7 +16,7 @@ async function listAllUsers() {
           include: [{ model: db.Repository, as: 'repository' }]
         }
       ],
-      order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
 
     console.log(`\n--- Found ${users.length} Users ---\n`);

@@ -26,6 +26,7 @@ export async function initDb() {
   for (const file of files) {
     const modelPath = path.join(modelsDir, file);
     const modelFileUrl = pathToFileURL(modelPath).href;
+    console.log(`[BOOTSTRAP] Loading model: ${file}`);
 
     const { default: modelImport } = await import(modelFileUrl);
 
