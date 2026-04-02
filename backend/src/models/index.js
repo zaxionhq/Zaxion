@@ -1,5 +1,5 @@
 // src/models/index.js
-import { log as logLib, error as logError, warn as logWarn } from "./utils/logger.js";
+import { log as logLib, error as logError, warn as logWarn } from "../utils/logger.js";
 import { Sequelize } from "sequelize";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
