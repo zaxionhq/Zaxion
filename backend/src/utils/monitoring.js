@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { log, error } from './logger.js';
 
 export const initMonitoring = (app) => {
   if (process.env.SENTRY_DSN) {
@@ -31,9 +32,9 @@ export const initMonitoring = (app) => {
     // TracingHandler creates a trace for every incoming request
     app.use(Sentry.Handlers.tracingHandler());
 
-    console.log("Monitoring initialized (Sentry)");
+    log("Monitoring initialized (Sentry)");
   } else {
-    console.log("Monitoring skipped: No DSN provided");
+    log("Monitoring skipped: No DSN provided");
   }
 };
 
@@ -45,7 +46,7 @@ export const monitoringErrorHandler = () => {
 };
 
 export const captureException = (err, context) => {
-  console.error("Captured Exception:", err);
+  error("Captured Exception:", err);
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err, { extra: context });
   }
