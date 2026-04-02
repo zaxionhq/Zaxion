@@ -62,13 +62,22 @@ export class AdminService {
     logger.log(`[AdminService] Starting bulk analysis for ${owner}/${repo} (Count: ${prCount})`);
 
     // 1. Fetch recent PRs
-    // We use listPulls from github.service.js
-    const prs = await listPulls(token, owner, repo, { state: 'all', per_page: prCount });
+    let prs = [];
+    try {
+      prs = await listPulls(token, owner, repo, { state: 'all', per_page: prCount });
+    } catch (err) {
+      logger.error(`[AdminService] Failed to fetch PRs for ${owner}/${repo}:`, err.message);
+      throw new Error(`Failed to fetch PRs from GitHub: ${err.message}`);
+    }
     
     if (!prs || prs.length === 0) {
       return {
+        owner,
+        repo,
         message: `No Pull Requests found for ${owner}/${repo}.`,
-        results: []
+        totalAnalyzed: 0,
+        results: [],
+        summary: { score: 'N/A', grade: '?' }
       };
     }
 
@@ -76,14 +85,10 @@ export class AdminService {
     const results = [];
 
     // 2. Iterate and analyze each PR
-    // For bulk analysis, we bypass the standard queue and execute directly
     for (const pr of prs) {
       try {
         logger.log(`[AdminService] Analyzing PR #${pr.number} (${pr.head.sha})`);
         
-        // We need to pass the custom policyIds to the evaluation engine
-        // This requires a small modification to PrAnalysisService.execute or similar
-        // For now, let's capture the intent:
         const analysisData = {
           owner,
           repo,
@@ -91,23 +96,13 @@ export class AdminService {
           headSha: pr.head.sha,
           baseRef: pr.base.ref,
           headRef: pr.head.ref,
-          installationId: null, // We'll use the token provided
+          installationId: null,
           customToken: token,
-          customPolicies: policyIds // This will be used in the engine
+          customPolicies: policyIds
         };
 
-        // We'll perform the analysis. 
-        // Note: PrAnalysisService is designed for single PRs. 
-        // We'll return the decision object for each.
-        const result = await this.executeAnalysis(analysisData, db);
-        results.push({
-          prNumber: pr.number,
-          title: pr.title,
-          url: pr.html_url,
-          status: result.decision,
-          reason: result.reason,
-          violations: result.violations || []
-        });
+        const analysisResult = await this.executeAnalysis(analysisData, db);
+        results.push(analysisResult);
       } catch (err) {
         logger.error(`[AdminService] Failed to analyze PR #${pr.number}:`, err);
         results.push({
@@ -115,17 +110,39 @@ export class AdminService {
           title: pr.title,
           url: pr.html_url,
           status: 'ERROR',
-          reason: err.message
+          reason: err.message,
+          violations: []
         });
       }
     }
+
+    // 3. Generate Deep Audit Summary
+    const passedCount = results.filter(r => r.status === 'PASSED').length;
+    const blockedCount = results.filter(r => r.status === 'BLOCKED').length;
+    const warnCount = results.filter(r => r.status === 'WARNED').length;
+    
+    const score = Math.round((passedCount / results.length) * 100);
+    let grade = 'F';
+    if (score >= 90) grade = 'A';
+    else if (score >= 80) grade = 'B';
+    else if (score >= 70) grade = 'C';
+    else if (score >= 60) grade = 'D';
 
     return {
       owner,
       repo,
       totalAnalyzed: results.length,
-      results
+      results,
+      summary: {
+        passed: passedCount,
+        blocked: blockedCount,
+        warned: warnCount,
+        score,
+        grade,
+        auditDate: new Date().toISOString()
+      }
     };
+  }
   }
 
   /**
@@ -158,23 +175,26 @@ export class AdminService {
       prNumber,
       baseBranch: prData.base.ref,
       prBody: prData.body,
-      userLogin: prData.user.login
+      userLogin: prData.user.login,
+      enabledPolicyIds: customPolicies
     };
 
     // 3. Evaluate with Policy Injection
-    // If customPolicies is provided, we'll filter the core policies
-    const decision = await policyEngine.evaluate(prContext, metadata);
+    const result = await policyEngine.evaluate(prContext, metadata);
     
-    // If customPolicies was specified, we filter the violations/results
-    if (customPolicies && customPolicies.length > 0) {
-      decision.violations = decision.violations.filter(v => customPolicies.includes(v.rule_id));
-      // Re-evaluate the overall decision if it was BLOCKED by a policy NOT in the custom list
-      if (decision.decision === 'BLOCKED' && decision.violations.length === 0) {
-        decision.decision = 'PASSED';
-        decision.reason = 'All selected policies passed.';
-      }
-    }
-
-    return decision;
+    // 4. Transform to Frontend-friendly format
+    return {
+      prNumber,
+      title: prData.title,
+      url: prData.html_url,
+      status: result.decision,
+      reason: result.decisionReason || result.reason,
+      violations: (result.violations || []).map(v => ({
+        rule_id: v.rule_id,
+        explanation: v.message || v.explanation,
+        file: v.file,
+        line: v.line
+      }))
+    };
   }
 }

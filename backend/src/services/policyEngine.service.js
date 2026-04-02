@@ -19,10 +19,11 @@ export class PolicyEngineService {
   /**
    * Evaluate PR Context and return a Decision Object
    * @param {object} prContext - Result from DiffAnalyzer
-   * @param {object} metadata - { owner, repo, prNumber, baseBranch, prBody, userLogin }
+   * @param {object} metadata - { owner, repo, prNumber, baseBranch, prBody, userLogin, enabledPolicyIds }
    * @returns {Promise<object>} DecisionObject
    */
   async evaluate(prContext, metadata) {
+    const { enabledPolicyIds = [] } = metadata;
     // --- PREPARE FACT SNAPSHOT ---
     // Mapping DiffAnalyzer output to the Fact Snapshot format expected by EvaluationEngineService
     const factSnapshot = {
@@ -54,10 +55,18 @@ export class PolicyEngineService {
     const appliedPolicies = [];
 
     for (const corePolicy of CORE_POLICIES) {
-       // Check if policy is enabled for this context
-       const isEnabled = this.configService 
+       // Check if policy is explicitly requested (for Founder Console)
+       // OR if it's enabled in the standard configuration
+       const isRequested = enabledPolicyIds.length > 0 && enabledPolicyIds.includes(corePolicy.id);
+       
+       const isEnabled = isRequested || (this.configService 
          ? await this.configService.isPolicyEnabled(corePolicy.id, context)
-         : true;
+         : true);
+
+       // If specific policies were requested but this isn't one of them, skip it
+       if (enabledPolicyIds.length > 0 && !isRequested) {
+         continue;
+       }
 
        if (!isEnabled) {
          logger.log(`[PolicyEngine] Skipping disabled policy: ${corePolicy.id} for ${context.repo}:${context.branch}`);
