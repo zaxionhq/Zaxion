@@ -4,7 +4,7 @@ import { log as logLib, error as logError, warn } from "./utils/logger.js";
 import { initDb } from "./models/index.js"; // Import initDb function
 
 const log = (msg) => {
-  console.log(msg);
+  log(msg);
   logLib(msg);
 };
 
