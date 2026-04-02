@@ -143,7 +143,6 @@ export class AdminService {
       }
     };
   }
-  }
 
   /**
    * Internal helper to execute analysis with custom policy injection
