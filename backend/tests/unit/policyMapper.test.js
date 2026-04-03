@@ -7,14 +7,14 @@ describe('PolicyMapper', () => {
     expect(rules.type).toBe('no_hardcoded_secrets');
   });
 
-  test('should map SEC-002 to hardcoded_urls', () => {
+  test('should map SEC-002 to no_sql_injection', () => {
     const rules = mapCorePolicyToRules('SEC-002');
-    expect(rules.type).toBe('hardcoded_urls');
+    expect(rules.type).toBe('no_sql_injection');
   });
 
-  test('should map SEC-003 to no_magic_numbers', () => {
+  test('should map SEC-003 to no_xss', () => {
     const rules = mapCorePolicyToRules('SEC-003');
-    expect(rules.type).toBe('no_magic_numbers');
+    expect(rules.type).toBe('no_xss');
   });
 
   test('should map GOV-001 to pr_size with max_files: 20', () => {
