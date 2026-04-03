@@ -264,7 +264,130 @@ export class EvaluationEngineService {
       ['no_unsafe_regex', this._checkNoUnsafeRegex.bind(this)],
       ['no_sql_injection', this._checkNoSqlInjection.bind(this)],
       ['no_xss', this._checkNoXss.bind(this)],
+      ['architectural_integrity', this._checkArchitecturalIntegrity.bind(this)],
+      ['data_privacy', this._checkDataPrivacy.bind(this)],
+      ['institutional_style', this._checkInstitutionalStyle.bind(this)],
     ]);
+  }
+
+  /**
+   * Checker: Architectural Integrity
+   * Enforces layer-based import rules (e.g., "Services cannot import from Controllers").
+   */
+  _checkArchitecturalIntegrity(facts, rules) {
+    const files = facts.changes?.files || [];
+    const violations = [];
+    
+    // Standard enterprise layer rules (can be overridden by policy)
+    const layerRules = rules?.layer_rules || [
+      { from: '**/services/**', to: '**/controllers/**', allow: false, message: 'Services should not depend on Controllers (Layer Violation)' },
+      { from: '**/models/**', to: '**/services/**', allow: false, message: 'Models should not depend on Services (Circular Layer Risk)' },
+      { from: '**/utils/**', to: '**/services/**', allow: false, message: 'Utils should be pure and not depend on Services' }
+    ];
+
+    for (const f of files) {
+      const semantic = f.ast?.semanticFacts || facts.metadata?.ast_by_path?.[f.path]?.semanticFacts;
+      if (!semantic || !semantic.imports) continue;
+
+      for (const imp of semantic.imports) {
+        for (const rule of layerRules) {
+          if (minimatch(f.path, rule.from) && minimatch(imp.source, rule.to)) {
+            violations.push({
+              file: f.path,
+              message: rule.message,
+              severity: 'BLOCK',
+              actual: imp.source,
+              expected: 'Follow clean architecture layer rules'
+            });
+          }
+        }
+      }
+    }
+
+    return violations.length > 0 
+      ? { verdict: 'BLOCK', message: 'Architectural layer violations detected.', details: { violations } }
+      : { verdict: 'PASS', message: 'Architectural integrity verified.' };
+  }
+
+  /**
+   * Checker: Data Privacy (PII Leak Detection)
+   * Identifies potential PII exposure in variables and logging.
+   */
+  _checkDataPrivacy(facts, rules) {
+    const piiPatterns = [
+      { name: /ssn|social_security/i, message: 'Potential SSN handling' },
+      { name: /email_address|user_email/i, message: 'Potential Email PII' },
+      { name: /credit_?card|card_?number/i, message: 'Potential PCI data' },
+      { name: /phone_?number/i, message: 'Potential Phone PII' },
+      { name: /full_?name|first_?name|last_?name/i, message: 'Potential Name PII' }
+    ];
+
+    return this._checkSemanticPattern(facts, (semantic) => {
+      const issues = [];
+      
+      // Check variable declarations for PII names
+      for (const decl of semantic.variableDeclarations) {
+        const matchingPattern = piiPatterns.find(p => p.name.test(decl.name));
+        if (matchingPattern) {
+          // If it's passed to a logger or an external API, it's a risk
+          const isLogged = semantic.functionCalls.some(c => 
+            (c.name.includes('log') || c.name.includes('info') || c.name.includes('debug')) && 
+            c.arguments?.includes(decl.name)
+          );
+
+          if (isLogged) {
+            issues.push({ 
+              message: `${matchingPattern.message} being logged: '${decl.name}'`, 
+              actual: 'PII in logs', 
+              severity: 'BLOCK' 
+            });
+          } else {
+            issues.push({ 
+              message: `${matchingPattern.message} detected: '${decl.name}'`, 
+              actual: 'PII handling', 
+              severity: 'WARN' 
+            });
+          }
+        }
+      }
+      return issues;
+    }, 'data_privacy', 'Potential data privacy risks detected.');
+  }
+
+  /**
+   * Checker: Institutional Style
+   * Enforces naming conventions and organizational patterns.
+   */
+  _checkInstitutionalStyle(facts, rules) {
+    const files = facts.changes?.files || [];
+    const violations = [];
+    
+    const styleRules = rules?.style_rules || [
+      { path: '**/controllers/**', suffix: 'Controller', message: 'Controllers must have a "Controller" suffix' },
+      { path: '**/services/**', suffix: 'Service', message: 'Services must have a "Service" suffix' },
+      { path: '**/routes/**', suffix: '.routes.js', message: 'Route files must end in ".routes.js"' }
+    ];
+
+    for (const f of files) {
+      for (const rule of styleRules) {
+        if (minimatch(f.path, rule.path)) {
+          const fileName = f.path.split('/').pop();
+          if (rule.suffix && !fileName.endsWith(rule.suffix)) {
+            violations.push({
+              file: f.path,
+              message: rule.message,
+              severity: 'WARN',
+              actual: fileName,
+              expected: `Filename ending in "${rule.suffix}"`
+            });
+          }
+        }
+      }
+    }
+
+    return violations.length > 0 
+      ? { verdict: 'WARN', message: 'Institutional style guide violations detected.', details: { violations } }
+      : { verdict: 'PASS', message: 'Style guide compliance verified.' };
   }
 
   /**
@@ -293,7 +416,10 @@ export class EvaluationEngineService {
             message: `Magic number '${decl.value}' assigned to '${decl.name}'. Use a descriptive named constant instead.`,
             severity: 'WARN',
             actual: decl.value,
-            expected: 'Named constant'
+            expected: 'Named constant',
+            line: decl.loc?.start?.line,
+            column: decl.loc?.start?.column,
+            code: f.content.substring(decl.start, decl.end)
           });
         }
       }
@@ -305,7 +431,7 @@ export class EvaluationEngineService {
   }
 
   _checkNoHardcodedSecrets(facts, rules) {
-    return this._checkSemanticPattern(facts, (semantic) => {
+    return this._checkSemanticPattern(facts, (semantic, f) => {
       const issues = [];
       for (const decl of semantic.variableDeclarations) {
         if (decl.type === 'StringLiteral' && decl.value.length > 8) {
@@ -314,7 +440,14 @@ export class EvaluationEngineService {
           const isUrlOrUri = /(?:url|uri)/i.test(decl.name) || decl.value.startsWith('http');
           
           if (isSecretName && !isUrlOrUri) {
-            issues.push({ message: `Hardcoded secret assigned to '${decl.name}'`, actual: decl.value, severity: 'BLOCK' });
+            issues.push({ 
+              message: `Hardcoded secret assigned to '${decl.name}'`, 
+              actual: decl.value, 
+              severity: 'BLOCK',
+              line: decl.loc?.start?.line,
+              column: decl.loc?.start?.column,
+              code: f.content.substring(decl.start, decl.end)
+            });
           }
         }
       }
@@ -324,7 +457,14 @@ export class EvaluationEngineService {
            const isSecretName = /(?:secret|token|api_?key|password|passwd|pwd)/i.test(template.parentName || '');
            const isUrlOrUri = /(?:url|uri)/i.test(template.parentName || '') || template.value.startsWith('http');
            if (isSecretName && !isUrlOrUri) {
-             issues.push({ message: `Hardcoded secret assigned to '${template.parentName}'`, actual: template.value, severity: 'BLOCK' });
+             issues.push({ 
+               message: `Hardcoded secret assigned to '${template.parentName}'`, 
+               actual: template.value, 
+               severity: 'BLOCK',
+               line: template.loc?.start?.line,
+               column: template.loc?.start?.column,
+               code: f.content.substring(template.start, template.end)
+             });
            }
         }
       }
@@ -333,11 +473,18 @@ export class EvaluationEngineService {
   }
 
   _checkNoEval(facts, rules) {
-    return this._checkSemanticPattern(facts, (semantic) => {
+    return this._checkSemanticPattern(facts, (semantic, f) => {
       const issues = [];
       for (const call of semantic.functionCalls) {
         if (call.name === 'eval') {
-          issues.push({ message: `Use of eval() is unsafe`, actual: 'eval()', severity: 'BLOCK' });
+          issues.push({ 
+            message: `Use of eval() is unsafe`, 
+            actual: 'eval()', 
+            severity: 'BLOCK',
+            line: call.loc?.start?.line,
+            column: call.loc?.start?.column,
+            code: f.content.substring(call.start, call.end)
+          });
         }
       }
       return issues;
@@ -345,12 +492,19 @@ export class EvaluationEngineService {
   }
 
   _checkNoUnsafeRegex(facts, rules) {
-    return this._checkSemanticPattern(facts, (semantic) => {
+    return this._checkSemanticPattern(facts, (semantic, f) => {
       const issues = [];
       // Basic semantic check for literal regexes with nested quantifiers (a+)+
       for (const regex of semantic.regexLiterals || []) {
         if (/(?:\+[\+\*]|\*[\+\*]|\{\d+,\}[\+\*])/.test(regex)) {
-          issues.push({ message: `Unsafe regex detected (ReDoS risk)`, actual: regex, severity: 'BLOCK' });
+          issues.push({ 
+            message: `Unsafe regex detected (ReDoS risk)`, 
+            actual: regex, 
+            severity: 'BLOCK',
+            line: regex.loc?.start?.line,
+            column: regex.loc?.start?.column,
+            code: f.content.substring(regex.start, regex.end)
+          });
         }
       }
       return issues;
@@ -358,12 +512,19 @@ export class EvaluationEngineService {
   }
 
   _checkNoSqlInjection(facts, rules) {
-    return this._checkSemanticPattern(facts, (semantic) => {
+    return this._checkSemanticPattern(facts, (semantic, f) => {
       const issues = [];
       for (const template of semantic.templateLiterals) {
         const value = template.value.toLowerCase();
         if ((value.includes('select ') || value.includes('update ') || value.includes('insert ')) && template.expressionCount > 0) {
-          issues.push({ message: `Possible SQL Injection via template literal`, actual: template.value, severity: 'BLOCK' });
+          issues.push({ 
+            message: `Possible SQL Injection via template literal`, 
+            actual: template.value, 
+            severity: 'BLOCK',
+            line: template.loc?.start?.line,
+            column: template.loc?.start?.column,
+            code: f.content.substring(template.start, template.end)
+          });
         }
       }
       return issues;
@@ -371,12 +532,19 @@ export class EvaluationEngineService {
   }
 
   _checkNoXss(facts, rules) {
-    return this._checkSemanticPattern(facts, (semantic) => {
+    return this._checkSemanticPattern(facts, (semantic, f) => {
       const issues = [];
       for (const assign of semantic.assignments) {
         if (assign.left.includes('innerHTML') || assign.left.includes('dangerouslySetInnerHTML')) {
           if (assign.rightType !== 'StringLiteral') { // Assigning dynamic data
-             issues.push({ message: `Possible XSS: Dynamic assignment to innerHTML`, actual: `${assign.left} = ...`, severity: 'BLOCK' });
+             issues.push({ 
+               message: `Possible XSS: Dynamic assignment to innerHTML`, 
+               actual: `${assign.left} = ...`, 
+               severity: 'BLOCK',
+               line: assign.loc?.start?.line,
+               column: assign.loc?.start?.column,
+               code: f.content.substring(assign.start, assign.end)
+             });
           }
         }
       }
@@ -392,7 +560,7 @@ export class EvaluationEngineService {
       const semantic = f.ast?.semanticFacts || facts.metadata?.ast_by_path?.[f.path]?.semanticFacts;
       if (!semantic) continue;
 
-      const issues = checkFn(semantic);
+      const issues = checkFn(semantic, f);
       for (const issue of issues) {
         violations.push({
           file: f.path,
@@ -400,6 +568,9 @@ export class EvaluationEngineService {
           severity: issue.severity || 'BLOCK',
           actual: issue.actual,
           policy: ruleId, // Pass the specific policy ID for remediation lookup
+          line: issue.line,
+          column: issue.column,
+          code: issue.code
         });
       }
     }
@@ -425,7 +596,10 @@ export class EvaluationEngineService {
             message: `Hardcoded URL found: '${template.value}'. Use environment variables for dynamic URLs.`,
             severity: 'BLOCK',
             actual: template.value,
-            expected: 'Dynamic URL'
+            expected: 'Dynamic URL',
+            line: template.loc?.start?.line,
+            column: template.loc?.start?.column,
+            code: f.content.substring(template.start, template.end)
           });
         }
         // If template.expressionCount > 0, it's dynamic - ALLOWED
@@ -439,7 +613,10 @@ export class EvaluationEngineService {
             message: `Hardcoded URL found in variable '${decl.name}'. Use environment variables instead.`,
             severity: 'BLOCK',
             actual: decl.value,
-            expected: 'Environment variable'
+            expected: 'Environment variable',
+            line: decl.loc?.start?.line,
+            column: decl.loc?.start?.column,
+            code: f.content.substring(decl.start, decl.end)
           });
         }
       }
@@ -593,7 +770,17 @@ export class EvaluationEngineService {
       let result = { verdict: 'PASS', message: 'Policy satisfied.' };
 
       if (checker) {
+        const startTime = process.hrtime.bigint();
         result = checker(factData, rules);
+        const endTime = process.hrtime.bigint();
+        const durationMs = Number(endTime - startTime) / 1_000_000;
+        logger.info({ 
+          policyType, 
+          verdict: result.verdict, 
+          durationMs: durationMs.toFixed(2),
+          prNumber: factSnapshot.pr_number,
+          repo: factSnapshot.repo_full_name
+        }, `EvaluationEngine: Policy checker '${policyType}' completed.`);
       } else {
         logger.warn({ policyType, policyId: policy.policy_id }, "EvaluationEngine: No checker found for policy type");
       }
@@ -669,6 +856,7 @@ export class EvaluationEngineService {
               explanation: meta.explanation,
               remediation: meta.remediation,
               documentation_link: meta.documentation_link,
+              code: sv.code || sv.context
             });
           }
         } else {
@@ -693,6 +881,7 @@ export class EvaluationEngineService {
                 explanation: meta.explanation,
                 remediation: meta.remediation,
                 documentation_link: meta.documentation_link,
+                code: details.code || details.context
               });
             }
           } else {
@@ -706,6 +895,7 @@ export class EvaluationEngineService {
               explanation: meta.explanation,
               remediation: meta.remediation,
               documentation_link: meta.documentation_link,
+              code: details.code || details.context
             });
           }
         }
@@ -866,6 +1056,11 @@ export class EvaluationEngineService {
    * Uses AST-derived coverage ratio when available (min_coverage_ratio), else test file count (min_tests).
    */
   _checkCoverage(facts, rules) {
+    const isBot = facts.metadata?.author?.includes('[bot]') || facts.metadata?.author === 'dependabot';
+    if (isBot) {
+      return { verdict: 'PASS', message: 'Skipping coverage check for automated bot PR.' };
+    }
+
     const minCoverageRatio = rules.min_coverage_ratio;
     const astRatio = facts.metadata?.ast_coverage_ratio;
     const astFunctionCount = facts.metadata?.ast_function_count ?? 0;
@@ -877,9 +1072,10 @@ export class EvaluationEngineService {
       }
       const ratio = astRatio ?? 0;
       if (ratio < minCoverageRatio) {
+        const violationMsg = `Substandard Coverage Ratio: Structural integrity dictates a minimum test coverage of ${(minCoverageRatio * 100).toFixed(0)}%. Current analysis yields ${(ratio * 100).toFixed(1)}%. Immediate remediation required to satisfy CI gates.`;
         return {
           verdict: 'BLOCK',
-          message: `Test coverage ratio ${(ratio * 100).toFixed(1)}% is below required ${(minCoverageRatio * 100).toFixed(0)}%.`,
+          message: violationMsg,
           details: {
             fact_path: 'metadata.ast_coverage_ratio',
             expected: `>= ${(minCoverageRatio * 100).toFixed(0)}%`,
@@ -887,7 +1083,7 @@ export class EvaluationEngineService {
             violations: [{
               policy: 'coverage',
               severity: 'HIGH',
-              message: `Required coverage: ${(minCoverageRatio * 100).toFixed(0)}%, Actual: ${(ratio * 100).toFixed(1)}%`,
+              message: violationMsg,
               actual: `${(ratio * 100).toFixed(1)}%`,
               expected: `>= ${(minCoverageRatio * 100).toFixed(0)}%`
             }]
@@ -900,9 +1096,10 @@ export class EvaluationEngineService {
     const testFilesCount = facts.metadata?.test_files_changed_count || 0;
     const minTests = rules.min_tests ?? 1;
     if (testFilesCount < minTests) {
+      const violationMsg = `Critical Verification Gap: Architectural mandate requires a minimum of ${minTests} unit/integration test file(s) for code validation. Current PR provides ${testFilesCount}. Unverified logic introduces systemic deployment risk.`;
       return {
         verdict: 'BLOCK',
-        message: `Required at least ${minTests} test file(s), but found ${testFilesCount}.`,
+        message: violationMsg,
         details: {
           fact_path: 'metadata.test_files_changed_count',
           expected: `>= ${minTests}`,
@@ -910,7 +1107,7 @@ export class EvaluationEngineService {
           violations: [{
             policy: 'coverage',
             severity: 'HIGH',
-            message: `Required at least ${minTests} test file(s), but found ${testFilesCount}.`,
+            message: violationMsg,
             actual: `${testFilesCount}`,
             expected: `>= ${minTests}`
           }]
@@ -1103,22 +1300,28 @@ export class EvaluationEngineService {
     const files = facts.changes?.files || [];
     // Handle both single file_content and files array
     const singleContent = facts.file_content;
-    const packageJsonFiles = files.filter(f => f.path && f.path.endsWith('package.json'));
+    const packageJsonFiles = files.filter(f => f.path && (f.path.endsWith('package.json') || f.path.endsWith('poetry.lock') || f.path.endsWith('yarn.lock') || f.path.endsWith('pnpm-lock.yaml')));
     
     // Avoid duplication if single file is already in files array
-    if (singleContent && facts.file_path && facts.file_path.endsWith('package.json')) {
+    const isLockFile = (path) => path && (path.endsWith('package.json') || path.endsWith('poetry.lock') || path.endsWith('yarn.lock') || path.endsWith('pnpm-lock.yaml'));
+    
+    if (singleContent && facts.file_path && isLockFile(facts.file_path)) {
         const alreadyExists = packageJsonFiles.some(f => f.path === facts.file_path);
         if (!alreadyExists) {
             packageJsonFiles.push({ path: facts.file_path, content: singleContent });
         }
     }
     
-    if (!packageJsonFiles.length) return { verdict: 'PASS', message: 'No package.json changes detected.' };
+    if (!packageJsonFiles.length) return { verdict: 'PASS', message: 'No dependency lockfile changes detected.' };
 
     const violations = [];
     for (const file of packageJsonFiles) {
         const content = typeof file.content === 'string' ? file.content : '';
         const path = file.path || 'package.json';
+        
+        // Skip scanning if it's not package.json (as current scanner only supports JSON)
+        if (!path.endsWith('package.json')) continue;
+
         const fileViolations = await this.dependencyScanner.scanPackageJson(content, path);
         violations.push(...fileViolations);
     }
@@ -1134,6 +1337,7 @@ export class EvaluationEngineService {
             actual: `${violations.length} vulnerabilities`,
             violations: violations.map(v => ({
               ...v,
+              severity: v.severity || rules.severity || 'HIGH',
               policy: v.policy || 'dependency_scan'
             }))
         }
