@@ -2,6 +2,7 @@ import { Octokit } from "@octokit/rest";
 import { minimatch } from "minimatch";
 import env from "../config/env.js";
 import * as logger from "../utils/logger.js";
+import { analyzeFileAsync } from './astAnalyzer.service.js';
 
 /**
  * Service to fetch and analyze PR diffs
@@ -100,11 +101,17 @@ export class DiffAnalyzerService {
       }
       
       // Populate files array for content-based checks
-      context.files.push({ 
+      const fileEntry = { 
         path: filename, 
         content: content,
         extension: filename.split('.').pop()
-      });
+      };
+      
+      // Perform AST analysis for supported files
+      const astAnalysis = await analyzeFileAsync(content, filename);
+      fileEntry.ast = astAnalysis;
+
+      context.files.push(fileEntry);
 
       // Scan for secrets in content
       SECRET_PATTERNS.forEach(pattern => {
