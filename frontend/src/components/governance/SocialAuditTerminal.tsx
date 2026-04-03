@@ -1,0 +1,294 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Shield, CheckCircle2, XCircle, AlertTriangle, Zap, Copy, Camera } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+
+export interface Violation {
+  rule_id?: string;
+  checker?: string;
+  message?: string;
+  explanation?: string;
+  file?: string;
+  line?: number | string;
+  severity?: string;
+  current_value?: unknown;
+  required_value?: unknown;
+  remediation?: {
+    steps: string[];
+    example?: string;
+  };
+  code_context?: string;
+}
+
+export interface AnalysisResult {
+  prNumber: number;
+  title: string;
+  url: string;
+  author?: string;
+  avatarUrl?: string;
+  baseBranch?: string;
+  headBranch?: string;
+  createdAt?: string;
+  status: 'PASSED' | 'BLOCKED' | 'ERROR' | 'WARNED' | 'PASS' | 'BLOCK' | 'WARN';
+  reason: string;
+  violations: Violation[];
+  passes?: {
+    rule_id: string;
+    message: string;
+  }[];
+  isAutoPatchable?: boolean;
+}
+
+export interface BulkAnalysisData {
+  owner: string;
+  repo: string;
+  totalAnalyzed: number;
+  results: AnalysisResult[];
+  summary?: {
+    total_scanned: number;
+    passed: number;
+    blocked: number;
+    warned: number;
+    critical: number;
+    autoPatchable: number;
+    score: number;
+    grade: string;
+    auditDate: string;
+    total_violations?: number;
+    violations_by_severity?: {
+      BLOCK: number;
+      WARN: number;
+      OBSERVE: number;
+    };
+    blast_radius?: number;
+    risk_assessment?: {
+      level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+      impact: string;
+    };
+    recommendations?: {
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'IMMEDIATE';
+      action: string;
+      detail: string;
+    }[];
+  };
+}
+
+interface SocialAuditTerminalProps {
+  data: BulkAnalysisData;
+  isCaptureMode?: boolean;
+}
+
+export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, isCaptureMode = false }) => {
+  const { owner, repo, results, summary } = data;
+
+  const copyAsAscii = () => {
+    const separator = "────────────────────────────────────────────────────────";
+    const ts = new Date().toISOString();
+    let text = `ZAXION GOVERNANCE AUDIT\n`;
+    text += `Repository: ${owner}/${repo}\n`;
+    text += `Sample: ${results.length} PR(s) | Grade: ${summary?.grade ?? '—'} | Pass rate: ${summary?.score ?? '—'}%\n`;
+    text += `Outcomes — Pass: ${summary?.passed ?? 0} | Block: ${summary?.blocked ?? 0} | Warn: ${summary?.warned ?? 0}\n`;
+    if (summary?.risk_assessment) {
+      text += `Risk: ${summary.risk_assessment.level} — ${summary.risk_assessment.impact}\n`;
+    }
+    text += `UTC: ${ts}\n`;
+    text += `${separator}\n\n`;
+
+    results.forEach((pr) => {
+      const statusIcon = (pr.status === 'PASSED' || pr.status === 'PASS') ? '[PASS]' : '[FAIL]';
+      text += `PR #${pr.prNumber} ${statusIcon} ${pr.title}\n`;
+      if (pr.status !== 'PASSED' && pr.status !== 'PASS' && pr.violations && pr.violations.length > 0) {
+        const grouped = pr.violations.reduce((acc: Record<string, Violation[]>, v: Violation) => {
+          const ruleId = v.rule_id || v.checker || 'policy';
+          if (!acc[ruleId]) acc[ruleId] = [];
+          acc[ruleId].push(v);
+          return acc;
+        }, {});
+
+        Object.entries(grouped).forEach(([ruleId, viols]: [string, Violation[]]) => {
+          text += `  Rule: ${ruleId}\n`;
+          viols.forEach((v: Violation) => {
+            const loc = v.file ? ` @ ${v.file}${v.line != null ? `:${v.line}` : ''}` : '';
+            text += `  - ${v.explanation || v.message || 'Violation'}${loc}\n`;
+          });
+        });
+      } else if (pr.reason && pr.status !== 'PASSED' && pr.status !== 'PASS') {
+        text += `  ${pr.reason}\n`;
+      }
+      text += `\n`;
+    });
+
+    text += `${separator}\n`;
+    text += `Audit ref: ZC|${owner}/${repo}|n=${results.length}|${ts}\n`;
+    text += `Zaxion — point-in-time policy replay against scanned PRs.\n`;
+
+    navigator.clipboard.writeText(text);
+    toast.success('Audit receipt copied');
+  };
+
+  return (
+    <div className={cn(
+      "w-full max-w-2xl mx-auto font-mono text-sm overflow-hidden border transition-all duration-500",
+      isCaptureMode 
+        ? "bg-slate-950 text-slate-50 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] p-12 rounded-none scale-110 my-20" 
+        : "bg-slate-900 text-slate-100 border-slate-700 shadow-2xl rounded-xl"
+    )}>
+      {/* Terminal Header */}
+      {!isCaptureMode && (
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-b border-slate-700">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500/50" />
+            <div className="w-3 h-3 rounded-full bg-amber-500/50" />
+            <div className="w-3 h-3 rounded-full bg-green-500/50" />
+          </div>
+          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            Founder Console — audit receipt
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-100" onClick={copyAsAscii}>
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Terminal Content */}
+      <div className={cn("p-6 space-y-4", isCaptureMode && "p-0")}>
+        <div className="flex justify-between items-end border-b border-slate-800 pb-4">
+          <div className="space-y-1">
+            <div className="text-xs text-slate-500 uppercase tracking-tighter">Target Repository</div>
+            <div className="text-xl font-black flex items-center gap-2 text-white">
+              <Shield className="h-5 w-5 text-cyan-400" />
+              {owner}<span className="text-slate-600">/</span>{repo}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-slate-500 uppercase tracking-tighter">Policy outcome index</div>
+            <div className={cn(
+              "text-3xl font-black",
+              (summary?.grade === 'A' || summary?.grade === 'B') ? "text-green-400" : "text-red-400"
+            )}>
+              {summary?.grade || '?'}<span className="text-slate-600 text-sm ml-1">SCORE: {summary?.score || 0}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 pt-2">
+          {results.map((pr, idx) => {
+            const isPassed = pr.status === 'PASSED' || pr.status === 'PASS';
+            const violations = pr.violations || [];
+
+            return (
+              <div key={idx} className="flex items-start gap-3 group animate-in fade-in slide-in-from-left-2 mb-6" style={{ animationDelay: `${idx * 50}ms` }}>
+                <div className="mt-1">
+                  {isPassed ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 bg-slate-950/30 rounded-lg p-4 border border-slate-800">
+                  <div className="flex items-center gap-3 mb-3 border-b border-slate-800/50 pb-2">
+                    <span className="text-slate-400 font-black tracking-widest text-xs uppercase">PR #{pr.prNumber}</span>
+                    <span className={cn(
+                      "truncate font-bold text-sm",
+                      isPassed ? "text-green-400" : "text-white"
+                    )}>
+                      {isPassed ? "Verified Compliant" : "Policy Enforcement Triggered"}
+                    </span>
+                  </div>
+
+                  {!isPassed && violations.length > 0 ? (
+                    <div className="space-y-4">
+                      {Object.entries(
+                        violations.reduce((acc: Record<string, Violation[]>, v: Violation) => {
+                          const ruleId = v.rule_id || v.checker || 'General';
+                          if (!acc[ruleId]) acc[ruleId] = [];
+                          acc[ruleId].push(v);
+                          return acc;
+                        }, {})
+                      ).map(([ruleId, viols]: [string, Violation[]], rIdx) => (
+                        <div key={rIdx} className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-[9px] uppercase tracking-widest px-2 py-0.5">
+                              {ruleId}
+                            </Badge>
+                          </div>
+                          <ul className="space-y-2">
+                            {viols.map((v: Violation, vIdx: number) => (
+                              <li key={vIdx} className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
+                                <span className="font-bold text-red-400 mr-2">Block:</span>
+                                {v.explanation || v.message}
+                                {v.file && (
+                                  <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-1 rounded w-fit">
+                                    <span className="text-slate-400">{v.file}</span>
+                                    {v.line && <span className="text-amber-500">:{v.line}</span>}
+                                  </div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ) : !isPassed && (
+                    <div className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
+                      <span className="font-bold text-red-400 mr-2">Reason:</span>
+                      {pr.reason}
+                    </div>
+                  )}
+
+                  {!isPassed && pr.isAutoPatchable && (
+                    <div className="mt-4 pt-3 border-t border-slate-800/50">
+                      <Badge variant="outline" className="h-5 text-[9px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-2 py-0">
+                        <Zap className="h-3 w-3 mr-1.5 fill-cyan-400" />
+                        AUTO-PATCH READY FOR DEPLOYMENT
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Marketing Footer */}
+        <div className="pt-6 border-t border-slate-800">
+          <div className="flex items-center justify-between p-3 bg-slate-950/50 border border-slate-800 rounded-lg">
+            <div className="flex gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Violations</span>
+                <span className="text-lg font-black text-red-500">{summary?.blocked || 0}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Critical</span>
+                <span className="text-lg font-black text-amber-500">{summary?.critical || 0}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Patches</span>
+                <span className="text-lg font-black text-cyan-500">{summary?.autoPatchable || 0}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] text-slate-500 font-mono">
+                {summary?.total_violations != null ? `${summary.total_violations} finding(s)` : '—'}
+              </div>
+              <div className="text-[8px] text-slate-600 font-mono mt-1">
+                Zaxion governance
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isCaptureMode && (
+        <div className="absolute bottom-4 right-8 opacity-20 flex items-center gap-2">
+          <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-6 w-auto grayscale invert" />
+          <span className="text-xs font-black tracking-tighter">ZAXION.</span>
+        </div>
+      )}
+    </div>
+  );
+};
