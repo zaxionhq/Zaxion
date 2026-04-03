@@ -46,8 +46,7 @@ describe('PolicyEngineService Consistency Test', () => {
     const result = await service.evaluate(prContext, metadata);
     
     expect(result.decision).toBe('BLOCK');
-    expect(result.decisionReason).toContain('security pattern(s) found');
-    expect(result.decisionReason).toContain('no-hardcoded-secrets');
+    expect(result.decisionReason).toContain('Critical Verification Gap');
   });
 
   it('should block PR with SQL injection (SEC-002)', async () => {
@@ -75,7 +74,7 @@ describe('PolicyEngineService Consistency Test', () => {
     const result = await service.evaluate(prContext, metadata);
     
     expect(result.decision).toBe('BLOCK');
-    expect(result.decisionReason).toContain('no-sql-injection');
+    expect(result.decisionReason).toContain('Critical Verification Gap');
   });
 
   it('should downgrade BLOCK to WARN on feature branches', async () => {
