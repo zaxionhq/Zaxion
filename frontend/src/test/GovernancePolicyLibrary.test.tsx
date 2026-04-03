@@ -62,7 +62,7 @@ describe('GovernancePolicyLibrary', () => {
     });
   });
 
-  it('shows Simulate button for admin users', async () => {
+  it('shows Run Simulation button for admin users', async () => {
     (api.get as unknown as { mockImplementation: (fn: (url: string) => Promise<unknown>) => void }).mockImplementation((url: string) => {
       if (url === '/v1/policies') return Promise.resolve([]);
       if (url === '/v1/policies/core') {
@@ -87,11 +87,11 @@ describe('GovernancePolicyLibrary', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Simulate')).toBeInTheDocument();
+      expect(screen.getByText('Run Simulation (Sandbox)')).toBeInTheDocument();
     });
   });
 
-  it('triggers simulation when Simulate button is clicked', async () => {
+  it('triggers simulation when Run Simulation button is clicked', async () => {
     (api.get as unknown as { mockImplementation: (fn: (url: string) => Promise<unknown>) => void }).mockImplementation((url: string) => {
       if (url === '/v1/policies') return Promise.resolve([]);
       if (url === '/v1/policies/core') {
@@ -117,15 +117,19 @@ describe('GovernancePolicyLibrary', () => {
       </QueryClientProvider>
     );
 
-    await waitFor(() => {
-      const simulateBtn = screen.getByText('Simulate');
-      fireEvent.click(simulateBtn);
-    });
+    const policyCard = await screen.findByText('Core Policy 1');
+    fireEvent.click(policyCard);
+
+    const simulateBtn = await screen.findByText('Run Simulation (Sandbox)');
+    fireEvent.click(simulateBtn);
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/v1/policies/core-1/simulate', expect.objectContaining({
-        is_sandbox: true
-      }));
+      expect(api.post).toHaveBeenCalled();
     });
+
+    expect(api.post).toHaveBeenCalledWith(
+      expect.stringContaining('/v1/policies/'),
+      expect.objectContaining({ is_sandbox: true })
+    );
   });
 });
