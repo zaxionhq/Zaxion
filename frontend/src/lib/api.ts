@@ -114,7 +114,8 @@ async function requestWithRetry<TResponse>(
   path: string, 
   body?: unknown, 
   init?: RequestInit,
-  retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
+  retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG,
+  customTimeout?: number
 ): Promise<TResponse> {
   let lastError: ApiError;
   
@@ -122,7 +123,9 @@ async function requestWithRetry<TResponse>(
     try {
       const url = buildUrl(path);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // Reduced to 10 second timeout
+      // Default to 30 seconds, or use custom timeout if provided
+      const timeoutMs = customTimeout || 30000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
       // Get CSRF token for non-GET requests
       let token = null;
@@ -204,17 +207,17 @@ async function requestWithRetry<TResponse>(
   throw lastError!;
 }
 
-async function request<TResponse>(method: HttpMethod, path: string, body?: unknown, init?: RequestInit): Promise<TResponse> {
-  return requestWithRetry(method, path, body, init);
+async function request<TResponse>(method: HttpMethod, path: string, body?: unknown, init?: RequestInit, timeout?: number): Promise<TResponse> {
+  return requestWithRetry(method, path, body, init, undefined, timeout);
 }
 
 export const api = {
   base: API_BASE,
-  get: <TResponse>(path: string, init?: RequestInit) => request<TResponse>("GET", path, undefined, init),
-  post: <TResponse>(path: string, body?: unknown, init?: RequestInit) => request<TResponse>("POST", path, body, init),
-  put: <TResponse>(path: string, body?: unknown, init?: RequestInit) => request<TResponse>("PUT", path, body, init),
-  patch: <TResponse>(path: string, body?: unknown, init?: RequestInit) => request<TResponse>("PATCH", path, body, init),
-  delete: <TResponse>(path: string, init?: RequestInit) => request<TResponse>("DELETE", path, undefined, init),
+  get: <TResponse>(path: string, init?: RequestInit, timeout?: number) => request<TResponse>("GET", path, undefined, init, timeout),
+  post: <TResponse>(path: string, body?: unknown, init?: RequestInit, timeout?: number) => request<TResponse>("POST", path, body, init, timeout),
+  put: <TResponse>(path: string, body?: unknown, init?: RequestInit, timeout?: number) => request<TResponse>("PUT", path, body, init, timeout),
+  patch: <TResponse>(path: string, body?: unknown, init?: RequestInit, timeout?: number) => request<TResponse>("PATCH", path, body, init, timeout),
+  delete: <TResponse>(path: string, init?: RequestInit, timeout?: number) => request<TResponse>("DELETE", path, undefined, init, timeout),
   buildUrl,
 };
 
