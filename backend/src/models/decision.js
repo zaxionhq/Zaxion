@@ -83,6 +83,11 @@ export default (sequelize) => {
         allowNull: true,
         comment: 'Full name of the repository (owner/repo) for dashboard filtering',
       },
+      violations_details: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        comment: 'Detailed list of violations including file, line, column, and code context',
+      },
     },
     {
       sequelize,
