@@ -7,16 +7,35 @@
 export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
   const policyMap = {
     'SEC-001': { type: 'no_hardcoded_secrets' }, // Semantic Engine
-    'SEC-002': { type: 'hardcoded_urls' }, // Semantic Engine
-    'SEC-003': { type: 'no_magic_numbers' }, // Semantic Engine
+    'SEC-002': { type: 'no_sql_injection' }, // Semantic Engine
+    'SEC-003': { type: 'no_xss' }, // Semantic Engine
     'SEC-004': { type: 'dependency_scan' },
-    'SEC-005': { type: 'no_eval' }, // Semantic Engine
-    'SEC-006': { type: 'no_unsafe_regex' }, // Semantic Engine
-    'SEC-007': { type: 'no_sql_injection' }, // Semantic Engine
-    'SEC-008': { type: 'no_xss' }, // Semantic Engine
+    'SEC-005': { type: 'no_eval' },
+    'SEC-006': { type: 'no_unsafe_regex' },
+    'SEC-007': { type: 'no_hardcoded_secrets' },
+    'SEC-008': { type: 'no_hardcoded_secrets' },
     'REL-001': { type: 'reliability' },
-    'COD-001': { type: 'code_quality' },
-    'COD-002': { type: 'documentation' },
+    'REL-002': { type: 'reliability' },
+    'REL-003': { type: 'reliability' },
+    'REL-004': { type: 'reliability' },
+    'REL-005': { type: 'reliability' },
+    'ARC-001': { type: 'architectural_integrity' },
+    'ARC-002': { type: 'architecture' },
+    'ARC-003': { type: 'api' },
+    'ARC-004': { type: 'architecture' },
+    'COD-001': { type: 'complexity_metrics' },
+    'COD-002': { type: 'code_quality' },
+    'COD-003': { type: 'institutional_style' },
+    'COD-004': { type: 'documentation' },
+    'COD-005': { type: 'code_quality' },
+    'TST-001': { type: 'coverage' },
+    'TST-002': { type: 'testing_best_practices' },
+    'TST-003': { type: 'testing_best_practices' },
+    'TST-004': { type: 'performance' },
+    'PRF-001': { type: 'performance' },
+    'PRF-002': { type: 'performance' },
+    'PRF-003': { type: 'performance' },
+    'PRF-004': { type: 'performance' },
     'GOV-001': { type: 'pr_size', max_files: 20 },
     'GOV-002': { type: 'coverage', min_coverage_ratio: 0.8 },
     'GOV-003': { type: 'mandatory_review', min_approvals: 1 },
