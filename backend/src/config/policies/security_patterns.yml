@@ -140,6 +140,11 @@ policies:
       - name: "Hardcoded Port"
         regex: ":\\d{4,}"
         context: "code"
+        exclude_patterns:
+          - "lock"
+          - "json"
+          - "yaml"
+          - "yml"
     remediation: "Use environment variables for configuration. Example: const apiUrl = process.env.API_URL;"
 
   no-deprecated-apis:
