@@ -72,6 +72,15 @@ export class FactIngestorService {
     this.SNAPSHOT_VERSION = '1.0.0';
   }
 
+  /** Omit invalid Bearer when token missing so public-repo API calls still work (rate limits apply). */
+  _githubHeaders(extra = {}) {
+    const h = { Accept: 'application/vnd.github.v3+json', ...extra };
+    if (this.token && typeof this.token === 'string' && this.token.trim()) {
+      h.Authorization = `Bearer ${this.token}`;
+    }
+    return h;
+  }
+
   /**
    * Capture PR facts and store them as a versioned snapshot
    * @param {string} repoFullName - e.g. "owner/repo"
@@ -207,10 +216,7 @@ export class FactIngestorService {
    */
   async _fetchPRMetadata(repoFullName, prNumber) {
     return await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}`, {
-      headers: { 
-        Authorization: `Bearer ${this.token}`,
-        Accept: "application/vnd.github.v3+json"
-      }
+      headers: this._githubHeaders()
     });
   }
 
@@ -218,8 +224,11 @@ export class FactIngestorService {
    * Fetches raw file content from GitHub (for full-content analysis)
    */
   async _fetchFileContent(rawUrl) {
+    const headers = this.token && String(this.token).trim()
+      ? { Authorization: `Bearer ${this.token}` }
+      : {};
     const { data } = await axios.get(rawUrl, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers,
       responseType: 'arraybuffer',
       timeout: 10000,
       maxContentLength: MAX_FILE_SIZE,
@@ -245,10 +254,7 @@ export class FactIngestorService {
 
     while (hasNext) {
       const response = await axios.get(`${GH_API}/repos/${repoFullName}/pulls/${prNumber}/files`, {
-        headers: { 
-          Authorization: `Bearer ${this.token}`,
-          Accept: "application/vnd.github.v3+json"
-        },
+        headers: this._githubHeaders(),
         params: { per_page: 100, page }
       });
 
@@ -346,6 +352,7 @@ export class FactIngestorService {
             }
           }
         }
+        if (!factData.ingestion_status) factData.ingestion_status = { complete: false, missing_fields: [] };
         factData.ingestion_status.ingested_at = new Date().toISOString();
       } catch (error) {
         logger.error({ error: error.message, repoFullName, prNumber }, "FactIngestor: PR files fetch failed during enrichment");
