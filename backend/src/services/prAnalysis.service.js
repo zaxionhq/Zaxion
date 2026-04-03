@@ -37,6 +37,7 @@ export class PrAnalysisService {
     // Note: We use a transaction for the initial check/insert to prevent race conditions
     const t = await sequelize.transaction();
 
+    let decisionObject = null;
     try {
       // 1. Step 1: Idempotency (The Healing Layer)
       const [existingDecision] = await sequelize.query(
@@ -142,7 +143,7 @@ export class PrAnalysisService {
       // B. Evaluate Policy
       const { data: prDetails } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
       
-      const decisionObject = await policyEngine.evaluate(prContext, {
+      decisionObject = await policyEngine.evaluate(prContext, {
         owner,
         repo,
         prNumber,
@@ -261,7 +262,18 @@ export class PrAnalysisService {
             pr_number: prNumber,
             commit_sha: headSha,
             data: {
-              facts: decisionObject.facts || {},
+              pr_context: prContext, // Store the full PR context with files and AST data
+              policy_results: decisionObject.policy_results, // Store all policy results
+              violations: decisionObject.violations, // Store detailed violations
+              system_health: decisionObject.system_health, // Store system health metrics
+              confidence: decisionObject.confidence, // Store confidence score
+              policy_metrics: { // Aggregated policy execution metrics
+                total_policies_evaluated: decisionObject.policy_results?.length || 0,
+                passed_count: decisionObject.policy_results?.filter(p => p.verdict === 'PASS').length || 0,
+                blocked_count: decisionObject.policy_results?.filter(p => p.verdict === 'BLOCK').length || 0,
+                warned_count: decisionObject.policy_results?.filter(p => p.verdict === 'WARN').length || 0,
+                observed_count: decisionObject.policy_results?.filter(p => p.verdict === 'OBSERVE').length || 0,
+              },
               risk_level: decisionObject.advisor?.riskAssessment?.riskLevel || 'MEDIUM'
             }
           });
@@ -278,7 +290,8 @@ export class PrAnalysisService {
             pr_title: prDetails.title,
             base_branch: baseRef,
             risk_score: (decisionObject.advisor?.riskAssessment?.confidence || 0) * 100,
-            repo_full_name: `${owner}/${repo}` // Ensure repo name is stored for filtering
+            repo_full_name: `${owner}/${repo}`, // Ensure repo name is stored for filtering
+            violations_details: decisionObject.violations || [] // Store detailed violations
           });
           
           logger.log(`[PrAnalysisService] [trace:${traceId}] action: GOVERNANCE_SYNC_SUCCESS`);
@@ -320,7 +333,8 @@ export class PrAnalysisService {
             await reporter.reportStatus(owner, repo, headSha, "WARN", { description: "System Error: Policy version drift detected. Please re-trigger analysis.", prNumber });
           } else {
             // Fail-Closed: For unknown errors, we BLOCK for safety
-            await reporter.reportStatus(owner, repo, headSha, "BLOCK", { description: "System Error: Analysis failed. Blocking for safety.", prNumber });
+            // Pass the decisionObject to ensure violations_details are reported if available
+            await reporter.reportStatus(owner, repo, headSha, "BLOCK", { description: "System Error: Analysis failed. Blocking for safety.", prNumber, decisionObject: decisionObject || {} });
           }
         }
       } catch (e) {
