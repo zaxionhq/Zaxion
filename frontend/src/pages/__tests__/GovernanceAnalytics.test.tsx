@@ -38,7 +38,7 @@ describe('GovernanceAnalytics Page', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Analyzing Risk Vectors/i)).toBeInTheDocument();
+    expect(screen.getByText(/Verifying Institutional Credentials/i)).toBeInTheDocument();
   });
 
   it('renders hotspots when data is loaded', async () => {
