@@ -59,30 +59,31 @@ export class PolicySimulationService {
       days_back,
     });
 
-    // 2. Fetch Rules (if not provided as draft)
+    // 2. Resolve rules (server is source of truth for core policies)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
+    const clientRulesEmpty = !draft_rules || (typeof draft_rules === 'object' && Object.keys(draft_rules).length === 0);
+    /** UI sends placeholder rules for core policies; PR URL / analyze-code paths use mapCorePolicyToRules — align here. */
+    const clientCorePlaceholder = draft_rules && draft_rules.type === 'core_enforcement';
+
     let rules = draft_rules;
-    if (!rules) {
-      // Check if it's a Core Policy ID (e.g. SEC-001) or a DB UUID
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
-      
-      if (isUuid) {
+    if (isUuid) {
+      if (clientRulesEmpty) {
         const policy = await this.db.Policy.findByPk(policy_id);
         if (!policy) throw new Error("Policy not found");
-        
         const version = await this.db.PolicyVersion.findOne({
           where: { policy_id, is_current: true }
         });
         if (!version) throw new Error("No active version found for policy");
         rules = version.rules_logic;
-      } else {
-        // It's a Core Policy ID, fetch from static definition
-        const { CORE_POLICIES } = await import('../policies/corePolicies.js');
-        const { mapCorePolicyToRules } = await import('../utils/policyMapper.js');
-        const corePolicy = CORE_POLICIES.find(p => p.id === policy_id);
-        if (!corePolicy) throw new Error(`Core Policy ${policy_id} not found`);
-        
+      }
+    } else {
+      const { CORE_POLICIES } = await import('../policies/corePolicies.js');
+      const { mapCorePolicyToRules } = await import('../utils/policyMapper.js');
+      const corePolicy = CORE_POLICIES.find(p => p.id === policy_id);
+      if (!corePolicy) throw new Error(`Core Policy ${policy_id} not found`);
+      if (clientRulesEmpty || clientCorePlaceholder) {
         rules = mapCorePolicyToRules(corePolicy.id, corePolicy.severity);
-        logger.info({ policy_id, rules }, "PolicySimulationService: Resolved Core Policy Mapping");
+        logger.info({ policy_id, rules }, "PolicySimulationService: Resolved Core Policy Mapping (simulation parity)");
       }
     }
 
@@ -95,9 +96,7 @@ export class PolicySimulationService {
       // But let's see. If policy_id is 'SEC-001', PostgreSQL UUID column will fail.
       // So we must handle simulation creation differently for Core Policies or ensure schema supports it.
       // The schema likely has policy_id as UUID.
-      
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
-      
+
       const emptyResults = {
         summary: {
           total_snapshots: 0,
@@ -139,7 +138,6 @@ export class PolicySimulationService {
 
     // 3. Create Simulation Record
     let simulation;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(policy_id);
 
     if (isUuid) {
       simulation = await this.db.PolicySimulation.create({
