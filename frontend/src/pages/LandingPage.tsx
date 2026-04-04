@@ -19,8 +19,8 @@ import {
   FileText
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { GovernanceRecordCard } from '@/components/governance/GovernanceRecordCard';
 import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTrail';
+import { ProofImageLightbox } from '@/components/landing/ProofImageLightbox';
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
@@ -127,10 +127,10 @@ const LandingPage = () => {
             </div>
 
             <div className="flex flex-col items-center gap-6">
-              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => navigate('/governance')}>
+              <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => window.location.href = 'https://github.com/apps/zaxion-governance/installations/new'}>
                 Install on GitHub - Free
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
-              </NeonButton>
+              </NeonButton> 
               
               <div className="flex flex-col items-center gap-4">
                 <div className="flex flex-wrap justify-center gap-4 md:gap-8">
@@ -158,10 +158,12 @@ const LandingPage = () => {
               </div>
               <div className="relative group">
                 <div className="absolute -inset-4 bg-neon-cyan/10 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
-                <img 
+                <ProofImageLightbox
                   src="/github-pr-comment-proof.png"
-                  alt="Zaxion catching security bugs in a GitHub PR" 
-                  className="rounded-xl border border-border shadow-2xl relative z-10 max-w-4xl w-full transition-transform duration-500 hover:scale-[1.02] cursor-zoom-in"
+                  alt="Zaxion catching security bugs in a GitHub PR"
+                  caption="Actual Zaxion GitHub check run on a pull request"
+                  className="relative z-10 mx-auto max-w-4xl"
+                  imgClassName="rounded-xl border border-border shadow-2xl"
                 />
               </div>
             </div>
@@ -208,7 +210,12 @@ const LandingPage = () => {
                 ))}
               </div>
               <div className="glass-panel p-4 rounded-2xl border-border overflow-hidden">
-                <img src="/zaxion-action-screenshot.png" alt="Zaxion PR Comment Action" className="rounded-lg shadow-2xl transition-transform duration-500 hover:scale-110 cursor-zoom-in" />
+                <ProofImageLightbox
+                  src="/zaxion-action-screenshot.png"
+                  alt="Zaxion in action: governance report with findings, context, and remediation"
+                  caption="Live product UI — violation detail, observed context, and remediation steps"
+                  imgClassName="rounded-lg shadow-2xl"
+                />
               </div>
             </div>
           </div>
@@ -316,7 +323,12 @@ const LandingPage = () => {
                 <div className="relative group">
                   <div className="absolute -inset-10 bg-neon-cyan/5 blur-[100px] rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
                   <GlassCard className="p-4 relative z-10 overflow-hidden">
-                    <img src="/policy-simulator-preview.png" alt="Policy Simulator Feature" className="rounded-lg transition-transform duration-700 hover:scale-110 cursor-zoom-in" />
+                    <ProofImageLightbox
+                      src="/policy-simulator-preview.png"
+                      alt="Policy Simulator: enforcement impact analysis on historical pull requests"
+                      caption="Policy Simulator — projected block rate and historical impact table"
+                      imgClassName="rounded-lg"
+                    />
                     <div className="mt-4 p-4 bg-background/80 backdrop-blur-md rounded-lg border border-border relative z-20">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
@@ -442,7 +454,7 @@ const LandingPage = () => {
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
-              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => navigate('/governance')}>
+              <NeonButton color="cyan" size="lg" className="w-full md:w-auto px-12 h-14" onClick={() => window.location.href = 'https://github.com/apps/zaxion-governance/installations/new'}>
                 Install GitHub App (Free)
               </NeonButton>
               
