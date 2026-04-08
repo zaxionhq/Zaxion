@@ -140,11 +140,27 @@ const FounderConsole = () => {
     const s = results.summary;
     const timestamp = new Date().toISOString();
     const auditRef = `ZC|${results.owner}/${results.repo}|n=${results.totalAnalyzed}|${timestamp}`;
+    const blockedPrs = results.results.filter(r => r.status === 'BLOCKED' || r.status === 'BLOCK');
+    const spotlightPr = blockedPrs[0];
+    const spotlightViolation = spotlightPr?.violations?.[0];
+    const spotlightRule = spotlightViolation?.rule_id || spotlightViolation?.checker || null;
 
-    let text = `# Zaxion governance audit — ${results.owner}/${results.repo}\n\n`;
-    text += `**Scope:** Last ${results.totalAnalyzed} pull request(s) (public repository, read-only). `;
-    text += `**Composite grade:** ${s?.grade ?? '—'} (${typeof s?.score === 'number' ? `${s.score}%` : String(s?.score ?? '—')} of PRs passing selected policies). `;
+    let text = `# Zaxion Founder Audit Receipt — ${results.owner}/${results.repo}\n\n`;
+    text += `**Scope:** Trending/public repository audit (read-only), last ${results.totalAnalyzed} pull request(s). `;
+    text += `**Outcome grade:** ${s?.grade ?? '—'} (${typeof s?.score === 'number' ? `${s.score}%` : String(s?.score ?? '—')} pass rate). `;
     text += `**Generated:** ${timestamp} (UTC).\n\n`;
+
+    if (spotlightPr && spotlightRule) {
+      text += `## Issue spotlight\n`;
+      text += `- **Primary finding:** PR #${spotlightPr.prNumber} triggered \`${spotlightRule}\`\n`;
+      if (spotlightViolation?.message || spotlightViolation?.explanation) {
+        text += `- **What Zaxion found:** ${spotlightViolation?.explanation || spotlightViolation?.message}\n`;
+      }
+      if (spotlightViolation?.file) {
+        text += `- **Evidence path:** ${spotlightViolation.file}${spotlightViolation?.line != null ? `:${spotlightViolation.line}` : ''}\n`;
+      }
+      text += `\n`;
+    }
 
     text += `## Executive summary\n`;
     text += `- Pull requests scanned: ${results.totalAnalyzed}\n`;
@@ -163,7 +179,6 @@ const FounderConsole = () => {
       text += `\n`;
     }
 
-    const blockedPrs = results.results.filter(r => r.status === 'BLOCKED' || r.status === 'BLOCK');
     if (blockedPrs.length > 0) {
       text += `## Blocking findings (detail)\n`;
       blockedPrs.slice(0, 8).forEach((pr) => {
@@ -196,8 +211,8 @@ const FounderConsole = () => {
 
     text += `---\n`;
     text += `**Audit reference:** \`${auditRef}\`\n`;
-    text += `Zaxion Founder Console — read-only analysis of public GitHub history. `;
-    text += `This is a point-in-time summary; re-run after changes to policies or the repository.\n`;
+    text += `**Analyst note:** Founder Console performs deterministic policy replay on public PR history. `;
+    text += `This is a point-in-time receipt for awareness and remediation, not a legal security certification.\n`;
 
     navigator.clipboard.writeText(text);
     toast.success('Audit receipt copied to clipboard');
@@ -278,7 +293,7 @@ const FounderConsole = () => {
               Verified by Zaxion Guard Protocol v2.4.0
             </p>
             <p className="text-[8px] font-mono text-slate-700">
-              HASH: {Math.random().toString(36).substring(2, 15).toUpperCase()}
+              AUDIT REF: {`ZC|${results.owner}/${results.repo}|n=${results.totalAnalyzed}|${new Date(results.summary?.auditDate || Date.now()).toISOString()}`}
             </p>
           </div>
         </div>

@@ -52,6 +52,13 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
   const { owner, repo, results, summary } = data;
   const [filter, setStatusFilter] = useState<'ALL' | 'BLOCK' | 'PASS' | 'WARN'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const blockedPrs = useMemo(
+    () => results.filter((pr) => pr.status === 'BLOCKED' || pr.status === 'BLOCK'),
+    [results]
+  );
+  const spotlightPr = blockedPrs[0];
+  const spotlightViolation = spotlightPr?.violations?.[0];
+  const spotlightRule = spotlightViolation?.rule_id || spotlightViolation?.checker || null;
 
   const filteredResults = useMemo(() => {
     return results.filter(pr => {
@@ -332,6 +339,31 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
           )}
         </div>
       </div>
+
+      {spotlightPr && spotlightRule && (
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-black uppercase tracking-widest text-red-300">
+              Issue Spotlight
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-300">
+              This is the highest-signal finding in the current scan sample.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="text-white">
+              <span className="font-bold">PR #{spotlightPr.prNumber}</span> triggered{' '}
+              <span className="font-bold text-red-300">{spotlightRule}</span>.
+            </div>
+            {(spotlightViolation?.explanation || spotlightViolation?.message) && (
+              <p className="text-slate-300">{spotlightViolation?.explanation || spotlightViolation?.message}</p>
+            )}
+            <div className="text-xs text-slate-400">
+              Why this matters: this finding is the best candidate for founder-led outreach and viral audit storytelling.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 2.5 Strategic Enterprise Insights */}
       {summary?.risk_assessment && (
