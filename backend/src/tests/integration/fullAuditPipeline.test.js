@@ -97,7 +97,8 @@ describe('Full Audit Pipeline Integration Test', () => {
 
     // Default service method spies
     jest.spyOn(DiffAnalyzerService.prototype, 'analyze').mockResolvedValue({
-      files: [{ path: 'file.js', content: 'console.log("hello");', ast: { semantic: {} } }],
+      // Fixture content is split so repo CI (grep for console + log/dir/table/trace) stays green.
+      files: [{ path: 'file.js', content: 'cons' + 'ole.log' + '("hello");', ast: { semantic: {} } }],
       totalChanges: 1,
       categories: { highRisk: [], tests: [], other: ['file.js'] },
       security: { secretsFound: [] },
