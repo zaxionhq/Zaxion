@@ -13,7 +13,7 @@ import sequelize from '../../config/sequelize.js';
 jest.mock('../../services/diffAnalyzer.service.js', () => ({
   __esModule: true,
   DiffAnalyzerService: jest.fn(),
-}));
+}));                                                                                                                                                                                                                                                  
 jest.mock('../../services/policyEngine.service.js', () => ({
   __esModule: true,
   PolicyEngineService: jest.fn(),

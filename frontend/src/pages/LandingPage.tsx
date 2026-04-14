@@ -53,17 +53,17 @@ const LandingPage = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-neon-cyan/30 overflow-x-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-background dark:bg-black text-foreground selection:bg-neon-cyan/30 overflow-x-hidden transition-colors duration-300">
       <LoadingOverlay isVisible={isTransitioning} message="Initializing Governance Docs..." />
       {/* Background depth layers */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/5 dark:bg-neon-purple/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 dark:bg-neon-cyan/10 blur-[120px] rounded-full animate-pulse delay-700" />
-        <div className="absolute inset-0 radial-bg opacity-30 dark:opacity-50" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] rounded-full animate-pulse delay-700" />
+        <div className="absolute inset-0 radial-bg opacity-20" />
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/50 backdrop-blur-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/70 dark:bg-black/70 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="relative">
@@ -111,24 +111,24 @@ const LandingPage = () => {
           <div className="flex flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-black tracking-[0.2em] uppercase mb-8 border-neon-cyan/30 text-neon-cyan shadow-neon-cyan/10 shadow-lg">
               <Zap className="h-3 w-3" />
-              Automated Code Review for Startups
+              GitHub Pull Request Governance
             </div>
             
             <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[0.9] text-foreground">
-              Find Hardcoded Secrets <br />
-              <span className="gradient-text">In Every PR. Automatically.</span>
+              Zaxion reviews every pull request <br />
+              <span className="gradient-text">before it reaches production.</span>
             </h1>
 
             <div className="mb-8">
               <p className="text-lg md:text-2xl font-bold text-muted-foreground">
-                Install on GitHub. Check 31 code standards automatically.
-                <span className="text-neon-cyan block md:inline md:ml-2">Block bad PRs before merge. Set up in 30 seconds.</span>
+                Install the GitHub App and let Zaxion inspect each PR for secrets, risky patterns, and policy violations.
+                <span className="text-neon-cyan block md:inline md:ml-2">It reports pass, warn, or block before merge.</span>
               </p>
             </div>
 
             <div className="flex flex-col items-center gap-6">
               <NeonButton color="cyan" size="lg" className="px-12 h-14 text-lg" onClick={() => window.location.href = 'https://github.com/apps/zaxion-governance/installations/new'}>
-                Install on GitHub - Free
+                Connect GitHub (Free)
                 <ArrowRight className="h-5 w-5 ml-2 inline" />
               </NeonButton> 
               
@@ -136,7 +136,7 @@ const LandingPage = () => {
                 <div className="flex flex-wrap justify-center gap-4 md:gap-8">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">Always Free</span>
+                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">Free tier</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
@@ -144,7 +144,7 @@ const LandingPage = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">30-second setup</span>
+                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">Set up in minutes</span>
                   </div>
                 </div>
               </div>
@@ -154,7 +154,7 @@ const LandingPage = () => {
             <div className="mt-24 w-full flex flex-col items-center gap-8">
               <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl glass-panel border-red-500/30 bg-red-500/5 animate-pulse">
                 <AlertTriangle className="h-6 w-6 text-red-500" />
-                <span className="text-lg font-black tracking-tight text-foreground">Zaxion caught 8 security bugs</span>
+                <span className="text-lg font-black tracking-tight text-foreground">Zaxion flagged 8 risky findings in one PR</span>
               </div>
               <div className="relative group">
                 <div className="absolute -inset-4 bg-neon-cyan/10 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
@@ -171,11 +171,11 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 2 — Zaxion in Action */}
-        <section className="py-32 bg-muted/30 border-y border-border">
+        <section className="py-32 bg-muted/30 dark:bg-[#050505] border-y border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto text-center mb-16">
               <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-foreground">Zaxion in Action</h2>
-              <p className="text-xl text-muted-foreground">Real-time protection for your codebase.</p>
+              <p className="text-xl text-muted-foreground">What reviewers usually miss, Zaxion catches before merge.</p>
             </div>
             
             <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -184,19 +184,19 @@ const LandingPage = () => {
                   { 
                     label: "SECURITY", 
                     title: "Found Hardcoded Secret", 
-                    desc: "Zaxion detected a GitHub Personal Access Token being committed in plain text.",
+                    desc: "A GitHub Personal Access Token was found in plain text and blocked before merge.",
                     color: "red"
                   },
                   { 
                     label: "SECURITY", 
                     title: "SQL Injection Blocked", 
-                    desc: "Identified raw SQL query using unsanitized user input in the data layer.",
+                    desc: "Raw SQL with unsanitized user input was detected and marked high risk.",
                     color: "orange"
                   },
                   { 
                     label: "QUALITY", 
                     title: "Production Console Log", 
-                    desc: "Flagged console.log statements that shouldn't reach production code.",
+                    desc: "Debug logging in production code was flagged for cleanup before release.",
                     color: "cyan"
                   }
                 ].map((item, i) => (
@@ -226,7 +226,7 @@ const LandingPage = () => {
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto text-center mb-20">
               <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-foreground">31 Policies</h2>
-              <p className="text-xl text-muted-foreground">Comprehensive coverage for every aspect of your code.</p>
+              <p className="text-xl text-muted-foreground">Coverage across security, quality, testing, and delivery rules.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -249,15 +249,15 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 4 — The Cost of Missing One Bug */}
-        <section id="problem" className="py-32 bg-muted/30 border-b border-border">
+        <section id="problem" className="py-32 bg-muted/30 dark:bg-[#050505] border-b border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight text-center text-foreground">The Cost of Missing One Bug</h2>
               <div className="space-y-12">
                 {[
-                  { title: "Senior engineers are drowning in manual reviews", desc: "Manual code review is a bottleneck. Senior engineers spend hours catching basic logic errors instead of building core architecture." },
-                  { title: "Critical bugs slip through the cracks", desc: "High-risk changes (like payments or auth) often get the same level of scrutiny as simple CSS tweaks, leading to production disasters." },
-                  { title: "Inconsistent Standards", desc: "Every reviewer has a different 'vibe'. Zaxion ensures your engineering handbook is enforced mathematically on every single PR." }
+                  { title: "Senior engineers get stuck in repetitive review work", desc: "Manual review time is consumed by avoidable issues instead of system design and delivery." },
+                  { title: "High-risk changes are easy to miss", desc: "Auth, payments, and data-layer updates can slip through when review depth changes from PR to PR." },
+                  { title: "Standards vary by reviewer", desc: "Zaxion applies the same policy checks to every PR so review quality stays consistent." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-8 group">
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-border flex items-center justify-center text-neon-cyan font-black group-hover:border-neon-cyan/50 transition-colors">
@@ -285,27 +285,27 @@ const LandingPage = () => {
                   {[
                     { 
                       title: "Policy Simulator", 
-                      desc: "Test new policies against historical PRs to see the impact before you enable them.",
+                      desc: "Test policy changes on past PRs to preview impact before you enforce them.",
                       icon: Scale
                     },
                     { 
                       title: "Shadow Running", 
-                      desc: "Run rules in the background to gather data without blocking your team's workflow.",
+                      desc: "Run rules in monitor mode first, then enforce once your team is ready.",
                       icon: Ban
                     },
                     { 
                       title: "Immutable Audit Trail", 
-                      desc: "A tamper-proof record of every governance decision, perfect for SOC2 and security audits.",
+                      desc: "Keep a tamper-resistant record of decisions for compliance and incident review.",
                       icon: Shield
                     },
                     { 
                       title: "Dynamic Risk Scoring", 
-                      desc: "Automatically adjust enforcement levels based on the sensitivity of the files being changed.",
+                      desc: "Adjust enforcement based on file sensitivity and risk profile automatically.",
                       icon: AlertTriangle
                     },
                     { 
                       title: "Semantic Code Understanding", 
-                      desc: "Zaxion understands your code's logic using AST analysis, going far beyond simple regex checks.",
+                      desc: "AST-backed analysis reads code structure, not just text matches.",
                       icon: Code2
                     }
                   ].map((feature, i) => (
@@ -356,13 +356,13 @@ const LandingPage = () => {
                       <span className="gradient-text">Audit Trail.</span>
                     </h3>
                     <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-medium">
-                      Zaxion doesn't just block; it provides a longitudinal record of architectural intent. Every PR is a technical trial, resulting in a verifiable rationale anchored to your constitution.
+                      Zaxion does more than block or pass. It records what was checked, what failed, and why the final decision was made for every PR.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                       {[
-                        "Stateless Evaluation",
-                        "Cryptographic Intent Verification",
-                        "Immutable Ledger Entry"
+                        "Deterministic Policy Evaluation",
+                        "Signed Override Evidence",
+                        "Immutable Audit Entry"
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3">
                           <CheckCircle2 className="h-4 w-4 text-neon-cyan shrink-0" />
@@ -384,16 +384,16 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 6 — How to Get Started (New) */}
-        <section id="onboarding" className="py-32 bg-muted/30 border-y border-border">
+        <section id="onboarding" className="py-32 bg-muted/30 dark:bg-[#050505] border-y border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-4xl md:text-5xl font-black mb-16 text-center tracking-tight text-foreground">How to Get Started</h2>
               <div className="grid md:grid-cols-4 gap-8">
                 {[
-                  { step: "1", title: "Install App", desc: "Add the Zaxion GitHub App to your organization in seconds." },
-                  { step: "2", title: "Select Repos", desc: "Choose the repositories you want Zaxion to monitor." },
-                  { step: "3", title: "Define Policies", desc: "Use our Core Library or define your own custom safety rules." },
-                  { step: "4", title: "Ship Safely", desc: "Zaxion automatically handles reviews for your high-risk code." }
+                  { step: "1", title: "Install App", desc: "Install the Zaxion GitHub App for your organization." },
+                  { step: "2", title: "Select Repos", desc: "Choose which repositories should run Zaxion checks." },
+                  { step: "3", title: "Choose Policies", desc: "Start with core policies, then tune rules to your workflow." },
+                  { step: "4", title: "Merge with Confidence", desc: "Each PR gets a clear pass, warn, or block decision." }
                 ].map((item, i) => (
                   <div key={i} className="text-center space-y-4">
                     <div className="w-12 h-12 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan font-black mx-auto">
@@ -414,19 +414,19 @@ const LandingPage = () => {
             {[
               {
                 title: "Automated Gating",
-                description: "Block bugs before they merge. Zaxion uses AST-based analysis to ensure your safety standards are met on every PR.",
+                description: "Enforce policy checks on every pull request before code reaches your main branch.",
                 icon: Code2,
                 color: "cyan"
               },
               {
                 title: "Team Accountability",
-                description: "Track every decision. Overrides are logged with clear rationale, ensuring your team stays aligned on technical debt.",
+                description: "Every override and decision is logged with context so teams can review trade-offs clearly.",
                 icon: Shield,
                 color: "purple"
               },
               {
                 title: "Knowledge Retention",
-                description: "Turn your PR history into institutional knowledge. Zaxion remembers past decisions to help guide future policy.",
+                description: "Convert PR decisions into reusable governance history your team can learn from.",
                 icon: History,
                 color: "pink"
               }
@@ -449,8 +449,8 @@ const LandingPage = () => {
         <section className="container mx-auto px-6 py-24 md:py-32 border-t border-border">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-6xl font-black tracking-tight mb-12 leading-tight text-foreground">
-              Ready to ship with <br />
-              <span className="gradient-text">Zero Regressions?</span>
+              Ready to review every PR <br />
+              <span className="gradient-text">before it reaches production?</span>
             </h2>
             
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
@@ -469,14 +469,14 @@ const LandingPage = () => {
             </div>
 
             <p className="mt-16 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-              Instant Setup • No Configuration Required
+              Fast setup • Clear PR decisions
             </p>
           </div>
         </section>
       </main> 
 
       {/* Simplified Footer */}
-      <footer className="py-20 bg-background border-t border-border">
+      <footer className="py-20 bg-background dark:bg-black border-t border-border">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-end">
             <div className="space-y-6">
@@ -487,8 +487,8 @@ const LandingPage = () => {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-                Zaxion is the automated code review layer for high-growth engineering teams. 
-                Built to help you ship faster by catching high-risk bugs before they hit production.
+                Zaxion is a pull request governance layer for engineering teams.
+                It helps catch risky changes before merge and keeps a clear audit trail of decisions.
               </p>
             </div>
             <div className="text-right space-y-2">

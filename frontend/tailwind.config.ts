@@ -61,10 +61,10 @@ export default {
 				warning: 'hsl(var(--warning))',
 				'code-bg': 'hsl(var(--code-bg))',
 				neon: {
-					cyan: '#00ffff',
-					purple: '#bf00ff',
-					pink: '#ff00ff',
-					blue: '#0066ff',
+					cyan: '#e5e5e5',
+					purple: '#b3b3b3',
+					pink: '#d4d4d4',
+					blue: '#a3a3a3',
 				},
 				glass: {
 					DEFAULT: 'rgba(255, 255, 255, 0.05)',
@@ -81,8 +81,8 @@ export default {
 			boxShadow: {
 				'elegant': 'var(--shadow-elegant)',
 				'glow': 'var(--shadow-glow)',
-				'neon-cyan': '0 0 10px rgba(0, 255, 255, 0.2)',
-				'neon-purple': '0 0 10px rgba(191, 0, 255, 0.2)',
+				'neon-cyan': '0 0 10px rgba(255, 255, 255, 0.12)',
+				'neon-purple': '0 0 10px rgba(200, 200, 200, 0.12)',
 			},
 			transitionTimingFunction: {
 				'smooth': 'var(--transition-smooth)'

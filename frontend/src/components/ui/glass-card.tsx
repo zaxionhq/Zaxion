@@ -24,8 +24,8 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         className
       )}
     >
-      {/* Subtle inner glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+      {/* Subtle inner highlight to keep depth monochrome */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/4 to-transparent pointer-events-none" />
       
       {/* Content */}
       <div className="relative z-10">

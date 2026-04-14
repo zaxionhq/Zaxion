@@ -10,92 +10,92 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 218 25% 97%;
-    --foreground: 210 11% 15%;
+    --background: 0 0% 99%;
+    --foreground: 0 0% 9%;
 
-    --card: 220 25% 99%;
-    --card-foreground: 210 11% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 11% 15%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 263 93% 65%;
+    --primary: 0 0% 8%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4% 96%;
-    --secondary-foreground: 210 11% 15%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 215 13% 65%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 42%;
 
-    --accent: 240 5% 96%;
-    --accent-foreground: 210 11% 15%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 12%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 263 93% 65%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 25%;
 
     --radius: 0.75rem;
 
-    --github: 210 11% 15%;
-    --github-hover: 210 11% 25%;
+    --github: 0 0% 10%;
+    --github-hover: 0 0% 20%;
     
-    --ai-gradient: linear-gradient(135deg, hsl(263 93% 65%), hsl(280 100% 70%));
-    --hero-gradient: linear-gradient(135deg, hsl(263 93% 65%), hsl(280 100% 70%), hsl(300 85% 75%));
-    --code-bg: 220 13% 18%;
+    --ai-gradient: linear-gradient(135deg, hsl(0 0% 18%), hsl(0 0% 32%));
+    --hero-gradient: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 18%), hsl(0 0% 28%));
+    --code-bg: 0 0% 16%;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
     
-    --shadow-elegant: 0 4px 20px -10px hsl(263 93% 65% / 0.1);
-    --shadow-glow: 0 0 15px hsl(263 93% 65% / 0.15);
+    --shadow-elegant: 0 8px 24px -12px hsl(0 0% 0% / 0.16);
+    --shadow-glow: 0 0 0 hsl(0 0% 0% / 0);
     
-    --glass: 0 0% 100% / 0.4;
-    --glass-border: 240 6% 90% / 0.5;
+    --glass: 0 0% 100% / 0.75;
+    --glass-border: 0 0% 86% / 0.9;
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 220 13% 9%;
-    --foreground: 220 13% 95%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 95%;
 
-    --card: 220 13% 11%;
-    --card-foreground: 220 13% 95%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 220 13% 11%;
-    --popover-foreground: 220 13% 95%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 263 93% 65%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 94%;
+    --primary-foreground: 0 0% 6%;
 
-    --secondary: 220 13% 15%;
-    --secondary-foreground: 220 13% 95%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 94%;
 
-    --muted: 220 13% 15%;
-    --muted-foreground: 220 9% 65%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 68%;
 
-    --accent: 220 13% 15%;
-    --accent-foreground: 220 13% 95%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 94%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 18%;
-    --input: 220 13% 18%;
-    --ring: 263 93% 65%;
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 0 0% 35%;
 
-    --github: 220 13% 95%;
-    --github-hover: 263 93% 65%;
+    --github: 0 0% 94%;
+    --github-hover: 0 0% 80%;
     
-    --code-bg: 220 13% 14%;
+    --code-bg: 0 0% 9%;
     --success: 142 76% 46%;
     --warning: 38 92% 60%;
 
-    --glass: 220 13% 11% / 0.5;
-    --glass-border: 220 13% 18% / 0.5;
+    --glass: 0 0% 6% / 0.86;
+    --glass-border: 0 0% 16% / 0.9;
   }
 }
 
@@ -131,11 +131,11 @@ All colors MUST be HSL.
   }
 
   .glass-panel {
-    @apply bg-glass backdrop-blur-xl border border-glass-border;
+    @apply bg-glass backdrop-blur-md border border-glass-border;
   }
 
   .glass-card {
-    @apply bg-glass backdrop-blur-lg border border-glass-border rounded-2xl shadow-xl transition-all duration-300;
+    @apply bg-glass backdrop-blur-md border border-glass-border rounded-2xl shadow-lg transition-all duration-300;
   }
 
   .neon-text-cyan {
@@ -147,11 +147,11 @@ All colors MUST be HSL.
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-cyan to-neon-purple font-bold;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground font-bold;
   }
 
   .radial-bg {
-    background: radial-gradient(circle at top center, rgba(191, 0, 255, 0.15) 0%, rgba(0, 255, 255, 0.05) 50%, transparent 100%);
+    background: radial-gradient(circle at top center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 45%, transparent 100%);
   }
 
   .animate-gradient-border {
