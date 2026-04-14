@@ -473,7 +473,7 @@ const LandingPage = () => {
             </p>
           </div>
         </section>
-      </main>
+      </main> 
 
       {/* Simplified Footer */}
       <footer className="py-20 bg-background border-t border-border">

@@ -22,7 +22,7 @@
     "@sentry/node": "^10.43.0",
     "@sentry/tracing": "^7.120.4",
     "adm-zip": "^0.5.16",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
     "bullmq": "^5.66.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

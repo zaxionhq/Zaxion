@@ -120,6 +120,29 @@ const RULE_REMEDIATIONS = new Map([
     },
     documentation_link: `${DOCS_BASE}/rules`,
   }],
+  ['dependency_scan', {
+    explanation: 'Dependency scan detected vulnerable or policy-disallowed dependencies in lockfiles/package manifests.',
+    remediation: {
+      steps: [
+        'Upgrade the affected package(s) to a patched version.',
+        'Run npm audit (or equivalent) to verify no critical vulnerabilities remain.',
+        'Regenerate lockfiles after upgrading and commit the updated lockfile.',
+      ],
+      example: 'npm install <package>@latest && npm audit --omit=dev --audit-level=critical',
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
+  ['no-dependency-vulnerabilities', {
+    explanation: 'A dependency vulnerability was identified by the dependency scan policy.',
+    remediation: {
+      steps: [
+        'Upgrade to the patched version recommended by the advisory.',
+        'If no patch exists, pin to a safe range and apply temporary mitigation.',
+      ],
+      example: 'npm install axios@latest',
+    },
+    documentation_link: `${DOCS_BASE}/rules`,
+  }],
   ['performance', {
     explanation: 'Performance-critical paths should have corresponding performance or benchmark tests.',
     remediation: {
@@ -1296,7 +1319,7 @@ export class EvaluationEngineService {
   /**
    * Dependency scanner checker: scans package.json
    */
-  async _checkDependencyScan(facts, rules) {
+  _checkDependencyScan(facts, rules) {
     const files = facts.changes?.files || [];
     // Handle both single file_content and files array
     const singleContent = facts.file_content;
@@ -1322,7 +1345,7 @@ export class EvaluationEngineService {
         // Skip scanning if it's not package.json (as current scanner only supports JSON)
         if (!path.endsWith('package.json')) continue;
 
-        const fileViolations = await this.dependencyScanner.scanPackageJson(content, path);
+        const fileViolations = this.dependencyScanner.scanPackageJson(content, path);
         violations.push(...fileViolations);
     }
 
@@ -1449,9 +1472,11 @@ export class EvaluationEngineService {
     const singleContent = facts.file_content;
     const toScan = files.filter(f => f.content).length ? files : singleContent ? [{ path: 'file', content: singleContent }] : [];
     const violations = [];
+    const isTestFile = (path = '') => path.includes('.test.') || path.includes('.spec.') || path.includes('/tests/') || path.includes('\\tests\\');
     for (const file of toScan) {
       const content = typeof file.content === 'string' ? file.content : '';
       const path = file.path || file.filePath || 'file';
+      if (isTestFile(path)) continue;
       if (/await\s+[^;]+(?!\s*catch)/m.test(content) && !/try\s*\{[\s\S]*await/m.test(content) && !/\.catch\s*\(/m.test(content)) {
         if (/await\s+/m.test(content)) violations.push({ file: path, message: 'await without try/catch or .catch' });
       }

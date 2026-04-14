@@ -15,7 +15,7 @@ export class DependencyScannerService {
    * @param {string} packageJsonContent - Content of package.json
    * @param {string} filePath - Path to the file
    */
-  async scanPackageJson(packageJsonContent, filePath) {
+  scanPackageJson(packageJsonContent, filePath) {
     try {
       const packageJson = JSON.parse(packageJsonContent);
       const allDeps = {
@@ -31,7 +31,7 @@ export class DependencyScannerService {
       // to demonstrate the capability without needing live external API calls which might fail in dev.
       
       for (const [packageName, version] of Object.entries(allDeps)) {
-        const vulns = await this.checkPackageVulnerabilities(packageName, version);
+        const vulns = this.checkPackageVulnerabilities(packageName, version);
         if (vulns.length > 0) {
             vulns.forEach(v => {
                 violations.push({
@@ -54,7 +54,7 @@ export class DependencyScannerService {
     }
   }
 
-  async checkPackageVulnerabilities(packageName, version) {
+  checkPackageVulnerabilities(packageName, version) {
     // SIMULATED DATABASE OF VULNERABILITIES for demonstration
     // In production, this would query OSV or GitHub Advisory Database
     const KNOWN_VULNERABILITIES = new Map();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Shield, 
   CheckCircle2, 
@@ -60,6 +60,8 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
   const spotlightViolation = spotlightPr?.violations?.[0];
   const spotlightRule = spotlightViolation?.rule_id || spotlightViolation?.checker || null;
 
+  const itemValue = useCallback((idx: number) => `pr-${idx}`, []);
+
   const filteredResults = useMemo(() => {
     return results.filter(pr => {
       const matchesFilter = 
@@ -76,6 +78,32 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
       return matchesFilter && matchesSearch;
     });
   }, [results, filter, searchQuery]);
+
+  const spotlightIdx = useMemo(() => {
+    if (!spotlightPr) return -1;
+    return filteredResults.findIndex((p) => p.prNumber === spotlightPr.prNumber);
+  }, [filteredResults, spotlightPr]);
+
+  const [openAccordionValues, setOpenAccordionValues] = useState<string[]>([]);
+
+  const filteredKey = useMemo(
+    () => filteredResults.map((p) => p.prNumber).join(','),
+    [filteredResults]
+  );
+
+  useEffect(() => {
+    if (spotlightIdx >= 0) setOpenAccordionValues([itemValue(spotlightIdx)]);
+    else setOpenAccordionValues([]);
+  }, [owner, repo, filteredKey, spotlightIdx, itemValue]);
+
+  const expandAllPrs = useCallback(() => {
+    setOpenAccordionValues(filteredResults.map((_, i) => itemValue(i)));
+  }, [filteredResults, itemValue]);
+
+  const collapseToSpotlight = useCallback(() => {
+    if (spotlightIdx >= 0) setOpenAccordionValues([itemValue(spotlightIdx)]);
+    else setOpenAccordionValues([]);
+  }, [spotlightIdx, itemValue]);
 
   const generateHtmlReport = () => {
     const htmlContent = `
@@ -445,19 +473,44 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1">
-              {(['ALL', 'BLOCK', 'PASS', 'WARN'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setStatusFilter(f)}
-                  className={cn(
-                    "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
-                    filter === f ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300"
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1">
+                {(['ALL', 'BLOCK', 'PASS', 'WARN'] as const).map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setStatusFilter(f)}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-md transition-all",
+                      filter === f ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+              {filteredResults.length > 0 && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-[10px] font-black uppercase tracking-widest border-slate-800 bg-slate-900/50"
+                    onClick={expandAllPrs}
+                  >
+                    Expand all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 text-[10px] font-black uppercase tracking-widest border-slate-800 bg-slate-900/50"
+                    onClick={collapseToSpotlight}
+                  >
+                    Collapse to spotlight
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -468,15 +521,24 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
             <p className="text-slate-500 font-mono text-sm">No matching PRs found for the current filters.</p>
           </div>
         ) : (
-          <Accordion type="single" collapsible className="space-y-4">
+          <Accordion
+            type="multiple"
+            value={openAccordionValues}
+            onValueChange={setOpenAccordionValues}
+            className="space-y-4"
+          >
             {filteredResults.map((pr, idx) => {
               const isPassed = pr.status === 'PASSED' || pr.status === 'PASS';
               const isBlocked = pr.status === 'BLOCKED' || pr.status === 'BLOCK';
+              const vCount = pr.violations?.length ?? 0;
+              const ruleGroups = vCount
+                ? new Set((pr.violations || []).map((v) => v.rule_id || v.checker || 'policy')).size
+                : 0;
               
               return (
                 <AccordionItem 
                   key={pr.prNumber} 
-                  value={`item-${idx}`}
+                  value={itemValue(idx)}
                   className="border border-slate-800 bg-slate-900/30 rounded-2xl overflow-hidden px-0 transition-all hover:border-slate-700"
                 >
                   <AccordionTrigger className="hover:no-underline px-6 py-4 group">
@@ -493,6 +555,13 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-[10px] font-mono font-bold text-slate-500">#{pr.prNumber}</span>
                           <h4 className="text-sm font-bold text-white truncate group-hover:text-cyan-400 transition-colors">{pr.title}</h4>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mb-1">
+                          {isPassed
+                            ? 'No violations in sample'
+                            : vCount > 0
+                              ? `${vCount} finding${vCount === 1 ? '' : 's'} · ${ruleGroups} rule group${ruleGroups === 1 ? '' : 's'}`
+                              : pr.reason || 'Open for details'}
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium uppercase tracking-wider">

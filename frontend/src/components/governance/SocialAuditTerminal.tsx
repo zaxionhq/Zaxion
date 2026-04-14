@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Shield, CheckCircle2, XCircle, AlertTriangle, Zap, Copy, Camera } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, Zap, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -82,10 +82,47 @@ interface SocialAuditTerminalProps {
 
 export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, isCaptureMode = false }) => {
   const { owner, repo, results, summary } = data;
-  const blockedPrs = results.filter((pr) => pr.status === 'BLOCKED' || pr.status === 'BLOCK');
+  const blockedPrs = useMemo(
+    () => results.filter((pr) => pr.status === 'BLOCKED' || pr.status === 'BLOCK'),
+    [results]
+  );
+  const spotlightPrNumber = blockedPrs[0]?.prNumber ?? null;
   const topBlocked = blockedPrs[0];
   const topViolation = topBlocked?.violations?.[0];
   const topRule = topViolation?.rule_id || topViolation?.checker || null;
+
+  const [openPrSet, setOpenPrSet] = useState<Set<number>>(() => {
+    const s = new Set<number>();
+    if (spotlightPrNumber != null) s.add(spotlightPrNumber);
+    return s;
+  });
+
+  const resultsKey = useMemo(() => results.map((r) => r.prNumber).join(','), [results]);
+
+  useEffect(() => {
+    const s = new Set<number>();
+    if (spotlightPrNumber != null) s.add(spotlightPrNumber);
+    setOpenPrSet(s);
+  }, [owner, repo, resultsKey, spotlightPrNumber]);
+
+  const togglePr = useCallback((prNumber: number) => {
+    setOpenPrSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(prNumber)) next.delete(prNumber);
+      else next.add(prNumber);
+      return next;
+    });
+  }, []);
+
+  const expandAllPrs = useCallback(() => {
+    setOpenPrSet(new Set(results.map((r) => r.prNumber)));
+  }, [results]);
+
+  const collapseToSpotlight = useCallback(() => {
+    const s = new Set<number>();
+    if (spotlightPrNumber != null) s.add(spotlightPrNumber);
+    setOpenPrSet(s);
+  }, [spotlightPrNumber]);
 
   const copyAsAscii = () => {
     const separator = "────────────────────────────────────────────────────────";
@@ -195,77 +232,138 @@ export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, 
           </div>
         </div>
 
+        {!isCaptureMode && results.length > 0 && (
+          <div className="flex flex-wrap justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] font-bold uppercase tracking-wider border-slate-700 bg-slate-900/80 text-slate-200"
+              onClick={expandAllPrs}
+            >
+              Expand all PRs
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] font-bold uppercase tracking-wider border-slate-700 bg-slate-900/80 text-slate-200"
+              onClick={collapseToSpotlight}
+            >
+              Collapse to spotlight
+            </Button>
+          </div>
+        )}
+
         <div className="space-y-3 pt-2">
           {results.map((pr, idx) => {
             const isPassed = pr.status === 'PASSED' || pr.status === 'PASS';
             const violations = pr.violations || [];
+            const isOpen = openPrSet.has(pr.prNumber);
+            const findingCount = violations.length;
+            const ruleCount = findingCount
+              ? new Set(violations.map((v) => v.rule_id || v.checker || 'policy')).size
+              : 0;
 
             return (
-              <div key={idx} className="flex items-start gap-3 group animate-in fade-in slide-in-from-left-2 mb-6" style={{ animationDelay: `${idx * 50}ms` }}>
-                <div className="mt-1">
+              <div key={`${pr.prNumber}-${idx}`} className="flex items-start gap-3 group animate-in fade-in slide-in-from-left-2 mb-4" style={{ animationDelay: `${idx * 50}ms` }}>
+                <div className="mt-2 shrink-0">
                   {isPassed ? (
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                   ) : (
                     <XCircle className="h-5 w-5 text-red-500" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 bg-slate-950/30 rounded-lg p-4 border border-slate-800">
-                  <div className="flex items-center gap-3 mb-3 border-b border-slate-800/50 pb-2">
-                    <span className="text-slate-400 font-black tracking-widest text-xs uppercase">PR #{pr.prNumber}</span>
-                    <span className={cn(
-                      "truncate font-bold text-sm",
-                      isPassed ? "text-green-400" : "text-white"
-                    )}>
-                      {isPassed ? "Verified Compliant" : "Policy Enforcement Triggered"}
+                <div className="flex-1 min-w-0 bg-slate-950/30 rounded-lg border border-slate-800 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => togglePr(pr.prNumber)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-start gap-2 px-3 py-3 text-left hover:bg-slate-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
+                  >
+                    <span className="mt-0.5 shrink-0 text-slate-500" aria-hidden>
+                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </span>
-                  </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-slate-400 font-black tracking-widest text-xs uppercase">PR #{pr.prNumber}</span>
+                        <span className={cn('truncate text-sm font-bold', isPassed ? 'text-green-400' : 'text-white')}>
+                          {pr.title || (isPassed ? 'Verified compliant' : 'Policy enforcement triggered')}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-[10px] text-slate-500">
+                        {isPassed
+                          ? 'No violations in sample'
+                          : findingCount > 0
+                            ? `${findingCount} finding${findingCount === 1 ? '' : 's'} · ${ruleCount} rule group${ruleCount === 1 ? '' : 's'}`
+                            : pr.reason
+                              ? 'See reason inside'
+                              : 'No violation payload'}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'shrink-0 text-[9px] font-black uppercase',
+                        isPassed ? 'border-green-500/30 text-green-400' : 'border-red-500/30 text-red-400'
+                      )}
+                    >
+                      {isPassed ? 'PASS' : 'BLOCK'}
+                    </Badge>
+                  </button>
 
-                  {!isPassed && violations.length > 0 ? (
-                    <div className="space-y-4">
-                      {Object.entries(
-                        violations.reduce((acc: Record<string, Violation[]>, v: Violation) => {
-                          const ruleId = v.rule_id || v.checker || 'General';
-                          if (!acc[ruleId]) acc[ruleId] = [];
-                          acc[ruleId].push(v);
-                          return acc;
-                        }, {})
-                      ).map(([ruleId, viols]: [string, Violation[]], rIdx) => (
-                        <div key={rIdx} className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-[9px] uppercase tracking-widest px-2 py-0.5">
-                              {ruleId}
-                            </Badge>
-                          </div>
-                          <ul className="space-y-2">
-                            {viols.map((v: Violation, vIdx: number) => (
-                              <li key={vIdx} className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
-                                <span className="font-bold text-red-400 mr-2">Block:</span>
-                                {v.explanation || v.message}
-                                {v.file && (
-                                  <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-1 rounded w-fit">
-                                    <span className="text-slate-400">{v.file}</span>
-                                    {v.line && <span className="text-amber-500">:{v.line}</span>}
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
+                  {isOpen && (
+                    <div className="border-t border-slate-800/80 px-3 pb-3 pt-2 space-y-3">
+                      {!isPassed && violations.length > 0 ? (
+                        <div className="space-y-4">
+                          {Object.entries(
+                            violations.reduce((acc: Record<string, Violation[]>, v: Violation) => {
+                              const ruleId = v.rule_id || v.checker || 'General';
+                              if (!acc[ruleId]) acc[ruleId] = [];
+                              acc[ruleId].push(v);
+                              return acc;
+                            }, {})
+                          ).map(([ruleId, viols]: [string, Violation[]], rIdx) => (
+                            <div key={rIdx} className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-[9px] uppercase tracking-widest px-2 py-0.5">
+                                  {ruleId}
+                                </Badge>
+                              </div>
+                              <ul className="space-y-2">
+                                {viols.map((v: Violation, vIdx: number) => (
+                                  <li key={vIdx} className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
+                                    <span className="font-bold text-red-400 mr-2">Block:</span>
+                                    {v.explanation || v.message}
+                                    {v.file && (
+                                      <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-1 rounded w-fit">
+                                        <span className="text-slate-400">{v.file}</span>
+                                        {v.line && <span className="text-amber-500">:{v.line}</span>}
+                                      </div>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : !isPassed && (
-                    <div className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
-                      <span className="font-bold text-red-400 mr-2">Reason:</span>
-                      {pr.reason}
-                    </div>
-                  )}
+                      ) : !isPassed ? (
+                        <div className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
+                          <span className="font-bold text-red-400 mr-2">Reason:</span>
+                          {pr.reason}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500">No violations for this PR in the scanned sample.</p>
+                      )}
 
-                  {!isPassed && pr.isAutoPatchable && (
-                    <div className="mt-4 pt-3 border-t border-slate-800/50">
-                      <Badge variant="outline" className="h-5 text-[9px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-2 py-0">
-                        <Zap className="h-3 w-3 mr-1.5 fill-cyan-400" />
-                        AUTO-PATCH READY FOR DEPLOYMENT
-                      </Badge>
+                      {!isPassed && pr.isAutoPatchable && (
+                        <div className="pt-1 border-t border-slate-800/50">
+                          <Badge variant="outline" className="h-5 text-[9px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-2 py-0">
+                            <Zap className="h-3 w-3 mr-1.5 fill-cyan-400" />
+                            AUTO-PATCH READY FOR DEPLOYMENT
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
