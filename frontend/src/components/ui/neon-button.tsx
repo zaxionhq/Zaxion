@@ -27,15 +27,15 @@ export const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>((
   ...props
 }, ref) => {
   const sizeMap = {
-    sm: 'px-4 py-1.5 text-xs',
-    md: 'px-8 py-3 text-base',
-    lg: 'px-10 py-4 text-lg',
+    sm: 'px-4 py-2 text-xs',
+    md: 'px-8 py-2.5 text-sm',
+    lg: 'px-10 py-3 text-base',
   };
 
   const colorMap = {
-    cyan: 'bg-foreground border-foreground text-background shadow-elegant',
-    purple: 'bg-foreground border-foreground text-background shadow-elegant',
-    pink: 'bg-foreground border-foreground text-background shadow-elegant',
+    cyan: 'bg-primary border-primary text-primary-foreground shadow-elegant',
+    purple: 'bg-primary border-primary text-primary-foreground shadow-elegant',
+    pink: 'bg-primary border-primary text-primary-foreground shadow-elegant',
   };
 
   const glassColorMap = {
@@ -45,7 +45,7 @@ export const NeonButton = React.forwardRef<HTMLButtonElement, NeonButtonProps>((
   };
 
   const classes = cn(
-    "rounded-full font-bold transition-all duration-300 border-2 inline-flex items-center justify-center",
+    "rounded-full font-medium transition-all duration-300 border inline-flex items-center justify-center",
     sizeMap[size],
     variant === 'neon' ? colorMap[color] : cn("bg-transparent", glassColorMap[color]),
     glow && variant === 'neon' && "hover:brightness-95",

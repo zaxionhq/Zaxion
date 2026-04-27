@@ -10,92 +10,92 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 99%;
-    --foreground: 0 0% 9%;
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 8%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 147 62% 53%;
+    --primary-foreground: 0 0% 6%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 42%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 62%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 12%;
+    --accent: 0 0% 11%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 0 0% 25%;
+    --border: 0 0% 18%;
+    --input: 0 0% 22%;
+    --ring: 147 62% 53%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --github: 0 0% 10%;
-    --github-hover: 0 0% 20%;
+    --github: 0 0% 6%;
+    --github-hover: 0 0% 12%;
     
-    --ai-gradient: linear-gradient(135deg, hsl(0 0% 18%), hsl(0 0% 32%));
-    --hero-gradient: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 18%), hsl(0 0% 28%));
-    --code-bg: 0 0% 16%;
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
+    --ai-gradient: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 11%));
+    --hero-gradient: linear-gradient(135deg, hsl(0 0% 9%), hsl(0 0% 10%), hsl(0 0% 12%));
+    --code-bg: 0 0% 8%;
+    --success: 147 62% 53%;
+    --warning: 38 92% 55%;
     
-    --shadow-elegant: 0 8px 24px -12px hsl(0 0% 0% / 0.16);
+    --shadow-elegant: 0 4px 12px hsl(0 0% 0% / 0.1);
     --shadow-glow: 0 0 0 hsl(0 0% 0% / 0);
     
-    --glass: 0 0% 100% / 0.75;
-    --glass-border: 0 0% 86% / 0.9;
+    --glass: 0 0% 16% / 0.84;
+    --glass-border: 0 0% 22% / 0.9;
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 95%;
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 94%;
+    --primary: 147 62% 53%;
     --primary-foreground: 0 0% 6%;
 
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 68%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 62%;
 
-    --accent: 0 0% 10%;
-    --accent-foreground: 0 0% 94%;
+    --accent: 0 0% 11%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 14%;
-    --ring: 0 0% 35%;
+    --border: 0 0% 18%;
+    --input: 0 0% 22%;
+    --ring: 147 62% 53%;
 
-    --github: 0 0% 94%;
-    --github-hover: 0 0% 80%;
+    --github: 0 0% 6%;
+    --github-hover: 0 0% 12%;
     
-    --code-bg: 0 0% 9%;
-    --success: 142 76% 46%;
+    --code-bg: 0 0% 8%;
+    --success: 147 62% 53%;
     --warning: 38 92% 60%;
 
-    --glass: 0 0% 6% / 0.86;
-    --glass-border: 0 0% 16% / 0.9;
+    --glass: 0 0% 16% / 0.84;
+    --glass-border: 0 0% 22% / 0.9;
   }
 }
 
@@ -106,6 +106,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
 }
 
@@ -135,7 +136,7 @@ All colors MUST be HSL.
   }
 
   .glass-card {
-    @apply bg-glass backdrop-blur-md border border-glass-border rounded-2xl shadow-lg transition-all duration-300;
+    @apply bg-glass backdrop-blur-sm border border-glass-border rounded-xl transition-all duration-300;
   }
 
   .neon-text-cyan {
@@ -147,11 +148,11 @@ All colors MUST be HSL.
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground font-bold;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground;
   }
 
   .radial-bg {
-    background: radial-gradient(circle at top center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 45%, transparent 100%);
+    background: radial-gradient(circle at top center, rgba(62, 207, 142, 0.08) 0%, rgba(62, 207, 142, 0.03) 45%, transparent 100%);
   }
 
   .animate-gradient-border {

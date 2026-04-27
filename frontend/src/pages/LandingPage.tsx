@@ -53,29 +53,27 @@ const LandingPage = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen bg-background dark:bg-black text-foreground selection:bg-neon-cyan/30 overflow-x-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-300">
       <LoadingOverlay isVisible={isTransitioning} message="Initializing Governance Docs..." />
       {/* Background depth layers */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/5 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] rounded-full animate-pulse delay-700" />
-        <div className="absolute inset-0 radial-bg opacity-20" />
+        <div className="absolute inset-0 radial-bg opacity-25" />
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/70 dark:bg-black/70 backdrop-blur-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/85 backdrop-blur-md">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="relative">
-              <div className="absolute -inset-2 bg-neon-cyan/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute -inset-2 bg-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
               <img 
                 src="/Zaxion landing page logo.png" 
                 alt="Zaxion" 
                 className="h-10 md:h-12 w-auto object-contain relative z-10 transition-transform duration-500 group-hover:scale-110" 
               />
             </div>
-            <span className="text-xl font-black tracking-tighter hidden sm:block ml-1">
-              ZAXION<span className="text-neon-cyan">.</span>
+            <span className="text-xl font-medium tracking-tighter hidden sm:block ml-1">
+              ZAXION<span className="text-primary">.</span>
             </span>
           </div>
           
@@ -83,13 +81,13 @@ const LandingPage = () => {
             <a 
               href="/docs" 
               onClick={handleDocsNavigation}
-              className="text-sm font-medium text-muted-foreground hover:text-neon-cyan transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
             >
               Documentation
             </a>
 
-            <a href="#problem" className="text-sm font-medium text-muted-foreground hover:text-neon-cyan transition-colors">The Problem</a>
-            <a href="#use-cases" className="text-sm font-medium text-muted-foreground hover:text-neon-cyan transition-colors">Use Cases</a>
+            <a href="#problem" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">The Problem</a>
+            <a href="#use-cases" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Use Cases</a>
             
             <div className="flex items-center gap-4">
               <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
@@ -109,20 +107,20 @@ const LandingPage = () => {
         {/* SECTION 1 — Hero */}
         <section className="container mx-auto px-6 mb-32">
           <div className="flex flex-col items-center text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-black tracking-[0.2em] uppercase mb-8 border-neon-cyan/30 text-neon-cyan shadow-neon-cyan/10 shadow-lg">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[10px] font-medium tracking-[0.2em] uppercase mb-8 border-primary/40 text-primary">
               <Zap className="h-3 w-3" />
               GitHub Pull Request Governance
             </div>
             
-            <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1] md:leading-[0.9] text-foreground">
+            <h1 className="text-5xl md:text-8xl font-normal tracking-tight mb-8 leading-[1.0] text-foreground">
               Zaxion reviews every pull request <br />
               <span className="gradient-text">before it reaches production.</span>
             </h1>
 
             <div className="mb-8">
-              <p className="text-lg md:text-2xl font-bold text-muted-foreground">
+              <p className="text-lg md:text-2xl font-normal text-muted-foreground">
                 Install the GitHub App and let Zaxion inspect each PR for secrets, risky patterns, and policy violations.
-                <span className="text-neon-cyan block md:inline md:ml-2">It reports pass, warn, or block before merge.</span>
+                <span className="text-primary block md:inline md:ml-2">It reports pass, warn, or block before merge.</span>
               </p>
             </div>
 
@@ -135,16 +133,16 @@ const LandingPage = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="flex flex-wrap justify-center gap-4 md:gap-8">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">Free tier</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">Free tier</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">No credit card</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">No credit card</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-neon-cyan" />
-                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-muted-foreground">Set up in minutes</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <span className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">Set up in minutes</span>
                   </div>
                 </div>
               </div>
@@ -152,12 +150,12 @@ const LandingPage = () => {
 
             {/* Hero Artifact - MAIN PROOF */}
             <div className="mt-24 w-full flex flex-col items-center gap-8">
-              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl glass-panel border-red-500/30 bg-red-500/5 animate-pulse">
+              <div className="inline-flex items-center gap-3 px-6 py-3 rounded-xl glass-panel border-border bg-card">
                 <AlertTriangle className="h-6 w-6 text-red-500" />
-                <span className="text-lg font-black tracking-tight text-foreground">Zaxion flagged 8 risky findings in one PR</span>
+                <span className="text-lg font-medium tracking-tight text-foreground">Zaxion flagged 8 risky findings in one PR</span>
               </div>
               <div className="relative group">
-                <div className="absolute -inset-4 bg-neon-cyan/10 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full opacity-40 group-hover:opacity-100 transition-opacity" />
                 <ProofImageLightbox
                   src="/github-pr-comment-proof.png"
                   alt="Zaxion catching security bugs in a GitHub PR"
@@ -171,10 +169,10 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 2 — Zaxion in Action */}
-        <section className="py-32 bg-muted/30 dark:bg-[#050505] border-y border-border">
+        <section className="py-32 bg-card/30 border-y border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto text-center mb-16">
-              <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-foreground">Zaxion in Action</h2>
+              <h2 className="text-4xl md:text-6xl font-normal mb-6 tracking-tight text-foreground">Zaxion in Action</h2>
               <p className="text-xl text-muted-foreground">What reviewers usually miss, Zaxion catches before merge.</p>
             </div>
             
@@ -200,11 +198,11 @@ const LandingPage = () => {
                     color: "cyan"
                   }
                 ].map((item, i) => (
-                  <div key={i} className="p-6 rounded-xl border border-border bg-card/50 hover:border-neon-cyan/30 transition-colors">
-                    <div className={cn("text-[10px] font-black tracking-widest uppercase mb-2", `text-${item.color}-500`)}>
+                  <div key={i} className="p-6 rounded-xl border border-border bg-card/50 hover:border-primary/40 transition-colors">
+                    <div className={cn("text-[10px] font-medium tracking-widest uppercase mb-2", `text-${item.color}-500`)}>
                       {item.label}
                     </div>
-                    <h3 className="text-xl font-bold mb-2 text-foreground">{item.title}</h3>
+                    <h3 className="text-xl font-medium mb-2 text-foreground">{item.title}</h3>
                     <p className="text-muted-foreground text-sm">{item.desc}</p>
                   </div>
                 ))}
@@ -225,7 +223,7 @@ const LandingPage = () => {
         <section className="py-32 border-b border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto text-center mb-20">
-              <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-foreground">31 Policies</h2>
+              <h2 className="text-4xl md:text-6xl font-normal mb-6 tracking-tight text-foreground">31 Policies</h2>
               <p className="text-xl text-muted-foreground">Coverage across security, quality, testing, and delivery rules.</p>
             </div>
 
@@ -238,10 +236,10 @@ const LandingPage = () => {
                 { name: "Performance", count: 3, icon: Cpu },
                 { name: "Other", count: 3, icon: ListChecks }
               ].map((cat, i) => (
-                <div key={i} className="glass-panel p-6 rounded-xl border-border flex flex-col items-center text-center group hover:border-neon-cyan/30 transition-colors">
-                  <cat.icon className="h-8 w-8 text-neon-cyan mb-4 group-hover:scale-110 transition-transform" />
-                  <div className="text-2xl font-black mb-1 text-foreground">{cat.count}</div>
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{cat.name}</div>
+                <div key={i} className="glass-panel p-6 rounded-xl border-border flex flex-col items-center text-center group hover:border-primary/40 transition-colors">
+                  <cat.icon className="h-8 w-8 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                  <div className="text-2xl font-medium mb-1 text-foreground">{cat.count}</div>
+                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{cat.name}</div>
                 </div>
               ))}
             </div>
@@ -249,10 +247,10 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 4 — The Cost of Missing One Bug */}
-        <section id="problem" className="py-32 bg-muted/30 dark:bg-[#050505] border-b border-border">
+        <section id="problem" className="py-32 bg-card/30 border-b border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 tracking-tight text-center text-foreground">The Cost of Missing One Bug</h2>
+              <h2 className="text-4xl md:text-5xl font-normal mb-16 tracking-tight text-center text-foreground">The Cost of Missing One Bug</h2>
               <div className="space-y-12">
                 {[
                   { title: "Senior engineers get stuck in repetitive review work", desc: "Manual review time is consumed by avoidable issues instead of system design and delivery." },
@@ -260,11 +258,11 @@ const LandingPage = () => {
                   { title: "Standards vary by reviewer", desc: "Zaxion applies the same policy checks to every PR so review quality stays consistent." }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-8 group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-border flex items-center justify-center text-neon-cyan font-black group-hover:border-neon-cyan/50 transition-colors">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-border flex items-center justify-center text-primary font-medium group-hover:border-primary/50 transition-colors">
                       0{i+1}
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-3 group-hover:text-neon-cyan transition-colors text-foreground">{item.title}</h3>
+                      <h3 className="text-2xl font-medium mb-3 group-hover:text-primary transition-colors text-foreground">{item.title}</h3>
                       <p className="text-muted-foreground text-lg leading-relaxed font-medium">{item.desc}</p>
                     </div>
                   </div>
@@ -278,7 +276,7 @@ const LandingPage = () => {
         <section id="advantage" className="py-32 border-b border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto">
-              <h2 className="text-4xl md:text-6xl font-black mb-24 text-center tracking-tight text-foreground">The Zaxion Advantage</h2>
+              <h2 className="text-4xl md:text-6xl font-normal mb-24 text-center tracking-tight text-foreground">The Zaxion Advantage</h2>
               
               <div className="grid md:grid-cols-2 gap-16 items-center mb-32">
                 <div className="space-y-8">
@@ -310,18 +308,18 @@ const LandingPage = () => {
                     }
                   ].map((feature, i) => (
                     <div key={i} className="flex gap-6 group">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-border flex items-center justify-center text-neon-cyan group-hover:border-neon-cyan/50 transition-colors">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl glass-panel border-border flex items-center justify-center text-primary group-hover:border-primary/50 transition-colors">
                         <feature.icon className="h-6 w-6" />
                       </div>
                       <div>
-                        <h4 className="text-xl font-bold mb-1 group-hover:text-neon-cyan transition-colors text-foreground">{feature.title}</h4>
+                        <h4 className="text-xl font-medium mb-1 group-hover:text-primary transition-colors text-foreground">{feature.title}</h4>
                         <p className="text-muted-foreground text-sm leading-relaxed">{feature.desc}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="relative group">
-                  <div className="absolute -inset-10 bg-neon-cyan/5 blur-[100px] rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute -inset-10 bg-primary/5 blur-[100px] rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
                   <GlassCard className="p-4 relative z-10 overflow-hidden">
                     <ProofImageLightbox
                       src="/policy-simulator-preview.png"
@@ -329,10 +327,10 @@ const LandingPage = () => {
                       caption="Policy Simulator — projected block rate and historical impact table"
                       imgClassName="rounded-lg"
                     />
-                    <div className="mt-4 p-4 bg-background/80 backdrop-blur-md rounded-lg border border-border relative z-20">
+                    <div className="mt-4 p-4 bg-background/90 backdrop-blur-md rounded-lg border border-border relative z-20">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
-                        <span className="text-[10px] font-mono text-neon-cyan uppercase">Simulator Active</span>
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-[10px] font-mono text-primary uppercase">Simulator Active</span>
                       </div>
                       <p className="text-xs text-muted-foreground">Visualizing the projected impact of 31 policies across 1,402 historical PRs.</p>
                     </div>
@@ -348,10 +346,10 @@ const LandingPage = () => {
                 
                 <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center relative z-10">
                   <div className="space-y-6 md:space-y-8">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-mono text-neon-cyan uppercase tracking-widest">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-primary/10 border border-primary/20 text-[10px] font-mono text-primary uppercase tracking-widest">
                       Protocol Evidence
                     </div>
-                    <h3 className="text-2xl md:text-4xl font-black tracking-tight leading-tight text-foreground">
+                    <h3 className="text-2xl md:text-4xl font-normal tracking-tight leading-tight text-foreground">
                       The Deterministic <br />
                       <span className="gradient-text">Audit Trail.</span>
                     </h3>
@@ -365,8 +363,8 @@ const LandingPage = () => {
                         "Immutable Audit Entry"
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <CheckCircle2 className="h-4 w-4 text-neon-cyan shrink-0" />
-                          <span className="text-xs md:text-sm font-bold text-muted-foreground">{item}</span>
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-xs md:text-sm font-medium text-muted-foreground">{item}</span>
                         </div>
                       ))}
                     </div>
@@ -384,10 +382,10 @@ const LandingPage = () => {
         </section>
 
         {/* SECTION 6 — How to Get Started (New) */}
-        <section id="onboarding" className="py-32 bg-muted/30 dark:bg-[#050505] border-y border-border">
+        <section id="onboarding" className="py-32 bg-card/30 border-y border-border">
           <div className="container mx-auto px-6">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-black mb-16 text-center tracking-tight text-foreground">How to Get Started</h2>
+              <h2 className="text-4xl md:text-5xl font-normal mb-16 text-center tracking-tight text-foreground">How to Get Started</h2>
               <div className="grid md:grid-cols-4 gap-8">
                 {[
                   { step: "1", title: "Install App", desc: "Install the Zaxion GitHub App for your organization." },
@@ -396,10 +394,10 @@ const LandingPage = () => {
                   { step: "4", title: "Merge with Confidence", desc: "Each PR gets a clear pass, warn, or block decision." }
                 ].map((item, i) => (
                   <div key={i} className="text-center space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-neon-cyan font-black mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-medium mx-auto">
                       {item.step}
                     </div>
-                    <h4 className="font-bold text-lg text-foreground">{item.title}</h4>
+                    <h4 className="font-medium text-lg text-foreground">{item.title}</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
@@ -433,12 +431,12 @@ const LandingPage = () => {
             ].map((feature, i) => (
               <GlassCard key={i} className="group h-full">
                 <div className={cn(
-                  "w-12 h-12 rounded-xl mb-6 flex items-center justify-center glass-panel border-border group-hover:border-neon-cyan/50 transition-colors",
+                  "w-12 h-12 rounded-xl mb-6 flex items-center justify-center glass-panel border-border group-hover:border-primary/50 transition-colors",
                   `shadow-neon-${feature.color}/5`
                 )}>
                   <feature.icon className={cn("h-6 w-6", `text-neon-${feature.color}`)} />
                 </div>
-                <h3 className="text-xl font-bold mb-4 text-foreground">{feature.title}</h3>
+                <h3 className="text-xl font-medium mb-4 text-foreground">{feature.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
               </GlassCard>
             ))}
@@ -448,7 +446,7 @@ const LandingPage = () => {
         {/* SECTION 8 — Simple Call to Action */}
         <section className="container mx-auto px-6 py-24 md:py-32 border-t border-border">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-6xl font-black tracking-tight mb-12 leading-tight text-foreground">
+            <h2 className="text-3xl md:text-6xl font-normal tracking-tight mb-12 leading-tight text-foreground">
               Ready to review every PR <br />
               <span className="gradient-text">before it reaches production?</span>
             </h2>
@@ -461,14 +459,14 @@ const LandingPage = () => {
               <a 
                 href="/docs" 
                 onClick={handleDocsNavigation}
-                className="group flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+                className="group flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Read Documentation
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </a>
             </div>
 
-            <p className="mt-16 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
+            <p className="mt-16 text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em]">
               Fast setup • Clear PR decisions
             </p>
           </div>
@@ -476,14 +474,14 @@ const LandingPage = () => {
       </main> 
 
       {/* Simplified Footer */}
-      <footer className="py-20 bg-background dark:bg-black border-t border-border">
+      <footer className="py-20 bg-background border-t border-border">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-end">
             <div className="space-y-6">
               <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                 <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-8 w-auto transition-transform duration-500 group-hover:scale-110" />
-                <span className="text-xl font-black tracking-tighter text-foreground">
-                  ZAXION<span className="text-neon-cyan">.</span>
+                <span className="text-xl font-medium tracking-tighter text-foreground">
+                  ZAXION<span className="text-primary">.</span>
                 </span>
               </div>
               <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
