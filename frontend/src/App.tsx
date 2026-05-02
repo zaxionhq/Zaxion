@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import React, { Suspense, lazy } from 'react';
 import { Loader2 } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 
 // Lazy Load Pages for Performance
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -80,6 +81,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <Analytics />
           <BrowserRouter>
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
