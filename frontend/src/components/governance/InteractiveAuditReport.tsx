@@ -37,11 +37,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { 
-  BulkAnalysisData, 
-  AnalysisResult, 
-  Violation 
-} from './SocialAuditTerminal';
+import { BulkAnalysisData, formatViolationLocation } from './SocialAuditTerminal';
 import { toast } from 'sonner';
 
 interface InteractiveAuditReportProps {
@@ -191,7 +187,7 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
                           <td class="py-3 font-bold text-slate-300">${v.rule_id}</td>
                           <td class="py-3"><span class="text-red-400 font-bold">${v.severity}</span></td>
                           <td class="py-3 text-slate-400">
-                            ${v.file}:${v.line}
+                            ${formatViolationLocation(v)}
                             ${v.code_context ? `<div class="mt-2 p-1.5 bg-black/40 rounded border border-slate-800 text-[9px] text-red-400 font-mono overflow-x-auto">${v.code_context}</div>` : ''}
                           </td>
                           <td class="py-3 text-slate-300">${v.explanation}</td>
@@ -653,11 +649,8 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
                                     <div className="flex flex-col gap-2">
                                       <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
                                         <FileCode className="h-3 w-3 text-slate-600" />
-                                        {v.file}
+                                        {formatViolationLocation(v)}
                                       </div>
-                                      {v.line && (
-                                        <span className="text-[9px] font-mono text-slate-600 uppercase">Line: {v.line}</span>
-                                      )}
                                       {v.code_context && (
                                         <div className="mt-2 p-2 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-red-400/90 overflow-x-auto whitespace-pre">
                                           {v.code_context}

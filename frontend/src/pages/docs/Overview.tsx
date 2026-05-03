@@ -52,7 +52,7 @@ const DocsOverview = () => {
           },
           {
             title: "Audit-Ready Ledger",
-            desc: "Every architectural deviation is cryptographically signed and stored in an immutable audit trail for compliance and accountability.",
+            desc: "Decisions and overrides can be recorded for review so teams have accountability and a paper trail for compliance conversations.",
             icon: History,
             color: "text-emerald-400"
           },
@@ -107,17 +107,17 @@ const DocsOverview = () => {
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Infrastructure Support</h2>
             <h3 className="text-3xl font-bold text-white">Seamless Ecosystem Integration</h3>
           </div>
-          <Link to="/docs/setup-guide" className="text-indigo-400 font-bold flex items-center gap-2 hover:underline">
-            View Integration Guides <ArrowRight className="h-4 w-4" />
+          <Link to="/documentation" className="text-indigo-400 font-bold flex items-center gap-2 hover:underline">
+            View setup guide <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { name: "GitHub Enterprise", desc: "Native App & Action support", icon: GitBranch },
-            { name: "Multi-Cloud", desc: "AWS, Azure, & GCP Ready", icon: Shield },
-            { name: "SAML/SSO", desc: "Enterprise Identity Integration", icon: Lock },
-            { name: "REST API", desc: "Automate Governance via Code", icon: Terminal }
+            { name: "GitHub", desc: "GitHub App, checks, and PR feedback on org or selected repos", icon: GitBranch },
+            { name: "Hosted SaaS", desc: "Runs as a managed service; dedicated deployments on request", icon: Shield },
+            { name: "Sign-in", desc: "GitHub OAuth today; SAML and other IdPs via enterprise onboarding", icon: Lock },
+            { name: "Policies & API", desc: "Configurable rules in-product; automation surfaces evolve—ask for roadmap", icon: Terminal }
           ].map((item, i) => (
             <div key={i} className="p-6 rounded-xl border border-white/5 bg-white/[0.01] hover:bg-indigo-500/5 transition-all">
               <item.icon className="h-5 w-5 text-slate-500 mb-4" />

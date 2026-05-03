@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api, ApiError } from '@/lib/api';
 import logger from '@/lib/logger';
 import { useApiErrorHandler } from '@/components/ErrorToast';
@@ -32,6 +32,7 @@ export const useSession = () => {
   });
 
   const { handleError, handleSuccess } = useApiErrorHandler();
+  const authEventTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkSession = useCallback(async (isRetry = false) => {
     try {
@@ -61,8 +62,12 @@ export const useSession = () => {
         window.history.replaceState({}, document.title, newUrl);
         handleSuccess('Successfully signed in!');
         
+        if (authEventTimeoutRef.current) {
+          clearTimeout(authEventTimeoutRef.current);
+        }
         // Delay the event dispatch slightly to ensure listeners are set up
-        setTimeout(() => {
+        authEventTimeoutRef.current = setTimeout(() => {
+          authEventTimeoutRef.current = null;
           // If this was a GitHub repository connection (not just a sign-in),
           // we need to ensure the UI reflects that we're ready to select repositories
           logger.log('Dispatching github-connected event');
@@ -119,6 +124,12 @@ export const useSession = () => {
 
   useEffect(() => {
     checkSession();
+    return () => {
+      if (authEventTimeoutRef.current) {
+        clearTimeout(authEventTimeoutRef.current);
+        authEventTimeoutRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

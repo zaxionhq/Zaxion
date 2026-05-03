@@ -1,57 +1,74 @@
 import React from 'react';
-import { ArrowRight, Terminal } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import DocsCallout from '../../components/docs/DocsCallout';
-import DocsStep from '../../components/docs/DocsStep';
 
 const DocsFAQ = () => {
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 text-foreground">
       <div className="space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight text-white leading-tight">
-          Frequently Asked Questions
-        </h1>
-        <p className="text-lg text-slate-400 leading-relaxed max-w-2xl">
-          Common questions about setting up and using Zaxion.
+        <h1 className="text-4xl font-bold tracking-tight leading-tight">Frequently asked questions</h1>
+        <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
+          Practical answers about installing and running Zaxion on GitHub. For the full doc map, start at{' '}
+          <Link to="/docs" className="text-primary hover:underline font-medium">
+            Documentation home
+          </Link>
+          .
         </p>
       </div>
 
       <div className="space-y-8">
         {[
           {
-            question: "How long does setup take?",
-            answer: "Typically 5 minutes or less. Install the GitHub App, add a .zaxion.yaml file to your repo, and you're done."
+            question: 'How long does setup take?',
+            answer:
+              'Most teams get a first check running in about 5–15 minutes: install the GitHub App on a pilot repo, follow the branch protection checklist in the setup guide, and open a test PR.',
           },
           {
-            question: "What is the pricing?",
-            answer: "Zaxion is currently in beta and free for open-source projects. Enterprise plans are available for larger organizations."
+            question: 'What does pricing look like?',
+            answer:
+              'Zaxion is in active development; many teams use it on public and private repos during beta. For volume pricing, compliance reviews, or enterprise terms, email zaxionhq@gmail.com.',
           },
           {
-            question: "Do I need to host it myself?",
-            answer: "No. Zaxion is a hosted SaaS solution. However, we offer a self-hosted option for enterprise customers."
+            question: 'Do I need to self-host?',
+            answer:
+              'The product is built as hosted SaaS. If you need a dedicated deployment, VPC requirements, or SAML-only access, contact us—those are handled as enterprise engagements.',
           },
           {
-            question: "Can I customize policies?",
-            answer: "Yes! Policies are defined in a simple YAML file (.zaxion.yaml) in your repository."
+            question: 'How do I sign in?',
+            answer:
+              'Use Sign in with GitHub (OAuth). SAML and other IdPs are not the default path today; ask us if that is a hard requirement for your org.',
           },
           {
-            question: "What if Zaxion makes a mistake?",
-            answer: "If Zaxion blocks a PR incorrectly, you can use the override command (e.g., /zaxion override) to bypass the check."
-          }
+            question: 'Can I customize policies?',
+            answer:
+              'Yes. Use the Governance dashboard and policy configuration docs to enable core rules, tune severity, and (where supported) add repository-level configuration. See Policy library and Rule types in the sidebar.',
+          },
+          {
+            question: 'What if Zaxion blocks a PR incorrectly?',
+            answer:
+              'Use your documented override flow (for example PR body markers or maintainer actions, depending on how your org configured governance). Signed overrides and audit context are described under Audit & Ledger in the docs.',
+          },
         ].map((item, i) => (
           <div key={i} className="space-y-2">
-            <h3 className="text-lg font-bold text-slate-200">{item.question}</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">{item.answer}</p>
+            <h3 className="text-lg font-bold text-foreground">{item.question}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{item.answer}</p>
           </div>
         ))}
       </div>
 
-      <div className="pt-8 border-t border-white/5 flex gap-4">
-        <Link 
-          to="/docs/troubleshooting" 
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-sm font-medium transition-colors"
+      <div className="pt-8 border-t border-border flex flex-wrap gap-4">
+        <Link
+          to="/docs/troubleshooting"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-muted/50 hover:bg-muted border border-border text-foreground text-sm font-medium transition-colors"
         >
-          Troubleshooting Guide
+          Troubleshooting
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+        <Link
+          to="/documentation"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-muted/50 hover:bg-muted border border-border text-foreground text-sm font-medium transition-colors"
+        >
+          Setup guide
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>

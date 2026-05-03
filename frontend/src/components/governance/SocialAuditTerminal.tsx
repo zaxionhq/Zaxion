@@ -22,6 +22,17 @@ export interface Violation {
   code_context?: string;
 }
 
+/** File + line for display/export; never emits the string "undefined". */
+export function formatViolationLocation(v: { file?: string; line?: number | string }): string {
+  const file = v.file != null && String(v.file).trim() !== '' ? String(v.file) : '';
+  const hasLine = v.line != null && String(v.line).trim() !== '';
+  const line = hasLine ? String(v.line) : '';
+  if (file && line) return `${file}:${line}`;
+  if (file) return file;
+  if (line) return line;
+  return '—';
+}
+
 export interface AnalysisResult {
   prNumber: number;
   title: string;
@@ -335,12 +346,11 @@ export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, 
                                   <li key={vIdx} className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded border border-slate-800/50">
                                     <span className="font-bold text-red-400 mr-2">Block:</span>
                                     {v.explanation || v.message}
-                                    {v.file && (
+                                    {(v.file != null && String(v.file).trim() !== '') || (v.line != null && String(v.line).trim() !== '') ? (
                                       <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500 font-mono bg-black/40 px-2 py-1 rounded w-fit">
-                                        <span className="text-slate-400">{v.file}</span>
-                                        {v.line && <span className="text-amber-500">:{v.line}</span>}
+                                        <span className="text-amber-500">{formatViolationLocation(v)}</span>
                                       </div>
-                                    )}
+                                    ) : null}
                                   </li>
                                 ))}
                               </ul>

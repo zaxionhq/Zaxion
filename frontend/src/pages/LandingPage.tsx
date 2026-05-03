@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
   Shield, 
   Zap, 
@@ -18,28 +18,16 @@ import {
   Ban,
   FileText
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTrail';
 import { ProofImageLightbox } from '@/components/landing/ProofImageLightbox';
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
-import { LoadingOverlay } from '@/components/ui/loading-overlay';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isTransitioning, setIsTransitioning] = React.useState(false);
-
-  // Handle delayed navigation for docs
-  const handleDocsNavigation = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsTransitioning(true);
-    setTimeout(() => {
-      navigate('/docs');
-    }, 1500); // 1.5s delay for institutional feel
-  };
 
   // Handle deep link redirects from GitHub "Fix with Zaxion" button
   useEffect(() => {
@@ -54,7 +42,6 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-300">
-      <LoadingOverlay isVisible={isTransitioning} message="Initializing Governance Docs..." />
       {/* Background depth layers */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 radial-bg opacity-25" />
@@ -78,13 +65,12 @@ const LandingPage = () => {
           </div>
           
           <div className="hidden md:flex items-center gap-6">
-            <a 
-              href="/docs" 
-              onClick={handleDocsNavigation}
+            <Link
+              to="/docs"
               className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
             >
               Documentation
-            </a>
+            </Link>
 
             <a href="#problem" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">The Problem</a>
             <a href="#use-cases" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">Use Cases</a>
@@ -456,14 +442,13 @@ const LandingPage = () => {
                 Install GitHub App (Free)
               </NeonButton>
               
-              <a 
-                href="/docs" 
-                onClick={handleDocsNavigation}
+              <Link
+                to="/docs"
                 className="group flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Read Documentation
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
             </div>
 
             <p className="mt-16 text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em]">

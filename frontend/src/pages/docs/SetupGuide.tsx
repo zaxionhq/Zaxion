@@ -288,7 +288,7 @@ const SetupGuide = () => {
             Go to Dashboard
           </Link>
           <Link 
-            to="/docs/getting-started" 
+            to="/docs" 
             className="px-8 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground/80 font-bold border border-border transition-all"
           >
             Read Core Concepts

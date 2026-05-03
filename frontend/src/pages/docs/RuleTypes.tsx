@@ -9,27 +9,13 @@ import { Link } from 'react-router-dom';
 const DocsRuleTypes = () => {
   const ruleTypes = [
     {
-      type: 'pr_size',
-      title: 'PR size',
-      description: 'Limits the number of files allowed per pull request. Reduces review load and blast radius.',
-      params: [{ name: 'max_files', type: 'number', desc: 'Maximum files per PR (e.g. 20–40).' }],
-    },
-    {
       type: 'coverage',
       title: 'Coverage',
-      description: 'Requires a minimum number of test files in the PR, or a minimum coverage ratio when AST data is available.',
+      description:
+        'Requires a minimum number of test files in the PR, or a minimum coverage ratio when AST coverage is available.',
       params: [
         { name: 'min_tests', type: 'number', desc: 'Minimum test files in the PR.' },
         { name: 'min_coverage_ratio', type: 'number', desc: 'Optional; e.g. 0.8 for 80% when AST coverage is available.' },
-      ],
-    },
-    {
-      type: 'file_extension',
-      title: 'File extension',
-      description: 'Restricts which file types can be changed, optionally scoped by a path pattern.',
-      params: [
-        { name: 'allowed_extensions', type: 'string[]', desc: 'e.g. [".js", ".ts", ".tsx", ".json"].' },
-        { name: 'pattern', type: 'string', desc: 'Optional glob pattern (e.g. "src/**") the rule applies to.' },
       ],
     },
     {
@@ -42,64 +28,184 @@ const DocsRuleTypes = () => {
       ],
     },
     {
+      type: 'file_extension',
+      title: 'File extension',
+      description: 'Restricts which file types can be changed, optionally scoped by a path pattern.',
+      params: [
+        { name: 'allowed_extensions', type: 'string[]', desc: 'e.g. [".js", ".ts", ".tsx", ".json"].' },
+        { name: 'pattern', type: 'string', desc: 'Optional glob pattern (e.g. "src/**") the rule applies to.' },
+      ],
+    },
+    {
+      type: 'pr_size',
+      title: 'PR size',
+      description: 'Limits the number of files allowed per pull request. Reduces review load and blast radius.',
+      params: [{ name: 'max_files', type: 'number', desc: 'Maximum files per PR (e.g. 20–40).' }],
+    },
+    {
       type: 'security_patterns',
       title: 'Security patterns',
-      description: 'Scans code for hardcoded secrets, eval(), and risky patterns (e.g. XSS). Content-based; requires file content.',
-      params: [],
-    },
-    {
-      type: 'code_quality',
-      title: 'Code quality',
-      description: 'Blocks console.log and debugger in code. Use for production or release branches.',
-      params: [],
-    },
-    {
-      type: 'documentation',
-      title: 'Documentation',
-      description: 'Requires JSDoc on exported functions.',
-      params: [],
-    },
-    {
-      type: 'architecture',
-      title: 'Architecture',
-      description: 'Checks for circular dependencies.',
-      params: [],
-    },
-    {
-      type: 'reliability',
-      title: 'Reliability',
-      description: 'Enforces error handling (e.g. try/catch) where needed.',
-      params: [],
-    },
-    {
-      type: 'performance',
-      title: 'Performance',
-      description: 'Requires performance or benchmark tests for critical paths.',
-      params: [],
-    },
-    {
-      type: 'api',
-      title: 'API',
-      description: 'Guards against breaking API changes.',
+      description:
+        'Runs PatternMatcherService over file text and surfaces all enabled security-related YAML policies (secrets, unsafe patterns, injection-style strings, and other configured rules). Requires file content in the fact snapshot.',
       params: [],
     },
     {
       type: 'complexity_metrics',
       title: 'Complexity metrics',
-      description: 'Enforces limits on cyclomatic complexity, function length, and file length using AST analysis.',
+      description: 'Enforces limits on cyclomatic complexity, function length, and file length using ComplexityMetricsService on source text.',
       params: [],
     },
     {
       type: 'dependency_scan',
       title: 'Dependency scan',
-      description: 'Scans package.json for known vulnerabilities using security advisory databases.',
+      description:
+        'When changed files include package.json, runs DependencyScannerService for known vulnerable dependency versions. Lockfiles listed in the engine are collected but only package.json is scanned today.',
       params: [],
+    },
+    {
+      type: 'code_quality',
+      title: 'Code quality',
+      description:
+        'Uses the same pattern matcher as security_patterns, then keeps only matches whose policy id is one of: no-console-logs-production, no-magic-numbers, no-deprecated-apis, no-debug-mode-production. Requires file content.',
+      params: [],
+    },
+    {
+      type: 'documentation',
+      title: 'Documentation',
+      description:
+        'When AST is available, warns on changed JS/TS files with exports that lack JSDoc on exports. If no AST is present, the checker passes.',
+      params: [
+        {
+          name: 'require_jsdoc_on_exports',
+          type: 'boolean',
+          desc: 'Optional. Defaults to requiring JSDoc when omitted (true). Set false to disable this checker.',
+        },
+      ],
+    },
+    {
+      type: 'architecture',
+      title: 'Architecture',
+      description: 'Builds an import graph from changed JS/TS files with content and blocks on circular dependencies.',
+      params: [],
+    },
+    {
+      type: 'reliability',
+      title: 'Reliability',
+      description:
+        'Heuristic scan of source (non-test) files for await without try/catch, enclosing try with await, or .catch. Warns when patterns suggest missing error handling.',
+      params: [],
+    },
+    {
+      type: 'performance',
+      title: 'Performance',
+      description:
+        'When require_performance_tests is true, looks for benchmark/perf-style patterns in test files; otherwise passes immediately.',
+      params: [
+        {
+          name: 'require_performance_tests',
+          type: 'boolean',
+          desc: 'Must be true to enable the check; otherwise the checker returns pass.',
+        },
+      ],
+    },
+    {
+      type: 'api',
+      title: 'API',
+      description:
+        'When disallow_breaking_changes is true, the engine currently returns pass with a message that no API diff is available in context—use as a placeholder until richer API diff facts are wired.',
+      params: [
+        {
+          name: 'disallow_breaking_changes',
+          type: 'boolean',
+          desc: 'Must be true to enable the stub check; otherwise the checker returns pass.',
+        },
+      ],
     },
     {
       type: 'testing_best_practices',
       title: 'Testing best practices',
-      description: 'Blocks skipped tests (.skip, xit) and empty test cases to ensure suite integrity.',
+      description: 'Uses AST metadata (skipped tests, empty tests) to block or warn on .skip/xit and empty test cases.',
       params: [],
+    },
+    {
+      type: 'no_magic_numbers',
+      title: 'No magic numbers',
+      description:
+        'AST semantic: warns on numeric literals assigned to variables in non-test files when they look like unnamed magic numbers (excludes descriptive ALL_CAPS constants and some heuristic exceptions).',
+      params: [],
+    },
+    {
+      type: 'hardcoded_urls',
+      title: 'Hardcoded URLs',
+      description:
+        'AST semantic: blocks hardcoded http(s) URLs in string/template literals where the engine classifies them as static configuration.',
+      params: [],
+    },
+    {
+      type: 'no_hardcoded_secrets',
+      title: 'No hardcoded secrets',
+      description:
+        'AST semantic: blocks long string/template assignments to variables whose names suggest secrets (token, api_key, password, etc.), excluding URL-named fields and plain http URLs.',
+      params: [],
+    },
+    {
+      type: 'no_eval',
+      title: 'No eval',
+      description: 'AST semantic: blocks direct eval() calls.',
+      params: [],
+    },
+    {
+      type: 'no_unsafe_regex',
+      title: 'No unsafe regex',
+      description: 'AST semantic: blocks regex literals that match simple ReDoS-style nested quantifier heuristics.',
+      params: [],
+    },
+    {
+      type: 'no_sql_injection',
+      title: 'No SQL injection',
+      description:
+        'AST semantic: blocks SQL-looking template literals that interpolate expressions (possible string-built queries).',
+      params: [],
+    },
+    {
+      type: 'no_xss',
+      title: 'No XSS',
+      description:
+        'AST semantic: blocks dynamic assignment to innerHTML or dangerouslySetInnerHTML when the right-hand side is not a string literal.',
+      params: [],
+    },
+    {
+      type: 'architectural_integrity',
+      title: 'Architectural integrity',
+      description:
+        'Uses import edges from semantic facts and minimatch: flags imports that violate layer rules (default rules apply if you omit layer_rules).',
+      params: [
+        {
+          name: 'layer_rules',
+          type: 'object[]',
+          desc: 'Each: { from, to, allow, message } — globs for source file path and imported path; allow false blocks matching pairs.',
+        },
+      ],
+    },
+    {
+      type: 'data_privacy',
+      title: 'Data privacy',
+      description:
+        'AST semantic: flags PII-style variable names (SSN, email, card, phone, name patterns); stronger severity when values appear passed into logging calls.',
+      params: [],
+    },
+    {
+      type: 'institutional_style',
+      title: 'Institutional style',
+      description:
+        'Path-based naming: for each changed file matching a rule path glob, filename must end with the configured suffix (default style rules apply if style_rules is omitted).',
+      params: [
+        {
+          name: 'style_rules',
+          type: 'object[]',
+          desc: 'Each: { path, suffix, message } — minimatch path, required filename suffix, violation message.',
+        },
+      ],
     },
   ];
 

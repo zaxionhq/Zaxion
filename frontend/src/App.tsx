@@ -106,7 +106,7 @@ const App = () => (
                 {/* Documentation Ecosystem */}
                 <Route path="/docs" element={<DocsLayout />}>
                   <Route index element={<DocsGettingStarted />} />
-                  <Route path="getting-started" element={<DocsGettingStarted />} />
+                  <Route path="getting-started" element={<Navigate to="/docs" replace />} />
                   <Route path="quick-start" element={<DocsQuickStart />} />
                   <Route path="use-cases" element={<DocsUseCases />} />
                   <Route path="examples" element={<DocsExamples />} />

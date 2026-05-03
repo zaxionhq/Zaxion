@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { 
   BookOpen, 
   Shield, 
@@ -20,7 +21,6 @@ import {
   List, 
   Settings
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
@@ -28,12 +28,15 @@ const DocsLayout = () => {
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
+  const isDocsHub = location.pathname === '/docs';
+
   const menuGroups = useMemo(() => [
     {
       label: "Getting Started",
       items: [
+        { title: "Documentation home", path: "/docs", icon: BookOpen },
         { title: "Setup Guide", path: "/documentation", icon: Settings },
-        { title: "Introduction", path: "/docs/getting-started", icon: Info },
+        { title: "Product overview", path: "/docs/overview", icon: Info },
         { title: "Quick Start (5 min)", path: "/docs/quick-start", icon: Terminal },
         { title: "Use Cases", path: "/docs/use-cases", icon: CheckCircle2 },
         { title: "Examples", path: "/docs/examples", icon: Code2 },
@@ -244,7 +247,12 @@ const DocsLayout = () => {
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative bg-background">
         <ScrollArea className="h-full">
-          <div className="container max-w-3xl mx-auto px-12 py-16 relative z-10">
+          <div
+            className={cn(
+              'container mx-auto px-12 py-16 relative z-10',
+              isDocsHub ? 'max-w-5xl' : 'max-w-3xl'
+            )}
+          >
             <Outlet />
             
             <footer className="mt-32 pt-8 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">

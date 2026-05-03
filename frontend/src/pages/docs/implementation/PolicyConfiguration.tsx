@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, ArrowRight, FileCode, Settings } from 'lucide-react';
+import { ArrowRight, FileCode, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const DocsPolicyConfiguration = () => {
@@ -21,7 +21,7 @@ const DocsPolicyConfiguration = () => {
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Centralized Governance</h2>
         <div className="p-8 rounded border border-white/5 bg-white/[0.01] space-y-6">
           <p className="text-sm text-slate-400 leading-relaxed">
-            Zaxion policies are managed through the **Institutional Registry**. Instead of local configuration files, policies are distributed via a cryptographically signed control plane. This ensures that architectural standards are consistent across thousands of repositories without manual intervention.
+            Zaxion policies are managed in the <strong className="text-slate-200">Governance</strong> dashboard: a centralized registry so teams share versioned rules instead of scattering one-off config per repo. Scope can be org-wide or targeted to specific repos and branches where your deployment supports it.
           </p>
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -53,10 +53,31 @@ const DocsPolicyConfiguration = () => {
           </div>
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-tight">Simulation Testing</h3>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Before promoting a policy to **BLOCK**, use the Policy Simulator to calculate the blast radius and ensure institutional readiness.
+            Before promoting a policy to <strong className="text-slate-300">BLOCK</strong>, use the Policy Impact Simulator to estimate blast radius and catch false positives.
           </p>
         </div>
       </div>
+
+      <section className="space-y-4">
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Authoring rules</h2>
+        <p className="text-sm text-slate-400 leading-relaxed max-w-2xl">
+          Policies reference a <strong className="text-slate-200">rules_logic</strong> JSON object (one rule per object). Use the references below for shape, parameters, and copy-paste examples.
+        </p>
+        <ul className="text-sm space-y-2">
+          <li>
+            <Link to="/docs/examples" className="text-indigo-400 hover:text-indigo-300 font-medium underline">
+              Policy Rules (JSON) Reference
+            </Link>
+            <span className="text-slate-500"> — examples and capability levels</span>
+          </li>
+          <li>
+            <Link to="/docs/rules" className="text-indigo-400 hover:text-indigo-300 font-medium underline">
+              Rule types
+            </Link>
+            <span className="text-slate-500"> — parameters per engine checker</span>
+          </li>
+        </ul>
+      </section>
 
       <div className="pt-12 border-t border-white/5">
         <Link 
