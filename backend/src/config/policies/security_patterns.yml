@@ -154,9 +154,33 @@ policies:
       - name: "Deprecated Node API"
         regex: "(Buffer\\.from|util\\.isArray|util\\.isError)"
         context: "code"
+        include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
       - name: "Deprecated DOM API"
-        regex: "(innerHTML|eval|with\\s*\\()"
+        # DOM / browser sinks only — avoid eval/with (Python, etc.) and match web extensions only.
+        regex: "(\\.innerHTML\\b|dangerouslySetInnerHTML|document\\.write\\s*\\()"
         context: "code"
+        include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".html", ".htm"]
+        exclude_path_substrings:
+          - "/test/"
+          - "/tests/"
+          - "/__tests__/"
+          - ".test."
+          - ".spec."
+          - "/mock/"
+          - "e2e/"
+      - name: "Dangerous eval()"
+        # JavaScript-family only; Python eval() is out of scope for this regex rule.
+        regex: "\\beval\\s*\\("
+        context: "code"
+        include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte"]
+        exclude_path_substrings:
+          - "/test/"
+          - "/tests/"
+          - "/__tests__/"
+          - ".test."
+          - ".spec."
+          - "/mock/"
+          - "e2e/"
     remediation: "Use current APIs. Check documentation for recommended alternatives."
 
   no-console-logs-production:

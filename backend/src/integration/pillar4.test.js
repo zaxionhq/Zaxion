@@ -30,11 +30,11 @@ eval("stealData()");`;
     // 4. Scan for patterns directly with new engine
     const violations = engine.analyzeCode(fileContent, 'malicious.js');
 
-    // 5. Verify detection
-    // The new engine returns policy: 'no-deprecated-apis', pattern: 'Deprecated DOM API' for eval
+    // 5. Verify detection (JS-scoped "Dangerous eval()" pattern, not Python)
     const dangerousEval = violations.find(v => v.code.includes('eval'));
     expect(dangerousEval).toBeDefined();
     expect(dangerousEval.policy).toBe('no-deprecated-apis');
+    expect(dangerousEval.pattern).toBe('Dangerous eval()');
     
     // 6. Verify line number
     // Line 4 in file content corresponds to the added line

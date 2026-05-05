@@ -78,10 +78,49 @@ export class PatternMatcherService {
   }
 
   /**
+   * Whether this pattern should run for the given file path (extension + path exclusions).
+   * YAML: optional `include_extensions` [".js", ".ts"], `exclude_path_substrings` ["__tests__"].
+   * Policy-level keys apply when not set on the pattern.
+   */
+  _patternAppliesToFile(filePath, policy, pattern) {
+    const pathNorm = (filePath || '').replace(/\\/g, '/');
+    const lowerPath = pathNorm.toLowerCase();
+
+    const exclude =
+      pattern.exclude_path_substrings ||
+      policy.exclude_path_substrings ||
+      pattern.exclude_path_patterns ||
+      policy.exclude_path_patterns;
+    if (exclude && Array.isArray(exclude)) {
+      for (const sub of exclude) {
+        if (sub != null && String(sub).length > 0 && lowerPath.includes(String(sub).toLowerCase())) {
+          return false;
+        }
+      }
+    }
+
+    const include = pattern.include_extensions || policy.include_extensions;
+    if (include && Array.isArray(include) && include.length > 0) {
+      const extList = include.map((e) => {
+        const s = String(e).toLowerCase();
+        return s.startsWith('.') ? s : `.${s}`;
+      });
+      const matches = extList.some((ext) => lowerPath.endsWith(ext));
+      if (!matches) return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Match a single pattern against code
    */
   matchPattern(code, filePath, policyName, policy, pattern) {
     try {
+      if (!this._patternAppliesToFile(filePath, policy, pattern)) {
+        return;
+      }
+
       // Security: regex comes from trusted policy configuration
       // Exception handled in eslint.config.js for this service
       const regex = new RegExp(pattern.regex, 'gm');
