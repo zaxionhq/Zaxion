@@ -31,6 +31,12 @@ The **Resolution-First Doctrine** dictates that `decisionId` is the only immutab
 
 ## 🔄 System Flow Diagram
 
+**Text view** (if Mermaid does not render):
+
+```text
+GitHub PR → Zaxion backend → policy engine → decision → check run failed → user opens resolution → workspace → fix → PR updated
+```
+
 ```mermaid
 graph TD
     subgraph "GitHub (Enforcement)"
@@ -41,7 +47,7 @@ graph TD
     end
 
     subgraph "Zaxion (Resolution)"
-        E -->|Click 'Fix with Zaxion'| F[Landing Page / Resolution Deep Link]
+        E -->|Click Fix with Zaxion| F[Landing Page / Resolution Deep Link]
         F -->|/:decisionId| G[Resolution Workspace]
         G -->|Auto-fetch| H[Decision Facts + Repo Context]
         H -->|AI Labor| I[Generate/Edit Tests]
@@ -76,3 +82,35 @@ graph TD
 ## Rationale
 
 Phase 3 moves the product from "Advice" (Phase 1/2) to "Enforcement & Resolution" (Phase 3). By locking this architecture, we ensure that the AI is always framed as the "Laborer" that helps the developer pass the "Guard."
+
+---
+
+<!-- zaxion-doc-map-footer -->
+
+## Repository documentation map
+
+How this file fits in the Zaxion repo: see **[Zaxion repository documentation map](./ZAXION_REPOSITORY_DOC_MAP.md)** (`docs/ZAXION_REPOSITORY_DOC_MAP.md`) for folder roles and links to system architecture.
+
+**Text view** (works in any viewer):
+
+```text
+Zaxion/
+├── docs/                    ← phase specs, governance, doc map
+├── Incremental Architecture/ ← incremental plans, OPS-001
+├── frontend/                ← UI (and frontend/src/Docs)
+├── backend/                 ← API, policy engine, evaluation
+├── PITCH/                   ← pitch materials
+├── README.md                ← entry point
+└── docs/ZAXION_REPOSITORY_DOC_MAP.md  ← canonical doc index
+```
+
+**Diagram** (Mermaid — quoted labels for compatibility):
+
+```mermaid
+flowchart LR
+  root["Zaxion monorepo"]
+  map["docs/ZAXION_REPOSITORY_DOC_MAP"]
+  here["This markdown file"]
+  root --> map
+  map --> here
+```

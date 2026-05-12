@@ -29,6 +29,19 @@ describe('PolicyMapper', () => {
     expect(rules.min_coverage_ratio).toBe(0.8);
   });
 
+  test('should map OPS-001 to supply_chain_integrity with checks and block flag', () => {
+    const rules = mapCorePolicyToRules('OPS-001');
+    expect(rules.type).toBe('supply_chain_integrity');
+    expect(rules.id).toBe('OPS-001');
+    expect(rules.checks).toEqual([
+      'action_pinning',
+      'workflow_permissions',
+      'docker_digest_pinning',
+      'lockfile_presence',
+    ]);
+    expect(rules.block_on_privileged_deploy_risk).toBe(true);
+  });
+
   test('should return core_enforcement for unknown IDs', () => {
     const rules = mapCorePolicyToRules('UNKNOWN-001', 'WARN');
     expect(rules.type).toBe('core_enforcement');

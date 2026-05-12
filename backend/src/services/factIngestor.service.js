@@ -43,6 +43,10 @@ function shouldFetchContent(filePath) {
   if (isIgnored) {
     return false;
   }
+  const base = path.basename(filePath.replace(/\\/g, '/'));
+  if (/^Dockerfile(\.|$)/i.test(base)) {
+    return true;
+  }
   const ext = path.extname(filePath).toLowerCase();
   if (IGNORED_EXTENSIONS.has(ext)) return false;
   return VALID_EXTENSIONS.has(ext);

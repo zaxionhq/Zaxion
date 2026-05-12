@@ -5,6 +5,7 @@ import logger from '../logger.js';
 import { PatternMatcherService } from './patternMatcher.service.js';
 import { ComplexityMetricsService } from './complexityMetrics.service.js';
 import { DependencyScannerService } from './dependencyScanner.service.js';
+import { evaluateSupplyChainIntegrity } from '../utils/supplyChainIntegrity.js';
 
 /** Documentation base (production). */
 const DOCS_BASE = 'https://zaxion.dev/docs';
@@ -239,6 +240,20 @@ const RULE_REMEDIATIONS = new Map([
     },
     documentation_link: `${DOCS_BASE}/rules`,
   }],
+  ['supply_chain_integrity', {
+    explanation:
+      'CI/CD configuration can widen attack surface: mutable action refs, over-powered GitHub tokens, non-immutable container bases, or dependency manifests without lockfiles increase supply-chain and release risk.',
+    remediation: {
+      steps: [
+        'Pin third-party actions to full 40-character commit SHAs.',
+        'Declare minimal workflow permissions; avoid write-all and unnecessary write scopes on sensitive workflows.',
+        'Pin Docker base images with digest (@sha256:...).',
+        'Update and commit lockfiles whenever manifests change.',
+      ],
+      example: 'uses: actions/checkout@8b49600... # full SHA',
+    },
+    documentation_link: `${DOCS_BASE}/operations/supply-chain`,
+  }],
 ]);
 
 /** Security pattern definitions: { pattern: RegExp, message: string, severity: 'BLOCK'|'WARN' } */
@@ -290,6 +305,7 @@ export class EvaluationEngineService {
       ['architectural_integrity', this._checkArchitecturalIntegrity.bind(this)],
       ['data_privacy', this._checkDataPrivacy.bind(this)],
       ['institutional_style', this._checkInstitutionalStyle.bind(this)],
+      ['supply_chain_integrity', this._checkSupplyChainIntegrity.bind(this)],
     ]);
   }
 
@@ -651,6 +667,14 @@ export class EvaluationEngineService {
   }
 
   /**
+   * Checker: OPS-001 CI/CD supply chain integrity (workflows, Dockerfiles, lockfiles).
+   */
+  _checkSupplyChainIntegrity(facts, rules) {
+    const files = facts.changes?.files || [];
+    return evaluateSupplyChainIntegrity(files, rules);
+  }
+
+  /**
    * Wave 4: Requirements Detection
    * Determines if a set of policies requires file content or AST data for evaluation.
    */
@@ -665,7 +689,8 @@ export class EvaluationEngineService {
       if ([
         'security_patterns', 'code_quality', 'complexity_metrics', 
         'dependency_scan', 'reliability', 'hardcoded_urls',
-        'no_hardcoded_secrets', 'no_eval', 'no_unsafe_regex', 'no_sql_injection', 'no_xss'
+        'no_hardcoded_secrets', 'no_eval', 'no_unsafe_regex', 'no_sql_injection', 'no_xss',
+        'supply_chain_integrity'
       ].includes(type)) {
         requiresContent = true;
       }
@@ -689,6 +714,7 @@ export class EvaluationEngineService {
     ['no_eval', 102],
     ['no_unsafe_regex', 101],
     ['security_patterns', 100],
+    ['supply_chain_integrity', 88],
     ['api', 90],
     ['architecture', 80],
     ['testing_best_practices', 70],

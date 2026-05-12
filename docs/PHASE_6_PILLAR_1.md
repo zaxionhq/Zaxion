@@ -81,3 +81,35 @@ This is a read-only projection (The "Explanation Record") generated exclusively 
 ## **6. User Experience (UX) Goals**
 *   **Zero Ambiguity**: Instead of "Tests missing", show "Fact: `test_files_changed_count` is 0. Policy: `requires_tests` is TRUE."
 *   **Audit Readiness**: A "Download Evidence PDF" button that bundles the Snapshot, the Policy versions, and the Judge's signature.
+
+---
+
+<!-- zaxion-doc-map-footer -->
+
+## Repository documentation map
+
+How this file fits in the Zaxion repo: see **[Zaxion repository documentation map](./ZAXION_REPOSITORY_DOC_MAP.md)** (`docs/ZAXION_REPOSITORY_DOC_MAP.md`) for folder roles and links to system architecture.
+
+**Text view** (works in any viewer):
+
+```text
+Zaxion/
+├── docs/                    ← phase specs, governance, doc map
+├── Incremental Architecture/ ← incremental plans, OPS-001
+├── frontend/                ← UI (and frontend/src/Docs)
+├── backend/                 ← API, policy engine, evaluation
+├── PITCH/                   ← pitch materials
+├── README.md                ← entry point
+└── docs/ZAXION_REPOSITORY_DOC_MAP.md  ← canonical doc index
+```
+
+**Diagram** (Mermaid — quoted labels for compatibility):
+
+```mermaid
+flowchart LR
+  root["Zaxion monorepo"]
+  map["docs/ZAXION_REPOSITORY_DOC_MAP"]
+  here["This markdown file"]
+  root --> map
+  map --> here
+```

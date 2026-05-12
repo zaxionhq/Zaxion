@@ -39,6 +39,11 @@ export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
     'GOV-001': { type: 'pr_size', max_files: 20 },
     'GOV-002': { type: 'coverage', min_coverage_ratio: 0.8 },
     'GOV-003': { type: 'mandatory_review', min_approvals: 1 },
+    'OPS-001': {
+      type: 'supply_chain_integrity',
+      checks: ['action_pinning', 'workflow_permissions', 'docker_digest_pinning', 'lockfile_presence'],
+      block_on_privileged_deploy_risk: true,
+    },
   };
 
   if (!Object.prototype.hasOwnProperty.call(policyMap, policyId)) {

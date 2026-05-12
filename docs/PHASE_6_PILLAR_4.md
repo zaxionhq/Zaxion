@@ -47,3 +47,35 @@ Answer the question: **"Is our governance actually working?"** This pillar provi
 *   **Data-Driven Governance**: Decisions to tighten or loosen rules are based on real friction data, not "gut feelings."
 *   **Compliance Readiness**: The system can generate a "Governance Report" for auditors, showing that 100% of deviations were signed and justified.
 *   **Developer Satisfaction**: By identifying and fixing "High Friction" policies, the platform reduces developer toil.
+
+---
+
+<!-- zaxion-doc-map-footer -->
+
+## Repository documentation map
+
+How this file fits in the Zaxion repo: see **[Zaxion repository documentation map](./ZAXION_REPOSITORY_DOC_MAP.md)** (`docs/ZAXION_REPOSITORY_DOC_MAP.md`) for folder roles and links to system architecture.
+
+**Text view** (works in any viewer):
+
+```text
+Zaxion/
+├── docs/                    ← phase specs, governance, doc map
+├── Incremental Architecture/ ← incremental plans, OPS-001
+├── frontend/                ← UI (and frontend/src/Docs)
+├── backend/                 ← API, policy engine, evaluation
+├── PITCH/                   ← pitch materials
+├── README.md                ← entry point
+└── docs/ZAXION_REPOSITORY_DOC_MAP.md  ← canonical doc index
+```
+
+**Diagram** (Mermaid — quoted labels for compatibility):
+
+```mermaid
+flowchart LR
+  root["Zaxion monorepo"]
+  map["docs/ZAXION_REPOSITORY_DOC_MAP"]
+  here["This markdown file"]
+  root --> map
+  map --> here
+```

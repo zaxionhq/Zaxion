@@ -42,3 +42,35 @@ This document outlines the roadmap for achieving **Claude Code** and **OpenAI Co
 - **Phase 8.2**: Taint Analysis and Data-Flow Tracking for Security Policies.
 - **Phase 8.3**: Vector Style Embedding for Pattern Recognition.
 - **Phase 8.4**: Automated Patch Generation Engine.
+
+---
+
+<!-- zaxion-doc-map-footer -->
+
+## Repository documentation map
+
+How this file fits in the Zaxion repo: see **[Zaxion repository documentation map](./docs/ZAXION_REPOSITORY_DOC_MAP.md)** (`docs/ZAXION_REPOSITORY_DOC_MAP.md`) for folder roles and links to system architecture.
+
+**Text view** (works in any viewer):
+
+```text
+Zaxion/
+├── docs/                    ← phase specs, governance, doc map
+├── Incremental Architecture/ ← incremental plans, OPS-001
+├── frontend/                ← UI (and frontend/src/Docs)
+├── backend/                 ← API, policy engine, evaluation
+├── PITCH/                   ← pitch materials
+├── README.md                ← entry point
+└── docs/ZAXION_REPOSITORY_DOC_MAP.md  ← canonical doc index
+```
+
+**Diagram** (Mermaid — quoted labels for compatibility):
+
+```mermaid
+flowchart LR
+  root["Zaxion monorepo"]
+  map["docs/ZAXION_REPOSITORY_DOC_MAP"]
+  here["This markdown file"]
+  root --> map
+  map --> here
+```

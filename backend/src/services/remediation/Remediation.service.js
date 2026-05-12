@@ -21,7 +21,17 @@ export class RemediationService {
           'Run npm audit to verify safety.'
         ],
         docs: '/docs/remediation/dependencies'
-      })
+      }),
+      'OPS-001': () => ({
+        title: 'CI/CD Supply Chain Hardening',
+        steps: [
+          'Pin GitHub Actions to immutable commit SHAs.',
+          'Narrow workflow permissions to the minimum required scopes.',
+          'Pin Docker base images with digest (@sha256:...).',
+          'Commit lockfile updates when dependency manifests change.',
+        ],
+        docs: '/docs/remediation/supply-chain',
+      }),
     };
   }
 

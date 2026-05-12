@@ -5,6 +5,8 @@
 
 **Zaxion** is an AI-native governance platform that transforms passive engineering documentation into active code guardrails. By combining **Deep Semantic AST Analysis** with **LLM-Native Architectural Reasoning**, Zaxion ensures that every Pull Request aligns with your organization's non-negotiable architectural, security, and stylistic standards at the level of a Staff Engineer.
 
+**Documentation index:** [docs/ZAXION_REPOSITORY_DOC_MAP.md](docs/ZAXION_REPOSITORY_DOC_MAP.md) explains how markdown across the repo fits together (includes text fallbacks if Mermaid does not render).
+
 ---
 
 ## ⚙️ What is Zaxion?
@@ -76,3 +78,35 @@ Zaxion will now automatically listen for every Pull Request event in your select
 ---
 
 *Zaxion: Turning engineering standards into the infrastructure that powers your code.*
+
+---
+
+<!-- zaxion-doc-map-footer -->
+
+## Repository documentation map
+
+How this file fits in the Zaxion repo: see **[Zaxion repository documentation map](./docs/ZAXION_REPOSITORY_DOC_MAP.md)** (`docs/ZAXION_REPOSITORY_DOC_MAP.md`) for folder roles and links to system architecture.
+
+**Text view** (works in any viewer):
+
+```text
+Zaxion/
+├── docs/                    ← phase specs, governance, doc map
+├── Incremental Architecture/ ← incremental plans, OPS-001
+├── frontend/                ← UI (and frontend/src/Docs)
+├── backend/                 ← API, policy engine, evaluation
+├── PITCH/                   ← pitch materials
+├── README.md                ← entry point
+└── docs/ZAXION_REPOSITORY_DOC_MAP.md  ← canonical doc index
+```
+
+**Diagram** (Mermaid — quoted labels for compatibility):
+
+```mermaid
+flowchart LR
+  root["Zaxion monorepo"]
+  map["docs/ZAXION_REPOSITORY_DOC_MAP"]
+  here["This markdown file"]
+  root --> map
+  map --> here
+```

@@ -4,6 +4,7 @@
  */
 import * as logger from "../utils/logger.js";
 import { CORE_POLICIES } from "../policies/corePolicies.js";
+import { mapCorePolicyToRules } from "../utils/policyMapper.js";
 import { PolicyConfigurationService } from "./policyConfiguration.service.js";
 import { EvaluationEngineService } from "./evaluationEngine.service.js";
 
@@ -73,55 +74,16 @@ export class PolicyEngineService {
          continue;
        }
 
-       // Map Core Policy to the dynamic policy format
-       const policyMap = {
-         'SEC-001': 'no_hardcoded_secrets',
-         'SEC-002': 'no_sql_injection',
-         'SEC-003': 'no_xss',
-         'SEC-004': 'dependency_scan',
-         'SEC-005': 'no_eval',
-         'SEC-006': 'no_unsafe_regex',
-         'SEC-007': 'no_hardcoded_secrets', // Encryption at Rest often involves secrets
-         'SEC-008': 'no_hardcoded_secrets', // Encryption in Transit often involves secrets
-         'REL-001': 'reliability',
-         'REL-002': 'reliability',
-         'REL-003': 'reliability',
-         'REL-004': 'reliability',
-         'REL-005': 'reliability',
-         'ARC-001': 'architectural_integrity',
-         'ARC-002': 'architecture',
-         'ARC-003': 'api',
-         'ARC-004': 'architecture',
-         'COD-001': 'complexity_metrics',
-         'COD-002': 'code_quality',
-         'COD-003': 'institutional_style',
-         'COD-004': 'documentation',
-         'COD-005': 'code_quality',
-         'TST-001': 'coverage',
-         'TST-002': 'testing_best_practices',
-         'TST-003': 'testing_best_practices',
-         'TST-004': 'performance',
-         'PRF-001': 'performance',
-         'PRF-002': 'performance',
-         'PRF-003': 'performance',
-         'PRF-004': 'performance',
-         'GOV-001': 'pr_size',
-         'GOV-002': 'coverage',
-       };
-
-       const policyType = policyMap[corePolicy.id] || 'core_enforcement';
+       // Map Core Policy to the dynamic policy format (single source of truth with simulation / PR URL analysis)
+       const rules = mapCorePolicyToRules(corePolicy.id, corePolicy.severity);
 
        appliedPolicies.push({
          policy_id: corePolicy.id,
          policy_version_id: `core-${corePolicy.id}-v1`,
          level: corePolicy.severity === 'CRITICAL' ? 'MANDATORY' : 'ADVISORY',
          rules_logic: {
-           type: policyType,
-           id: corePolicy.id,
+           ...rules,
            severity: corePolicy.severity,
-           // For pr_size and coverage, we need to pass the actual thresholds
-           ...(corePolicy.id === 'GOV-001' && { max_files: 20 }),
-           ...(corePolicy.id === 'GOV-002' && { min_coverage_ratio: 0.8 }),
          }
        });
     }

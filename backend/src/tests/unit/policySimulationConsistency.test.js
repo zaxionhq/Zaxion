@@ -128,4 +128,41 @@ describe('PolicySimulationService Consistency Test', () => {
     expect(result.results.summary.policy_would_block).toBe(true);
     expect(result.results.per_pr_results[0].verdict).toBe('BLOCK');
   });
+
+  it('OPS-001 core policy maps to supply_chain_integrity and evaluates deploy workflow snapshot', async () => {
+    const workflow = `name: deploy-prod
+on:
+  push:
+    branches: [main]
+permissions: write-all
+jobs:
+  ship:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+`;
+    const payload = {
+      policy_id: 'OPS-001',
+      sample_strategy: 'TIME_BASED',
+      sample_size: 1,
+      is_sandbox: true,
+    };
+
+    service._collectSnapshots = jest.fn().mockResolvedValue([
+      {
+        id: 'snapshot-ops',
+        pr_number: 99,
+        repo_full_name: 'owner/repo',
+        data: {
+          changes: {
+            files: [{ path: '.github/workflows/deploy-prod.yml', content: workflow }],
+          },
+        },
+      },
+    ]);
+
+    const result = await service.runSimulation(payload);
+    expect(result.results.summary.policy_would_block).toBe(true);
+    expect(result.results.per_pr_results[0].verdict).toBe('BLOCK');
+  });
 });

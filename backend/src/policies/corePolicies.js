@@ -334,5 +334,23 @@ export const CORE_POLICIES = [
       steps: ['Use async/await.', 'Offload CPU-intensive tasks.', 'Use worker threads.'],
       docs: 'https://zaxion.dev/docs/performance/blocking'
     }
-  }
+  },
+  // OPERATIONS
+  {
+    id: 'OPS-001',
+    name: 'CI/CD Supply Chain Integrity',
+    description:
+      'Detects risky delivery pipeline patterns: unpinned GitHub Actions, overly broad workflow permissions, container base images without digest pinning, and dependency manifest changes without a matching lockfile update.',
+    severity: 'HIGH',
+    category: 'Operations',
+    remediation: {
+      steps: [
+        'Pin third-party GitHub Actions to full commit SHAs (or an approved internal pinning policy).',
+        'Set explicit minimal permissions on workflows; avoid write-all and unnecessary contents: write on deploy paths.',
+        'Pin production container base images to digests (@sha256:...).',
+        'Commit lockfile updates whenever you change package or dependency manifests.',
+      ],
+      docs: 'https://zaxion.dev/docs/operations/supply-chain',
+    },
+  },
 ];
