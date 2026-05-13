@@ -133,6 +133,7 @@ export class FactIngestorService {
           additions: f.additions,
           deletions: f.deletions,
           is_test_file: false, // Initial value
+          ...(typeof f.patch === 'string' && f.patch.length > 0 ? { patch: f.patch } : {}),
         };
         const canFetch = shouldFetchContent(f.filename);
         if (opts.fetchContent && canFetch && f.raw_url) {
@@ -344,6 +345,9 @@ export class FactIngestorService {
         const { data: filesData } = await this._fetchPRFiles(repoFullName, prNumber);
         for (const f of files) {
           const matchingFile = filesData.find(fd => fd.filename === f.path);
+          if (matchingFile && typeof matchingFile.patch === 'string' && matchingFile.patch.length > 0 && !f.patch) {
+            f.patch = matchingFile.patch;
+          }
           if (matchingFile && matchingFile.raw_url && shouldFetchContent(f.path)) {
             try {
               const content = await this._fetchFileContent(matchingFile.raw_url);

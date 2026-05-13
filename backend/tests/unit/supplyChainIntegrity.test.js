@@ -8,6 +8,7 @@ import {
   findDockerFromWithoutDigest,
   checkLockfileHygiene,
   isPrivilegedWorkflow,
+  packageJsonDependencyTouchedInPatch,
 } from '../../src/utils/supplyChainIntegrity.js';
 
 describe('supplyChainIntegrity helpers', () => {
@@ -46,6 +47,54 @@ describe('supplyChainIntegrity helpers', () => {
     const files = [{ path: 'package.json', status: 'modified' }];
     const pathSet = new Set(['package.json', 'package-lock.json']);
     expect(checkLockfileHygiene(files, pathSet)).toHaveLength(0);
+  });
+
+  it('checkLockfileHygiene skips package.json when only scripts change (patch)', () => {
+    const patch = `@@ -10,6 +10,8 @@
+       "format": "prettier --write .",
++      "test": "node --test $(find docs/scripts -name '*.test.js' -print)",
++      "test:coverage": "node --test --experimental-test-coverage $(find docs/scripts -name '*.test.js' -print)",
+       "verify": "npm run format"
+`;
+    const files = [{ path: 'package.json', status: 'modified', patch }];
+    const pathSet = new Set(['package.json']);
+    expect(checkLockfileHygiene(files, pathSet)).toHaveLength(0);
+  });
+
+  it('checkLockfileHygiene warns package.json when dependency version changes in patch', () => {
+    const patch = `@@ -20,7 +20,7 @@
+   "dependencies": {
+-    "lodash": "^4.17.20"
++    "lodash": "^4.17.21"
+   }
+`;
+    const files = [{ path: 'package.json', status: 'modified', patch }];
+    const pathSet = new Set(['package.json']);
+    const v = checkLockfileHygiene(files, pathSet);
+    expect(v.length).toBe(1);
+    expect(v[0].severity).toBe('WARN');
+  });
+
+  it('checkLockfileHygiene skips package.json when content present but no patch (cannot prove dep churn)', () => {
+    const files = [
+      {
+        path: 'package.json',
+        status: 'modified',
+        content: '{"scripts":{"test":"node --test"},"dependencies":{"x":"1.0.0"}}',
+      },
+    ];
+    const pathSet = new Set(['package.json']);
+    expect(checkLockfileHygiene(files, pathSet)).toHaveLength(0);
+  });
+
+  it('packageJsonDependencyTouchedInPatch detects devDependencies block', () => {
+    const patch = '+  "devDependencies": {\n+    "vitest": "^1.0.0"\n+  }';
+    expect(packageJsonDependencyTouchedInPatch(patch)).toBe(true);
+  });
+
+  it('packageJsonDependencyTouchedInPatch is false for scripts-only diff', () => {
+    const patch = '+    "test": "node --test $(find . -name \'*.js\' -print)"';
+    expect(packageJsonDependencyTouchedInPatch(patch)).toBe(false);
   });
 
   it('isPrivilegedWorkflow detects deploy in path', () => {

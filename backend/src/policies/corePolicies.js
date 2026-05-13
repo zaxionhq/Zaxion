@@ -340,7 +340,7 @@ export const CORE_POLICIES = [
     id: 'OPS-001',
     name: 'CI/CD Supply Chain Integrity',
     description:
-      'Detects risky delivery pipeline patterns: unpinned GitHub Actions, overly broad workflow permissions, container base images without digest pinning, and dependency manifest changes without a matching lockfile update.',
+      'Detects risky delivery pipeline patterns: unpinned GitHub Actions, overly broad workflow permissions, container base images without digest pinning, and dependency-related manifest edits without a matching lockfile update in the same change set.',
     severity: 'HIGH',
     category: 'Operations',
     remediation: {
@@ -348,7 +348,7 @@ export const CORE_POLICIES = [
         'Pin third-party GitHub Actions to full commit SHAs (or an approved internal pinning policy).',
         'Set explicit minimal permissions on workflows; avoid write-all and unnecessary contents: write on deploy paths.',
         'Pin production container base images to digests (@sha256:...).',
-        'Commit lockfile updates whenever you change package or dependency manifests.',
+        'Commit lockfile updates when you add, remove, or bump dependencies (or change other resolution inputs such as overrides); script-only package.json edits do not require a lockfile in the PR.',
       ],
       docs: 'https://zaxion.dev/docs/operations/supply-chain',
     },

@@ -191,8 +191,111 @@ function pnpmWorkspaceLockPresent(pathSet) {
   return false;
 }
 
+/** Top-level package.json keys that are not dependency resolution inputs for lockfile sync. */
+const PACKAGE_JSON_NON_DEP_TOP_KEYS = new Set([
+  'name',
+  'version',
+  'private',
+  'description',
+  'keywords',
+  'homepage',
+  'bugs',
+  'license',
+  'author',
+  'contributors',
+  'maintainers',
+  'funding',
+  'repository',
+  'type',
+  'main',
+  'module',
+  'browser',
+  'bin',
+  'man',
+  'directories',
+  'files',
+  'exports',
+  'imports',
+  'types',
+  'typings',
+  'scripts',
+  'config',
+  'engines',
+  'os',
+  'cpu',
+  'preferGlobal',
+  'publishConfig',
+  'eslintConfig',
+  'jest',
+  'prettier',
+  'stylelint',
+  'lint-staged',
+  'browserslist',
+]);
+
 /**
- * @param {Array<{ path: string, status?: string }>} files
+ * True when unified diff lines suggest dependencies / lock-relevant manifest fields changed.
+ * Used to avoid OPS-001 false positives when only `scripts` or other non-dep keys change.
+ * @param {string} patch
+ * @returns {boolean}
+ */
+export function packageJsonDependencyTouchedInPatch(patch) {
+  if (!patch || typeof patch !== 'string') return false;
+  const topDepField = /^\s*[+-]\s*"(dependencies|devDependencies|peerDependencies|optionalDependencies|overrides|resolutions|packageManager|bundledDependencies)"\s*:/;
+  const stringFieldLine = /^\s*[+-]\s*"(@?[^"]+)"\s*:\s*"((?:\\.|[^"\\])*)"\s*,?\s*$/;
+
+  for (const rawLine of patch.split('\n')) {
+    const line = rawLine.replace(/\r$/, '');
+    if (!/^\s*[+-]/.test(line) || /^\s*[+-]{3}/.test(line)) continue;
+    if (topDepField.test(line)) return true;
+
+    const m = line.match(stringFieldLine);
+    if (!m) continue;
+    const key = m[1];
+    const value = m[2];
+    if (PACKAGE_JSON_NON_DEP_TOP_KEYS.has(key)) continue;
+    if (valueLooksLikeShellScript(value)) continue;
+    if (valueLooksLikeDependencySpec(value)) return true;
+  }
+  return false;
+}
+
+function valueLooksLikeShellScript(val) {
+  return (
+    /\$\(|`/.test(val) ||
+    /\b(find|grep|xargs|awk|sed)\b/.test(val) ||
+    /&&|\|\||;\s*(npm|yarn|pnpm|node)\b/.test(val) ||
+    /^\s*(npm|yarn|pnpm|node|bash|sh)\s/i.test(val)
+  );
+}
+
+function valueLooksLikeDependencySpec(val) {
+  if (/^(file:|workspace:|link:|git\+|github:|https?:)/i.test(val)) return true;
+  if (/^(latest|\*)$/i.test(val)) return true;
+  if (/^(\^|~|>=|>|<=|<)?\d+\.\d+/i.test(val)) return true;
+  if (/^[\^~]?\d+\.x(\.\d+)?$/i.test(val)) return true;
+  return false;
+}
+
+/**
+ * For package.json: should we require a lockfile in this PR when none is listed?
+ * - With GitHub patch: only when dependency-related lines changed.
+ * - With content but no patch (legacy snapshots): skip — cannot distinguish scripts-only edits.
+ * - With neither patch nor content: keep strict behavior.
+ */
+function packageJsonRequiresLockfileInChangeSet(f) {
+  const patch = typeof f.patch === 'string' ? f.patch : '';
+  if (patch.length > 0) {
+    return packageJsonDependencyTouchedInPatch(patch);
+  }
+  if (typeof f.content === 'string' && f.content.length > 0) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @param {Array<{ path: string, status?: string, patch?: string, content?: string }>} files
  * @param {Set<string>} pathSet
  * @returns {Array<{ file: string, message: string, severity: string }>}
  */
@@ -217,6 +320,9 @@ export function checkLockfileHygiene(files, pathSet) {
 
     for (const rule of MANIFEST_RULES) {
       if (!rule.manifest.test(fp)) continue;
+      if (/(^|\/)package\.json$/i.test(fp) && !packageJsonRequiresLockfileInChangeSet(f)) {
+        break;
+      }
       const dir = path.posix.dirname(fp);
       const candidates = rule.locks.map((lockName) =>
         dir === '.' ? lockName : `${dir}/${lockName}`
