@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import path from 'path';
 import { minimatch } from 'minimatch';
 import { buildImportGraph, findCircularDependencies } from './astAnalyzer.service.js';
 import logger from '../logger.js';
@@ -255,6 +256,26 @@ const RULE_REMEDIATIONS = new Map([
     documentation_link: `${DOCS_BASE}/operations/supply-chain`,
   }],
 ]);
+
+/**
+ * Extensions where async/await error handling is expressed with try/catch or .catch().
+ * Rust (.await), Python (await in asyncio), C#, etc. use different models — do not apply this heuristic there.
+ */
+const JS_TS_ASYNC_AWAIT_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
+
+function fileExtensionForPolicyScan(file) {
+  let ext = String(file?.extension ?? '').toLowerCase();
+  if (ext) {
+    if (!ext.startsWith('.')) ext = `.${ext}`;
+  } else {
+    ext = path.extname(String(file?.path || file?.filePath || '')).toLowerCase();
+  }
+  return ext;
+}
+
+function isJavaScriptLikeAsyncAwaitFile(file) {
+  return JS_TS_ASYNC_AWAIT_EXTENSIONS.has(fileExtensionForPolicyScan(file));
+}
 
 /** Security pattern definitions: { pattern: RegExp, message: string, severity: 'BLOCK'|'WARN' } */
 const SECURITY_PATTERNS = [
@@ -1496,15 +1517,18 @@ export class EvaluationEngineService {
   _checkReliability(facts, rules) {
     const files = facts.changes?.files || [];
     const singleContent = facts.file_content;
-    const toScan = files.filter(f => f.content).length ? files : singleContent ? [{ path: 'file', content: singleContent }] : [];
+    const toScan = files.filter(f => f.content).length
+      ? files
+      : singleContent ? [{ path: facts.file_path || 'file', content: singleContent }] : [];
     const violations = [];
-    const isTestFile = (path = '') => path.includes('.test.') || path.includes('.spec.') || path.includes('/tests/') || path.includes('\\tests\\');
+    const isTestFile = (p = '') => p.includes('.test.') || p.includes('.spec.') || p.includes('/tests/') || p.includes('\\tests\\');
     for (const file of toScan) {
+      if (!isJavaScriptLikeAsyncAwaitFile(file)) continue;
       const content = typeof file.content === 'string' ? file.content : '';
-      const path = file.path || file.filePath || 'file';
-      if (isTestFile(path)) continue;
+      const filePath = file.path || file.filePath || 'file';
+      if (isTestFile(filePath)) continue;
       if (/await\s+[^;]+(?!\s*catch)/m.test(content) && !/try\s*\{[\s\S]*await/m.test(content) && !/\.catch\s*\(/m.test(content)) {
-        if (/await\s+/m.test(content)) violations.push({ file: path, message: 'await without try/catch or .catch' });
+        if (/await\s+/m.test(content)) violations.push({ file: filePath, message: 'await without try/catch or .catch' });
       }
     }
     if (violations.length === 0) return { verdict: 'PASS', message: 'Async code appears to have error handling.' };

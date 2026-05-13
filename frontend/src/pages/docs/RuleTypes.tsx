@@ -92,7 +92,7 @@ const DocsRuleTypes = () => {
       type: 'reliability',
       title: 'Reliability',
       description:
-        'Heuristic scan of source (non-test) files for await without try/catch, enclosing try with await, or .catch. Warns when patterns suggest missing error handling.',
+        'Heuristic scan of JavaScript/TypeScript source (non-test) for await without try/catch, enclosing try with await, or .catch. Other languages (e.g. Rust .await) are skipped.',
       params: [],
     },
     {

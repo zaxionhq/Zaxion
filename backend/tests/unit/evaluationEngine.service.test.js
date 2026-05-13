@@ -128,5 +128,52 @@ describe('EvaluationEngineService', () => {
       expect(outcome.result).toBe('WARN');
       expect(outcome.violated_policies[0].actual).toBe('5');
     });
+
+    test('Reliability: does not flag Rust .await as missing JS try/catch', () => {
+      const facts = {
+        id: 'fact-rust',
+        evaluation_mode: 'BEST_EFFORT',
+        data: {
+          changes: {
+            files: [
+              {
+                path: 'src/openhuman/socket/ws_loop.rs',
+                extension: '.rs',
+                content: 'async fn run() {\n    let _ = connection.await;\n}\n',
+              },
+            ],
+          },
+        },
+      };
+      const policies = [
+        { policy_version_id: 'v-rel', level: 'ADVISORY', rules_logic: { type: 'reliability' } },
+      ];
+      const outcome = engine.evaluate(facts, policies);
+      expect(outcome.result).toBe('PASS');
+    });
+
+    test('Reliability: flags bare await in non-test TypeScript', () => {
+      const facts = {
+        id: 'fact-ts',
+        evaluation_mode: 'BEST_EFFORT',
+        data: {
+          changes: {
+            files: [
+              {
+                path: 'src/api.ts',
+                extension: '.ts',
+                content: 'export async function load() {\n  return await fetch("/x").json();\n}\n',
+              },
+            ],
+          },
+        },
+      };
+      const policies = [
+        { policy_version_id: 'v-rel', level: 'ADVISORY', rules_logic: { type: 'reliability' } },
+      ];
+      const outcome = engine.evaluate(facts, policies);
+      expect(outcome.result).toBe('WARN');
+      expect(outcome.violated_policies.some((v) => v.rule_id === 'reliability')).toBe(true);
+    });
   });
 });
