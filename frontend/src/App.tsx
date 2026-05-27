@@ -8,6 +8,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import React, { Suspense, lazy } from 'react';
 import { Loader2 } from "lucide-react";
 import { Analytics } from "@vercel/analytics/react";
+import { SessionProvider } from "@/contexts/SessionContext";
+import { CinematicBackground } from "@/components/layout/CinematicBackground";
 
 // Lazy Load Pages for Performance
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -20,6 +22,7 @@ const GovernanceSettings = lazy(() => import("./pages/GovernanceSettings"));
 const GovernancePolicyLibrary = lazy(() => import("./pages/GovernancePolicyLibrary"));
 const GovernanceCorePolicies = lazy(() => import("./pages/GovernanceCorePolicies"));
 const FounderConsole = lazy(() => import("./pages/FounderConsole"));
+const ReportSharePage = lazy(() => import("./pages/ReportSharePage"));
 
 // Documentation Pages Lazy Load
 const DocsLayout = lazy(() => import("./components/docs/DocsLayout"));
@@ -67,14 +70,22 @@ const WorkspaceRedirect = () => {
   return <Navigate to="/" replace />;
 };
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
+      <SessionProvider>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
+        defaultTheme="dark"
         enableSystem
         disableTransitionOnChange
       >
@@ -83,6 +94,8 @@ const App = () => (
           <Sonner />
           <Analytics />
           <BrowserRouter>
+            <CinematicBackground />
+            <div className="relative z-[2] min-h-screen">
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
@@ -97,6 +110,7 @@ const App = () => (
                 <Route path="/governance/core-policies" element={<GovernanceCorePolicies />} />
                 <Route path="/governance/settings" element={<GovernanceSettings />} />
                 <Route path="/admin/founder-console" element={<FounderConsole />} />
+                <Route path="/reports/:token" element={<ReportSharePage />} />
                 
                 {/* Comprehensive Setup Guide (Global Access) */}
                 <Route path="/documentation" element={<DocsLayout />}>
@@ -133,9 +147,11 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </div>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
+      </SessionProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

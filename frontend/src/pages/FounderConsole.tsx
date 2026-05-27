@@ -14,9 +14,11 @@ import {
   ArrowRight,
   Camera,
   Copy,
+  Link2,
   Terminal,
   X
 } from 'lucide-react';
+import { createShareableReportLink } from '@/lib/shareReport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +57,7 @@ const FounderConsole = () => {
   const [loadingPolicies, setLoadingPolicies] = useState(true);
   const [isCaptureMode, setIsCaptureMode] = useState(false);
   const [viewMode, setViewMode] = useState<'INTERACTIVE' | 'SOCIAL'>('INTERACTIVE');
+  const [sharing, setSharing] = useState(false);
 
   // Identity Gating
   useEffect(() => {
@@ -131,6 +134,29 @@ const FounderConsole = () => {
       toast.error(error.message || "Bulk analysis failed.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleShareLink = async () => {
+    if (!results) return;
+    setSharing(true);
+    try {
+      const url = await createShareableReportLink({
+        type: 'founder_audit',
+        payload: results,
+        meta: {
+          owner: results.owner,
+          repo: results.repo,
+          totalAnalyzed: results.totalAnalyzed,
+        },
+      });
+      await navigator.clipboard.writeText(url);
+      toast.success('Share link copied — anyone with the link can view this report.');
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error.message || 'Failed to create share link');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -533,6 +559,16 @@ const FounderConsole = () => {
                         <Copy className="h-4 w-4" />
                         Copy Post
                       </Button>
+
+                      <Button
+                        onClick={handleShareLink}
+                        disabled={sharing}
+                        variant="outline"
+                        className="h-full border-border hover:bg-muted/30 font-bold uppercase tracking-wider text-xs gap-2 rounded-2xl col-span-2 md:col-span-4"
+                      >
+                        {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                        Copy Share Link
+                      </Button>
                     </div>
 
                     <div className="py-2">
@@ -540,7 +576,21 @@ const FounderConsole = () => {
                     </div>
                   </div>
                 ) : (
-                  <InteractiveAuditReport data={results} />
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleShareLink}
+                        disabled={sharing}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                        Copy Share Link
+                      </Button>
+                    </div>
+                    <InteractiveAuditReport data={results} />
+                  </div>
                 )}
               </div>
             )}

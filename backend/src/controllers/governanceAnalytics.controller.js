@@ -11,7 +11,11 @@ export default function analyticsControllerFactory(db) {
   async function getExecutiveSummary(req, res, next) {
     try {
       const days = req.query.days ? parseInt(req.query.days, 10) : undefined;
-      const summary = await analyticsService.getExecutiveSummary(db, days ? { days } : {});
+      const includeHotspots = req.query.include_hotspots === 'true' || req.query.include_hotspots === '1';
+      const summary = await analyticsService.getExecutiveSummary(db, {
+        ...(days ? { days } : {}),
+        includeHotspots,
+      });
       res.json(summary);
     } catch (error) {
       next(error);

@@ -1,6 +1,27 @@
 import { Op } from 'sequelize';
 import logger from '../logger.js';
 
+const summaryCache = new Map();
+const SUMMARY_CACHE_TTL_MS = 60_000;
+
+function cacheKey(opts) {
+  return `summary:${opts.days ?? 'all'}:${opts.includeHotspots ? 'hot' : 'quick'}`;
+}
+
+function getCached(key) {
+  const entry = summaryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > SUMMARY_CACHE_TTL_MS) {
+    summaryCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCached(key, data) {
+  summaryCache.set(key, { at: Date.now(), data });
+}
+
 /**
  * Phase 6 Pillar 4: Governance Analytics & Trust Signals
  * Provides executive-level visibility into the governance lifecycle.
@@ -68,7 +89,11 @@ export async function getRepoMetrics(db, repoFullName) {
  */
 export async function getExecutiveSummary(db, opts = {}) {
   try {
-    const { days } = opts;
+    const { days, includeHotspots = false } = opts;
+    const key = cacheKey({ days, includeHotspots });
+    const cached = getCached(key);
+    if (cached) return cached;
+
     const decisionWhere = {};
     if (days && days > 0) {
       const since = new Date();
@@ -77,14 +102,15 @@ export async function getExecutiveSummary(db, opts = {}) {
     }
 
     const totalDecisions = await db.Decision.count({ where: decisionWhere });
-    const totalOverrides = await db.Override.count(); // could be filtered by decision date if needed
+    const totalOverrides = await db.Override.count();
     const totalBlocks = await db.Decision.count({ where: { result: 'BLOCK', ...decisionWhere } });
     const totalPolicies = await db.Policy.count({ where: { deleted_at: null } });
 
     const globalTrustScore = totalDecisions > 0 ? 1 - (totalOverrides / totalDecisions) : 1.0;
 
-    // Hotspot Map: Repos with most violations (BLOCK result)
-    const hotspots = await db.Decision.findAll({
+    let hotspots = [];
+    if (includeHotspots) {
+    hotspots = await db.Decision.findAll({
       attributes: [
         [db.sequelize.col('factSnapshot.repo_full_name'), 'repo'],
         [db.sequelize.fn('COUNT', db.sequelize.col('Decision.id')), 'count'],
@@ -115,19 +141,22 @@ export async function getExecutiveSummary(db, opts = {}) {
       limit: 5,
       raw: true
     });
+    }
 
-    return {
+    const result = {
       trustScore: parseFloat(globalTrustScore.toFixed(2)),
       bypassVelocity: totalDecisions > 0 ? parseFloat((totalOverrides / totalDecisions).toFixed(2)) : 0,
-      frictionIndex: 0, // Placeholder for global friction
+      frictionIndex: 0,
       totalDecisions,
       totalBlocks,
       totalOverrides,
       totalPolicies,
       hotspots,
-      alerts: await _checkAlertingThresholds(db),
+      alerts: includeHotspots ? await _checkAlertingThresholds(db) : [],
       timestamp: new Date().toISOString()
     };
+    setCached(key, result);
+    return result;
   } catch (error) {
     logger.error({ error }, "Analytics: Failed to fetch executive summary");
     throw error;

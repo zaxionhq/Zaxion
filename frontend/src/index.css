@@ -10,32 +10,36 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 9%;
+    --zaxion-bg-top: 0 0% 0%;
+    --zaxion-bg-bottom: 186 45% 6%;
+    --zaxion-surface: 186 30% 8%;
+
+    --background: 186 35% 5%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 10%;
+    --card: 186 28% 8%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 10%;
+    --popover: 186 28% 8%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 147 62% 53%;
     --primary-foreground: 0 0% 6%;
 
-    --secondary: 0 0% 9%;
+    --secondary: 186 25% 7%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 11%;
-    --muted-foreground: 0 0% 62%;
+    --muted: 186 20% 10%;
+    --muted-foreground: 186 8% 58%;
 
-    --accent: 0 0% 11%;
+    --accent: 186 22% 11%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 22%;
+    --border: 186 18% 14%;
+    --input: 186 18% 16%;
     --ring: 147 62% 53%;
 
     --radius: 0.5rem;
@@ -59,32 +63,32 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 0 0% 9%;
+    --background: 186 35% 5%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 10%;
+    --card: 186 28% 8%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 10%;
+    --popover: 186 28% 8%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 147 62% 53%;
     --primary-foreground: 0 0% 6%;
 
-    --secondary: 0 0% 9%;
+    --secondary: 186 25% 7%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 11%;
-    --muted-foreground: 0 0% 62%;
+    --muted: 186 20% 10%;
+    --muted-foreground: 186 8% 58%;
 
-    --accent: 0 0% 11%;
+    --accent: 186 22% 11%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 22%;
+    --border: 186 18% 14%;
+    --input: 186 18% 16%;
     --ring: 147 62% 53%;
 
     --github: 0 0% 6%;
@@ -152,7 +156,44 @@ All colors MUST be HSL.
   }
 
   .radial-bg {
-    background: radial-gradient(circle at top center, rgba(62, 207, 142, 0.08) 0%, rgba(62, 207, 142, 0.03) 45%, transparent 100%);
+    background: radial-gradient(
+      ellipse 100% 60% at 50% 100%,
+      hsl(var(--zaxion-bg-bottom) / 0.5) 0%,
+      transparent 70%
+    );
+  }
+
+  .zaxion-cinematic-bg {
+    background-color: hsl(var(--zaxion-bg-top));
+    background-image:
+      radial-gradient(
+        ellipse 120% 80% at 50% 100%,
+        hsl(186 50% 12% / 0.35) 0%,
+        transparent 55%
+      ),
+      linear-gradient(
+        180deg,
+        hsl(var(--zaxion-bg-top)) 0%,
+        hsl(var(--zaxion-bg-top)) 35%,
+        hsl(var(--zaxion-bg-bottom)) 100%
+      );
+  }
+
+  .zaxion-grain {
+    position: relative;
+  }
+
+  .zaxion-grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 180px 180px;
   }
 
   .animate-gradient-border {

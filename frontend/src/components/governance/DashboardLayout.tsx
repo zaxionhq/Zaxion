@@ -37,9 +37,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   ];
 
   return (
-    <div className="flex h-screen w-screen bg-background overflow-hidden">
+    <div className="flex h-screen w-screen overflow-hidden">
       {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col">
+      <div className="w-64 border-r border-border/60 bg-card/40 backdrop-blur-xl flex flex-col">
         <div className="p-6 flex items-center gap-2">
           <div className="h-12 w-12 flex items-center justify-center">
             <img src="/Zaxion landing page logo.png" alt="Zaxion" className="h-12 w-12 object-contain" />
@@ -106,7 +106,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background/50">
+      <main className="flex-1 overflow-y-auto bg-transparent">
         {children}
       </main>
     </div>

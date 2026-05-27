@@ -1,52 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
 import { AnalyticsCards } from '@/components/governance/AnalyticsCards';
-import { PolicySimulation } from '@/components/governance/PolicySimulation';
 import { Shield, Microscope, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
 
+const PolicySimulationLazy = lazy(() =>
+  import('@/components/governance/PolicySimulation').then((m) => ({ default: m.PolicySimulation }))
+);
+
 const GovernanceDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading: sessionLoading } = useSession();
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const {
+    data: analyticsData,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+  } = useQuery({
+    queryKey: ['governance', 'summary'],
+    queryFn: () => api.get('/v1/analytics/governance/summary'),
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  React.useEffect(() => {
     if (sessionLoading) return;
-    
     if (!user) {
       navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, { replace: true });
-      return;
     }
-
-    const fetchAnalytics = async () => {
-      try {
-        const response = await api.get('/v1/analytics/governance/summary');
-        setAnalyticsData(response);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAnalytics();
   }, [user, sessionLoading, navigate]);
 
-  if (sessionLoading || !user) {
+  if (sessionLoading) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-12 w-12 text-primary animate-spin" />
         <p className="text-muted-foreground font-mono text-xs uppercase tracking-[0.2em]">
-          Verifying Institutional Credentials...
+          Verifying credentials...
         </p>
       </div>
     );
   }
+
+  if (!user) {
+    return null;
+  }
+
+  const errorMessage = analyticsError instanceof Error ? analyticsError.message : null;
 
   return (
     <DashboardLayout>
@@ -68,15 +71,15 @@ const GovernanceDashboard: React.FC = () => {
           </div>
         </div>
 
-        {error && (
+        {errorMessage && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         )}
 
-        <AnalyticsCards data={analyticsData} isLoading={isLoading} />
+        <AnalyticsCards data={analyticsData} isLoading={analyticsLoading} />
 
         <div className="grid gap-6">
           <div className="rounded-lg border border-border/50 bg-card/30 p-6">
@@ -84,7 +87,15 @@ const GovernanceDashboard: React.FC = () => {
               <Microscope className="h-5 w-5 text-primary" />
               <h3 className="font-bold tracking-tight text-lg">Policy Impact Simulator</h3>
             </div>
-            <PolicySimulation />
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }
+            >
+              <PolicySimulationLazy />
+            </Suspense>
           </div>
         </div>
       </div>

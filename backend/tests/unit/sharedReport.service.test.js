@@ -1,0 +1,52 @@
+import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import {
+  createSharedReport,
+  getSharedReportByToken,
+} from '../../src/services/sharedReport.service.js';
+
+jest.unstable_mockModule('../../src/config/env.js', () => ({
+  default: { FRONTEND_ORIGIN: 'https://app.test', FRONTEND_URL: 'https://app.test' },
+}));
+
+describe('sharedReport.service', () => {
+  const mockDb = {
+    SharedReport: {
+      create: jest.fn(),
+      findOne: jest.fn(),
+    },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('createSharedReport returns share_url', async () => {
+    mockDb.SharedReport.create.mockResolvedValue({
+      id: 'uuid-1',
+      share_token: 'abc',
+    });
+
+    const out = await createSharedReport(mockDb, {
+      type: 'founder_audit',
+      payload: { owner: 'o', repo: 'r' },
+      createdBy: 'user-1',
+    });
+
+    expect(out.share_url).toContain('/reports/');
+    expect(out.share_token).toHaveLength(64);
+    expect(mockDb.SharedReport.create).toHaveBeenCalled();
+  });
+
+  it('getSharedReportByToken returns expired for past expires_at', async () => {
+    mockDb.SharedReport.findOne.mockResolvedValue({
+      share_token: 'tok',
+      revoked_at: null,
+      expires_at: new Date('2020-01-01'),
+      type: 'founder_audit',
+      payload: {},
+    });
+
+    const out = await getSharedReportByToken(mockDb, 'tok');
+    expect(out.expired).toBe(true);
+  });
+});

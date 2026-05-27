@@ -8,6 +8,7 @@ import { encrypt, decrypt } from "../utils/crypto.js";
 import generateState from "../utils/generateState.js";
 import { clearAuthCookies, setAuthCookies } from "../utils/cookies.js";
 import { logAuthEvent } from "../services/audit.service.js";
+import { scheduleUserRepoSync } from "../services/userRepoSync.service.js";
 import crypto from 'crypto';
 
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
@@ -146,78 +147,12 @@ const authController = (db) => {
         });
       }
 
-      // Permission Synchronization Logic
-      try {
-        // Only run sync if user is not already an admin
-        if (user.role !== 'admin') {
-          const { listUserReposWithPermissions } = await import('../services/github.service.js');
-          const repos = await listUserReposWithPermissions(ghAccessToken);
-          
-          let hasMaintainerRights = false;
-          const mappingsToCreate = [];
-          const repoRecordsToCreate = [];
-
-          for (const repo of repos) {
-            // Check if user has admin or write permissions
-            if (repo.permissions.admin || repo.permissions.push) {
-              hasMaintainerRights = true;
-              
-              // Prepare repository record
-              repoRecordsToCreate.push({
-                githubRepoId: repo.github_id,
-                name: repo.name,
-                owner: repo.owner,
-                // installationId can be synced via webhooks later or separate API
-              });
-
-              // Prepare mapping record
-              mappingsToCreate.push({
-                userId: user.id,
-                githubRepoId: repo.github_id, // Temporary store for mapping
-                githubPermissionLevel: repo.permissions.admin ? 'admin' : 'write'
-              });
-            }
-          }
-
-          if (hasMaintainerRights) {
-            // 1. Upsert Repositories
-            for (const repoData of repoRecordsToCreate) {
-              const [repo] = await db.Repository.findOrCreate({
-                where: { githubRepoId: repoData.githubRepoId },
-                defaults: repoData
-              });
-              
-              // 2. Upsert Mappings
-              const mappingData = mappingsToCreate.find(m => m.githubRepoId === repoData.githubRepoId);
-              if (mappingData) {
-                await db.RepositoryMaintainerMapping.upsert({
-                  userId: user.id,
-                  repositoryId: repo.id,
-                  githubPermissionLevel: mappingData.githubPermissionLevel
-                });
-              }
-            }
-
-            // 3. Update User Role to Maintainer if not already
-            if (user.role === 'user') {
-              await user.update({ role: 'maintainer' });
-              logAuthEvent(user.id, 'ROLE_UPDATE', 'SUCCESS', { 
-                previousRole: 'user', 
-                newRole: 'maintainer',
-                reason: 'GitHub permissions sync'
-              });
-            }
-          } else {
-            // If user was maintainer but lost all rights, downgrade (optional, maybe too aggressive for login)
-            // For now, we only promote. Demotion can happen via scheduled sync or webhooks.
-          }
-        }
-      } catch (syncError) {
-        // Log but don't fail login
-        error("Permission sync failed during login:", syncError);
+      // Defer repo permission sync so OAuth redirect is not blocked
+      if (user.role !== 'admin') {
+        scheduleUserRepoSync(db, user.id, ghAccessToken);
       }
 
-      // generate JWT with updated role
+      // generate JWT with current role (may update to maintainer in background)
       const jwtPayload = { id: user.id, githubId: user.githubId, role: user.role };
       const token = generateToken(jwtPayload);
 
@@ -308,12 +243,20 @@ const authController = (db) => {
   async function me(req, res) {
     try {
       if (req.user) {
-        const isFounder = req.user.role === 'admin' && req.user.username === env.FOUNDER_GITHUB_USERNAME;
-        return res.status(200).json({ 
+        const u = req.user;
+        const isFounder = u.role === 'admin' && u.username === env.FOUNDER_GITHUB_USERNAME;
+        return res.status(200).json({
           user: {
-            ...req.user.toJSON(),
-            is_founder: isFounder
-          } 
+            id: u.id,
+            githubId: u.githubId,
+            username: u.username,
+            login: u.username,
+            displayName: u.displayName,
+            email: u.email,
+            provider: u.authProvider || 'github',
+            role: u.role,
+            is_founder: isFounder,
+          },
         });
       }
 

@@ -51,15 +51,22 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   baseDelay: IS_TEST ? 10 : 1000, // 10ms in tests, 1s otherwise
   maxDelay: IS_TEST ? 100 : 10000, // 100ms in tests, 10s otherwise
   retryCondition: (error: ApiError) => {
-    // Retry on network errors, 5xx server errors, and rate limiting
+    if (error.status === 401 || error.status === 403) return false;
     return (
-      !error.status || // Network error
-      error.status >= 500 || // Server error
-      error.status === 429 || // Rate limited
-      error.status === 408 // Request timeout
+      !error.status ||
+      error.status >= 500 ||
+      error.status === 429 ||
+      error.status === 408
     );
-  }
+  },
 };
+
+function retryConfigForPath(path: string): RetryConfig {
+  if (path.includes('/auth/me') || path.includes('/auth/logout')) {
+    return { ...DEFAULT_RETRY_CONFIG, maxRetries: 0 };
+  }
+  return DEFAULT_RETRY_CONFIG;
+}
 
 function buildUrl(path: string): string {
   // Allow callers to pass full URLs for redirects if needed
@@ -208,7 +215,7 @@ async function requestWithRetry<TResponse>(
 }
 
 async function request<TResponse>(method: HttpMethod, path: string, body?: unknown, init?: RequestInit, timeout?: number): Promise<TResponse> {
-  return requestWithRetry(method, path, body, init, undefined, timeout);
+  return requestWithRetry(method, path, body, init, retryConfigForPath(path), timeout);
 }
 
 export const api = {

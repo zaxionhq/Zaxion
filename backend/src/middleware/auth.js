@@ -70,12 +70,14 @@ export async function requireLoginSoft(req, res, next) {
       return next();
     }
 
-    const githubToken = user.accessToken
-      ? decrypt(user.accessToken)
-      : null;
-
     req.user = user;
-    req.githubToken = githubToken;
+    // Skip decrypt on session check routes — saves ~50–200ms per /auth/me
+    const isSessionProbe = req.path === '/me' || req.originalUrl?.endsWith('/auth/me');
+    if (!isSessionProbe && user.accessToken) {
+      req.githubToken = decrypt(user.accessToken);
+    } else {
+      req.githubToken = null;
+    }
 
     next();
   } catch (err) {

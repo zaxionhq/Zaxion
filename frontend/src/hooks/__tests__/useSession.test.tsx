@@ -1,7 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useSession } from '../useSession';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+import { useSession, SessionProvider } from '../useSession';
 import { api } from '@/lib/api';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>{children}</SessionProvider>
+    </QueryClientProvider>
+  );
+}
 
 // Mock the API client
 vi.mock('@/lib/api', () => ({
@@ -50,7 +63,7 @@ describe('useSession', () => {
   });
 
   it('should initialize with loading state', () => {
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
     
     expect(result.current.loading).toBe(true);
     expect(result.current.user).toBe(null);
@@ -69,7 +82,7 @@ describe('useSession', () => {
 
     mockApi.get.mockResolvedValueOnce({ user: mockUser });
 
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -85,7 +98,7 @@ describe('useSession', () => {
     mockError.status = 401;
     mockApi.get.mockRejectedValueOnce(mockError);
 
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -100,7 +113,7 @@ describe('useSession', () => {
     mockError.status = 500;
     mockApi.get.mockRejectedValueOnce(mockError);
 
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -130,7 +143,7 @@ describe('useSession', () => {
 
     mockApi.get.mockResolvedValueOnce({ user: mockUser });
 
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -152,7 +165,7 @@ describe('useSession', () => {
 
     // First load user
     mockApi.get.mockResolvedValueOnce({ user: mockUser });
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.user).toEqual(mockUser);
@@ -181,7 +194,7 @@ describe('useSession', () => {
 
     // First load user
     mockApi.get.mockResolvedValueOnce({ user: mockUser });
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.user).toEqual(mockUser);
@@ -219,7 +232,7 @@ describe('useSession', () => {
     // Mock handleError to call the retry callback
     mockHandleError.mockImplementationOnce((err, retry) => retry());
 
-    const { result } = renderHook(() => useSession());
+    const { result } = renderHook(() => useSession(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

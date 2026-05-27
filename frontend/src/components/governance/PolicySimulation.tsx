@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle, Upload } from 'lucide-react';
+import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle, Upload, Link2 } from 'lucide-react';
+import { createShareableReportLink } from '@/lib/shareReport';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -496,6 +497,36 @@ export const PolicySimulation: React.FC = () => {
   };
 
   const [htmlReport, setHtmlReport] = useState<string | null>(null);
+  const [sharingReport, setSharingReport] = useState(false);
+
+  const handleShareReportLink = async () => {
+    if (!result) return;
+    setSharingReport(true);
+    try {
+      const url = await createShareableReportLink({
+        type: 'policy_simulation',
+        payload: {
+          summary: result.summary,
+          total_scanned: result.total_scanned,
+          total_blocked: result.total_blocked,
+          violations: result.violations,
+          per_pr_results: result.per_pr_results,
+        },
+        reportHtml: result.report_html || htmlReport || undefined,
+        meta: { policy_id: selectedPolicyId, repo: simulationRepo },
+      });
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Share link copied', description: 'Anyone with the link can view this report (30-day expiry).' });
+    } catch (error) {
+      toast({
+        title: 'Share failed',
+        description: error instanceof Error ? error.message : 'Could not create link',
+        variant: 'destructive',
+      });
+    } finally {
+      setSharingReport(false);
+    }
+  };
 
   const fetchPrsFromGitHub = async () => {
     if (!simulationRepo) {
@@ -1552,6 +1583,22 @@ export const PolicySimulation: React.FC = () => {
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
+                    {result && (inputMode === 'repository' || inputMode === 'github_url') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-primary/30 text-primary hover:bg-primary/10"
+                        onClick={handleShareReportLink}
+                        disabled={sharingReport}
+                      >
+                        {sharingReport ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Link2 className="mr-2 h-4 w-4" />
+                        )}
+                        Copy Share Link
+                      </Button>
+                    )}
                     {result?.report_html && (inputMode === 'repository' || inputMode === 'github_url') && (
                       <Button
                         variant="outline"

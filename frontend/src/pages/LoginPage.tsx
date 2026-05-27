@@ -38,13 +38,7 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-neon-cyan/30 overflow-hidden flex items-center justify-center p-6 relative transition-colors duration-300">
-      {/* Background depth layers */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/5 dark:bg-neon-purple/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 dark:bg-neon-cyan/10 blur-[120px] rounded-full animate-pulse delay-700" />
-        <div className="absolute inset-0 radial-bg opacity-30 dark:opacity-50" />
-      </div>
+    <div className="min-h-screen text-foreground selection:bg-primary/30 overflow-hidden flex items-center justify-center p-6 relative transition-colors duration-300">
 
       <div className="absolute top-8 left-8 z-10 flex items-center gap-4">
         <div 
