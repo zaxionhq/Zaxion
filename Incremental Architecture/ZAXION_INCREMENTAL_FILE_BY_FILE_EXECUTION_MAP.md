@@ -8,6 +8,10 @@ This document complements:
 - `Incremental Architecture/ZAXION_INCREMENTAL_ANALYSIS_DESIGN.md`
 - `Incremental Architecture/ZAXION_INCREMENTAL_IMPLEMENTATION_PLAN.md`
 
+It includes concrete file-level work for **structural false positive reduction** (language gates, file-kind classification, fixture suite), **sectioned PR scan progress UI** (GitHub checklist + app polling), and Merkle rollout.
+
+Full PR report UI spec: [ZAXION_PR_SCAN_PROGRESS_AND_REPORT_UI.md](ZAXION_PR_SCAN_PROGRESS_AND_REPORT_UI.md).
+
 ## Current System Touchpoints (Observed)
 
 - `backend/src/services/astAnalyzer.service.js`
@@ -21,8 +25,14 @@ This document complements:
 - `backend/src/services/policySimulation.service.js`
   - simulation replay flow
   - calls `evaluationEngine.getRequiredDataDepth` and on-demand enrichment
+- `backend/src/services/prAnalysis.service.js`
+  - PR webhook pipeline: `PENDING` → batch evaluate → `reportStatus`
+- `backend/src/services/githubReporter.service.js`
+  - GitHub Checks API + sticky PR comment (today: final status only)
+- `frontend/src/pages/DecisionResolutionConsole.tsx`
+  - PR governance UI; consumes decision API
 
-These are the primary seams to introduce incremental parsing/routing without breaking API contracts.
+These are the primary seams to introduce incremental parsing/routing and **sectioned scan progress** without breaking API contracts.
 
 ## New Modules to Add
 
@@ -62,6 +72,26 @@ Create these modules first (additive only):
 - `backend/src/services/incremental/shadowComparator.service.js`
   - compares legacy vs incremental decisions
   - emits parity metrics and mismatch diagnostics
+  - classifies deltas: `true_improvement`, `regression`, `acceptable_drift`, `intentional_fp_fix`
+
+- `backend/src/services/incremental/fileKindClassifier.service.js`
+  - maps `path` + extension + basename heuristics → `source` | `test` | `manifest` | `workflow` | `lockfile` | `infrastructure` | `unknown`
+  - examples: `package.json` → `manifest`; `.github/workflows/deploy.yml` → `workflow`; `Dockerfile` → `infrastructure`; `*.test.ts` → `test`
+
+- `backend/src/services/incremental/policyApplicability.service.js`
+  - given policy metadata + `file_kind` + `language` → `run` | `skip` | `fallback`
+  - emits structured `skip_reason`: `inapplicable_language`, `inapplicable_file_kind`, `no_adapter`
+  - consumed by `policyRouter.service.js` before checker invocation
+
+- `backend/src/services/incremental/policyReportMapper.service.js`
+  - maps `rule_id` / `policy_type` → report section + user-facing label
+  - aggregates checker verdicts into `ReportCheckRow` states
+  - renders GitHub markdown + React JSON from `ScanProgress`
+  - config: `backend/src/config/policyReportSections.js` (or YAML) — display label table
+
+- `backend/src/services/incremental/scanProgressBuilder.service.js`
+  - builds and merges `ScanProgress` from partial section results
+  - invoked on `onSectionComplete` callbacks during evaluation
 
 ## Data Contract (Backward-Compatible)
 
@@ -75,9 +105,14 @@ Preserve existing fields. Add only:
   - `routing_stats`
   - `cache_hit_rates`
   - `parity` (if shadow mode)
+  - `fp_delta` (if shadow mode: `legacy_only_count`, `incremental_only_count`, `true_improvement_count`)
+  - `scan_progress` (sectioned checklist — see [PR scan progress spec](ZAXION_PR_SCAN_PROGRESS_AND_REPORT_UI.md#data-contract-scanprogress))
+
+- `pr_decisions.raw_data` (additive while `PENDING`):
+  - `scan_progress` updated on each section complete when `INCR_SCAN_PROGRESS_UI_ENABLED=true`
 
 - Optional per-file additive field:
-  - `facts.changes.files[i].incremental = { node_ids, subtree_hashes, routed_policies }`
+  - `facts.changes.files[i].incremental = { file_kind, language, node_ids, subtree_hashes, routed_policies, skipped_policies }`
 
 Never remove or rename:
 - `metadata.ast_by_path`
@@ -118,13 +153,20 @@ Never remove or rename:
   - continue returning `{ requiresContent, requiresAst }` for compatibility
   - add optional additive fields like `requiresIncremental`, `requiresDeepAst`
 - Before executing checker:
+  - classify file via `fileKindClassifier.service.js`
+  - call `policyApplicability.service.js` — if `skip`, do not invoke checker; record `skip_reason` in metadata
   - obtain routing decision for policy + file/node context
   - if `selective_deep`: request deep facts for candidate nodes (through incremental analyzer/deep adapter)
   - if `fallback`: run checker against current facts as-is
+- **False positive guards (incremental authority phases):**
+  - `_checkCodeQuality` / `_checkSecurityPatterns`: do not scan `manifest`, `workflow`, `lockfile` file kinds
+  - `_checkReliability`: only `javascript`/`typescript` `source` files unless language adapter exists
+  - `_checkSupplyChainIntegrity`: only `manifest`, `workflow`, `infrastructure` — never share regex path with code quality
 - Emit routing metadata into logs and result metadata (additive only).
 
 ### Safety Guard
 - If router unavailable/fails, default path must be existing checker execution with legacy data.
+- If applicability service fails, default to legacy (do not widen scope); log `applicability_fallback`.
 
 ## 3) `backend/src/services/policySimulation.service.js` (Replay compatibility)
 
@@ -146,7 +188,76 @@ Never remove or rename:
 ### Safety Guard
 - If incremental enrichment fails mid-simulation, continue with current legacy path for that snapshot.
 
-## 4) `backend/src/services/patternMatcher.service.js` (Gradual optimization seam)
+## 4) `backend/src/services/prAnalysis.service.js` (PR scan + progress)
+
+### Change Intent
+- Keep idempotent `PENDING` → evaluate → `FINAL` flow.
+- Emit `scan_progress` during scan when progress UI flag enabled.
+
+### Specific Changes
+- After creating `PENDING` check run, store `github_check_run_id`.
+- Pass `onSectionComplete` into `policyEngine.evaluate()` (Phase 3+):
+  - patch `raw_data.scan_progress` in DB,
+  - call `reporter.reportProgress(...)`.
+- On completion, attach final `scan_progress` to `decisionObject`; `reportStatus` includes sectioned checklist.
+- Phase 2 shortcut: build `scan_progress` once after batch evaluate (final-only checklist).
+
+### Safety Guard
+- Progress callback failures must not abort evaluation; log and continue.
+
+## 5) `backend/src/services/githubReporter.service.js` (GitHub surfaces)
+
+### Change Intent
+- Add progressive checklist to check run output and sticky comment.
+
+### Specific Changes
+- New method `reportProgress(owner, repo, headSha, checkRunId, scanProgress)`:
+  - `status: in_progress`, `output.summary` = sectioned markdown from `policyReportMapper`.
+- Extend `reportStatus`:
+  - final `output.text` includes full sectioned report,
+  - sticky comment body uses checklist + deep link (not only badge + stats).
+- Throttle comment updates during progress (configurable ms).
+
+### Safety Guard
+- If `reportProgress` fails, continue evaluation; final `reportStatus` still runs.
+
+## 6) `backend/src/services/policyEngine.service.js` (Sectioned evaluate)
+
+### Change Intent
+- Optional section-ordered evaluation with progress callbacks.
+
+### Specific Changes
+- Accept `options.onSectionComplete(scanProgress)` and `options.reportSections` order.
+- Map `evaluation.policy_results` through `policyReportMapper` for `decisionObject.scan_progress`.
+- Include `category` on each `policies[]` entry from `corePolicies.js` lookup.
+
+### Safety Guard
+- When flag off, single batch evaluate — zero behavior change.
+
+## 7) `frontend/src/components/governance/GovernanceScanProgress.tsx` (new)
+
+### Change Intent
+- Reusable sectioned checklist matching GitHub markdown UX.
+
+### Specific Changes
+- Props: `scanProgress: ScanProgress`, `compact?: boolean`.
+- Row icons for `pending` | `running` | `passed` | `warn` | `failed` | `skipped`.
+- Section headers: Security, Architecture, etc.
+
+## 8) `frontend/src/pages/DecisionResolutionConsole.tsx`
+
+### Change Intent
+- Show live checklist while `evaluationStatus === 'PENDING'`.
+
+### Specific Changes
+- Poll decision endpoint (2–3s interval) while pending.
+- Render `GovernanceScanProgress` above existing decision hero.
+- On `COMPLETED`, transition to violation detail (existing UI).
+
+### Safety Guard
+- Stop polling on unmount and when `FINAL`.
+
+## 9) `backend/src/services/patternMatcher.service.js` (Gradual optimization seam)
 
 ### Change Intent
 - Preserve regex checks.
@@ -161,7 +272,7 @@ Never remove or rename:
 ### Safety Guard
 - If incremental fast-path is incomplete, always execute existing regex/AST fallback checks.
 
-## 5) `backend/src/services/factIngestor.service.js` (if present in pipeline)
+## 10) `backend/src/services/factIngestor.service.js` (if present in pipeline)
 
 ### Change Intent
 - Add optional incremental enrichment stage to ingestion.
@@ -175,7 +286,7 @@ Never remove or rename:
 ### Safety Guard
 - Incremental stage must be non-blocking in BEST_EFFORT mode.
 
-## 6) Policy Definitions / Mapping Layer
+## 11) Policy Definitions / Mapping Layer
 
 Likely files:
 - `backend/src/policies/corePolicies.js`
@@ -190,12 +301,26 @@ Likely files:
   - `escalation_triggers`
   - `fallback_behavior`
   - `supported_languages`
+  - `supported_file_kinds`
+- Document starter mappings (see Policy Routing Starter Matrix below).
 - Keep old rule shape valid by applying defaults in router.
+
+### Starter applicability examples (policyMapper / corePolicies)
+
+| Rule type / policy family | `supported_languages` | `supported_file_kinds` |
+|---------------------------|----------------------|-------------------------|
+| `code_quality`, `no-console-logs-production` | `javascript`, `typescript` | `source` |
+| `reliability` (REL-001) | `javascript`, `typescript` (v1) | `source` |
+| `security_patterns` (noisy regex) | per-pattern; default JS/TS for DOM/Node rules | `source` |
+| `supply_chain_integrity` (OPS-001) | `*` (structured rules) | `manifest`, `workflow`, `infrastructure` |
+| `dependency_scan` | `*` | `manifest`, `lockfile` |
+| `documentation`, `architecture` | `javascript`, `typescript` (v1) | `source` |
 
 ### Safety Guard
 - Missing new metadata must never break policy loading. Defaults route to legacy-safe behavior.
+- Default for ambiguous metadata: `supported_file_kinds: ["source"]` for style rules (narrows legacy over-scanning over time).
 
-## 7) Caching Utilities
+## 12) Caching Utilities
 
 Current cache utility:
 - `backend/src/utils/lruCache.js` (already used by AST analyzer)
@@ -214,27 +339,93 @@ Current cache utility:
 ## Incremental Rollout Sequence (Code-Level)
 
 1. Add new incremental services (no call-sites yet).
-2. Integrate into `astAnalyzer.service.js` behind flags.
-3. Add router integration in `evaluationEngine.service.js` (observe-only).
-4. Add shadow comparator and parity logs.
-5. Enable selective deep AST for 2-3 policy types.
-6. Wire simulation metadata in `policySimulation.service.js`.
-7. Enable canary enforcement by policy subset.
+2. Scaffold `policyReportMapper` + `ScanProgress` types (Phase 0).
+3. Integrate into `astAnalyzer.service.js` behind flags.
+4. **Phase A:** Final-only checklist in `githubReporter` + `prAnalysis` (Phase 2).
+5. Add router integration in `evaluationEngine.service.js` (observe-only).
+6. **Phase B:** `reportProgress` + section callbacks in `policyEngine` / `prAnalysis` (Phase 3).
+7. Add shadow comparator and parity logs.
+8. Enable selective deep AST for 2-3 policy types.
+9. `GovernanceScanProgress` + DecisionResolutionConsole polling (Phase 5).
+10. Wire simulation metadata in `policySimulation.service.js`.
+11. Enable canary enforcement by policy subset.
 
 ## Policy Routing Starter Matrix (Zaxion-Specific)
 
+- `code_quality` / `no-console-logs-production`: `shallow` on JS/TS `source` only
+  - **skip** `manifest`, `workflow`, `lockfile`, `infrastructure`
+  - trigger: Tree-sitter `CallExpression(console.*)` — not regex on `package.json` strings
+- `reliability` (REL-001): `fallback` initially (until per-language adapters ship)
+  - languages: `javascript`, `typescript` only
+  - **never** run JS `await`/try-catch heuristic on `.rs`, `.py`, `.go`
+  - skip `test` files unless policy explicitly targets tests
+- `supply_chain_integrity` (OPS-001): `shallow` + structured manifest/workflow diff
+  - file_kinds: `manifest`, `workflow`, `infrastructure`
+  - **never** route through `security_patterns` or `code_quality`
+  - reuse `supplyChainIntegrity.js` patch-aware logic; extend via incremental metadata only
 - `security_patterns`: `selective_deep`
+  - file_kinds: `source` only (not `manifest` / `workflow`)
   - trigger on suspicious sinks (`eval`, command execution, SQL-like templates)
+  - shallow candidate + deep validation before `BLOCK`
 - `no_hardcoded_secrets`: `selective_deep`
   - shallow candidate + deep validation to reduce false positives
 - `no_xss`: `selective_deep`
   - shallow sink detection + deep context check
 - `documentation`: `shallow`
-  - AST/export metadata only
+  - AST/export metadata only; JS/TS `source`
 - `testing_best_practices`: `shallow`
   - skipped/empty tests from structural facts
 - `architecture`: `shallow` first, deep on uncertain imports
-- `reliability`: `fallback` initially (until deeper flow analysis matures)
+- `dependency_scan`: `shallow`
+  - file_kinds: `manifest`, `lockfile` only
+
+### Report row mapping (user-facing labels)
+
+| Report row `id` | Section | `rule_types` / sources |
+|-----------------|---------|-------------------------|
+| `hardcoded_secrets` | security | `no_hardcoded_secrets` |
+| `sql_patterns` | security | `no_sql_injection` |
+| `security_patterns` | security | `security_patterns`, `no_eval`, `no_xss` |
+| `supply_chain` | security / operations | `supply_chain_integrity`, `dependency_scan` |
+| `architecture` | architecture | `architecture`, `architectural_integrity` |
+| `reliability` | reliability | `reliability` |
+| `code_quality` | code_quality | `code_quality`, `complexity_metrics`, `institutional_style` |
+| `testing` | testing | `coverage`, `testing_best_practices` |
+| `governance` | governance | `pr_size`, `mandatory_review`, GOV-* |
+| `documentation` | code_quality | `documentation` (optional sub-row) |
+
+## Scan progress fixtures (required before Phase 5 UI canary)
+
+Maintain under `backend/tests/fixtures/scan-progress/`:
+
+| Fixture | Expected checklist highlight |
+|---------|---------------------------|
+| `all-pass/` | All rows `passed`, header Passed |
+| `blocked-secrets/` | `hardcoded_secrets` → `failed`; header Blocked |
+| `warn-coverage/` | `testing` row → `warn` |
+| `ops-scripts-only/` | `supply_chain` → `passed` (no lockfile warn) |
+| `mixed-lang-skipped/` | `reliability` → `skipped` on Rust-only PR |
+
+## False Positive Regression Fixtures (required before Phase 5)
+
+Maintain under `backend/tests/fixtures/incremental-fp/`:
+
+| Fixture directory | Scenario | Expected incremental outcome |
+|-------------------|----------|------------------------------|
+| `package-json-scripts-only/` | Only `"scripts"` keys change; no lockfile in PR | PASS (OPS-001 lockfile check skipped) |
+| `package-json-dep-bump/` | `dependencies` version change; no lockfile | WARN (OPS-001) |
+| `rust-await-no-trycatch/` | `.rs` with `.await`, no JS try/catch | PASS (`reliability` skip) |
+| `python-no-console/` | `.py` with `print()` only | PASS (no `console.log` rule) |
+| `python-hashlib-md5/` | `.py` using `hashlib.md5` | Route per policy; no JS `md5(` regex false match if language-gated |
+| `package-json-script-console-string/` | npm script value contains `console.log` text | PASS (`manifest` not scanned as `source`) |
+| `workflow-only-pr/` | Only `.github/workflows/*.yml` changed | OPS-001 only; no `code_quality` findings |
+| `mixed-pr-js-py-rs/` | JS + Python + Rust in one PR | Each file evaluated only by applicable policies |
+
+CI gate (shadowComparator integration test):
+
+- `incremental_fp_count <= legacy_fp_count` on full fixture suite before `INCR_ENFORCEMENT_ENABLED`.
+- `incremental_fn_count === 0` for critical policies (`no_hardcoded_secrets`, `no_sql_injection`, `supply_chain_integrity` privileged workflow BLOCK cases).
+- Record baseline legacy FP counts in Phase 0 for trend comparison.
 
 ## Determinism and Replay Requirements
 
@@ -260,11 +451,21 @@ Add tests near affected services:
 - `backend/src/services/`:
   - `evaluationEngine` router decision tests
   - parity comparison tests (legacy vs incremental)
+  - `fileKindClassifier` unit tests (path → kind)
+  - `policyApplicability` unit tests (policy + file → run/skip/fallback)
+- `backend/tests/fixtures/incremental-fp/`:
+  - end-to-end FP regression suite (see table above)
+- `backend/tests/fixtures/scan-progress/`:
+  - checklist markdown snapshots + `ScanProgress` JSON golden files
+- `backend/tests/unit/policyReportMapper.test.js`
+- `backend/tests/unit/githubReporter.progress.test.js`
 - simulation integration:
   - verify no response contract drift in `runSimulation` results
 
 Gate checks:
 - parity threshold,
+- **FP regression suite: incremental ≤ legacy FP count**,
+- **zero critical-policy FN on fixture suite**,
 - no increase in crash/fatal error rate,
 - API snapshot tests for simulation responses.
 
