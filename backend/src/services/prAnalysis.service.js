@@ -134,7 +134,10 @@ export class PrAnalysisService {
       }
 
       // Report PENDING to GitHub
-      await reporter.reportStatus(owner, repo, headSha, "PENDING", { description: "Queued for analysis...", prNumber });
+      let activeCheckRunId = await reporter.reportStatus(owner, repo, headSha, "PENDING", {
+        description: "Queued for analysis...",
+        prNumber,
+      });
 
       // 3. Step 3: Execution Pipeline
       // A. Fetch & Analyze Diff
@@ -142,15 +145,42 @@ export class PrAnalysisService {
 
       // B. Evaluate Policy
       const { data: prDetails } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-      
-      decisionObject = await policyEngine.evaluate(prContext, {
+
+      const evalMetadata = {
         owner,
         repo,
         prNumber,
         baseBranch: baseRef,
         prBody: prDetails.body || "",
-        userLogin: prDetails.user.login
-      });
+        userLogin: prDetails.user.login,
+      };
+
+      const onScanProgress = async (scanProgress) => {
+        if (!scanProgress) return;
+        try {
+          await sequelize.query(
+            `UPDATE pr_decisions SET raw_data = :rawData, updated_at = NOW()
+             WHERE repo_owner = :owner AND repo_name = :repo AND pr_number = :prNumber AND commit_sha = :headSha`,
+            {
+              replacements: {
+                rawData: JSON.stringify({ scan_progress: scanProgress, evaluationStatus: 'PENDING' }),
+                owner,
+                repo,
+                prNumber,
+                headSha,
+              },
+              type: sequelize.QueryTypes.UPDATE,
+            }
+          );
+        } catch (dbErr) {
+          logger.warn(`[PrAnalysisService] scan_progress DB patch failed: ${dbErr.message}`);
+        }
+        if (activeCheckRunId) {
+          await reporter.reportProgress(owner, repo, headSha, activeCheckRunId, scanProgress);
+        }
+      };
+
+      decisionObject = await policyEngine.evaluate(prContext, evalMetadata, { onScanProgress });
 
       // C. Enrich with Advisor (Best-effort, non-gating)
       // SECURITY: Pass a deep copy to prevent "Soft Mutation" of the deterministic decision
