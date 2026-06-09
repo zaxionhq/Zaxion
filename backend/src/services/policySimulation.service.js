@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import logger from '../logger.js';
 import { Op } from 'sequelize';
 import { FactIngestorService } from './factIngestor.service.js';
+import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
+import { ShadowComparatorService } from './incremental/shadowComparator.service.js';
 
 /**
  * Phase 6 Pillar 3: Policy Evolution & Simulation (The Blast Radius)
@@ -216,7 +218,12 @@ export class PolicySimulationService {
     };
 
     // Wave 4: Detect required depth for simulation
-    const { requiresContent, requiresAst } = this.evaluationEngine.getRequiredDataDepth([mockAppliedPolicy]);
+    const {
+      requiresContent,
+      requiresAst,
+      requiresIncremental,
+      requiresDeepAst,
+    } = this.evaluationEngine.getRequiredDataDepth([mockAppliedPolicy]);
     const ingestor = github_token ? new FactIngestorService(this.db, github_token) : null;
 
     for (const snapshot of snapshots) {
@@ -243,7 +250,7 @@ export class PolicySimulationService {
           const activeIngestor = ingestor || new FactIngestorService(this.db);
           await activeIngestor.enrichFactData(factData, snapshot.repo_full_name, snapshot.pr_number, {
             fetchContent: requiresContent,
-            enrichAst: requiresAst
+            enrichAst: requiresAst || requiresIncremental || requiresDeepAst,
           });
         }
       }
@@ -253,7 +260,20 @@ export class PolicySimulationService {
         data: factData
       };
 
-      const simResult = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy]);
+      const repoParts = (snapshot.repo_full_name || '').split('/');
+      const incrementalContext = { owner: repoParts[0], repo: repoParts[1] };
+      const simResult = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy], {
+        incrementalContext,
+      });
+
+      let shadowParity = null;
+      if (incrementalFlags.isShadowCompareEnabled() && incrementalFlags.isRouterEnabled()) {
+        const legacy = this.evaluationEngine.evaluate(normalizedSnapshot, [mockAppliedPolicy], {
+          incrementalContext,
+          disableIncrementalRouter: true,
+        });
+        shadowParity = new ShadowComparatorService().compare(legacy, simResult);
+      }
 
       const historicalResult = historicalDecision ? historicalDecision.result : 'UNKNOWN';
       const simVerdict = simResult.result;
@@ -289,6 +309,10 @@ export class PolicySimulationService {
         ingested_at: snapshot.ingested_at,
         violations,
         passes,
+        ...(shadowParity && !shadowParity.skipped
+          ? { incremental_shadow_parity: shadowParity }
+          : {}),
+        incremental_flags: incrementalFlags.getActiveFlags(),
       };
       perPrResults.push(prMeta);
 
