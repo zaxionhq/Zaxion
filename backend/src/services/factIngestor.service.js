@@ -2,6 +2,8 @@ import axios from 'axios';
 import path from 'path';
 import logger from '../logger.js';
 import { enrichSnapshotWithAst, enrichSnapshotWithAstAsync } from './astAnalyzer.service.js';
+import { incrementalAnalyzer } from './incremental/incrementalAnalyzer.service.js';
+import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
 
 const GH_API = "https://api.github.com";
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -370,6 +372,29 @@ export class FactIngestorService {
     // 2. Add AST if needed
     if (opts.enrichAst) {
       await enrichSnapshotWithAstAsync(factData);
+    }
+
+    // 3. Incremental enrichment stage (additive metadata; flags off = no-op)
+    if (
+      !incrementalFlags.isForcedLegacy() &&
+      (incrementalFlags.isParseEnabled() || incrementalFlags.isMerkleEnabled())
+    ) {
+      const previousIncr = factData.metadata?.incremental || null;
+      const incr = incrementalAnalyzer.analyzeFiles(files, previousIncr);
+      if (incr?.enabled) {
+        factData.metadata = { ...(factData.metadata || {}), incremental: incr };
+        for (const file of files) {
+          const entry = incr.files?.find((x) => x.file_path === file.path);
+          if (entry) {
+            file.incremental = {
+              file_kind: entry.file_kind,
+              language: entry.language,
+              root_subtree_hash: entry.root_subtree_hash,
+              changed: entry.changed,
+            };
+          }
+        }
+      }
     }
 
     return factData;
