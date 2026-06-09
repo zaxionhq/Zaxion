@@ -1,0 +1,14 @@
+[
+  {
+    "policy_type": "no_hardcoded_secrets",
+    "verdict": "PASS",
+    "level": "MANDATORY",
+    "message": "Policy satisfied."
+  },
+  {
+    "policy_type": "supply_chain_integrity",
+    "verdict": "PASS",
+    "level": "MANDATORY",
+    "message": "Policy satisfied."
+  }
+]
