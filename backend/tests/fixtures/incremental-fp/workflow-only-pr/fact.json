@@ -1,0 +1,11 @@
+{
+  "name": "workflow-only-pr",
+  "policy_type": "supply_chain_integrity",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "content": "name: CI\non: push\npermissions:\n  contents: read\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@b4ffde65f46336ab88eb136be2b0d82f0b94549c\n"
+    }
+  ],
+  "expected_verdict": "PASS"
+}
