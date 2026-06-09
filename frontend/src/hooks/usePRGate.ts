@@ -40,6 +40,7 @@ export interface PRDecision {
   affected_files?: string[];
   policies?: PolicyResult[];
   violations?: Violation[];
+  scan_progress?: ScanProgress;
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +67,33 @@ export interface PolicyResult {
   name: string;
   passed: boolean;
   description: string;
+}
+
+export type ReportRowState = 'pending' | 'running' | 'passed' | 'warn' | 'failed' | 'skipped';
+
+export interface ScanProgressCheck {
+  id: string;
+  label: string;
+  state: ReportRowState;
+  rule_types: string[];
+  issue_count: number | null;
+  summary: string;
+}
+
+export interface ScanProgressSection {
+  id: string;
+  label: string;
+  order: number;
+  checks: ScanProgressCheck[];
+}
+
+export interface ScanProgress {
+  scan_status: 'RUNNING' | 'COMPLETED';
+  overall_label: string;
+  started_at?: string;
+  updated_at?: string;
+  sections: ScanProgressSection[];
+  deep_link?: string;
 }
 
 export interface DecisionObject {
