@@ -75,6 +75,19 @@ const schema = z.object({
 
   // --- Founder / Admin ---
   FOUNDER_GITHUB_USERNAME: z.string().default("Kaandizz"),
+
+  // --- Incremental Architecture (all default off; legacy unchanged) ---
+  INCR_PARSE_ENABLED: z.string().optional(),
+  INCR_MERKLE_ENABLED: z.string().optional(),
+  INCR_POLICY_ROUTER_ENABLED: z.string().optional(),
+  INCR_DEEP_AST_ENABLED: z.string().optional(),
+  INCR_SHADOW_COMPARE_ENABLED: z.string().optional(),
+  INCR_ENFORCEMENT_ENABLED: z.string().optional(),
+  INCR_SCAN_PROGRESS_UI_ENABLED: z.string().optional(),
+  INCR_FORCE_LEGACY: z.string().optional(),
+  INCR_CANARY_ORGS: z.string().optional(),
+  INCR_CANARY_REPOS: z.string().optional(),
+  INCR_CANARY_PERCENT: z.coerce.number().optional(),
 })
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments
