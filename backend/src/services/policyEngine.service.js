@@ -7,6 +7,12 @@ import { CORE_POLICIES } from "../policies/corePolicies.js";
 import { mapCorePolicyToRules } from "../utils/policyMapper.js";
 import { PolicyConfigurationService } from "./policyConfiguration.service.js";
 import { EvaluationEngineService } from "./evaluationEngine.service.js";
+import { incrementalFlags } from "./incremental/incrementalFeatureFlags.service.js";
+import { scanProgressBuilder } from "./incremental/scanProgressBuilder.service.js";
+import { PolicyRouterService } from "./incremental/policyRouter.service.js";
+import { incrementalAnalyzer } from "./incremental/incrementalAnalyzer.service.js";
+import { ShadowComparatorService } from "./incremental/shadowComparator.service.js";
+import { incrementalMetrics } from "./incremental/incrementalMetrics.service.js";
 
 export class PolicyEngineService {
   constructor(octokit, db) {
@@ -21,9 +27,10 @@ export class PolicyEngineService {
    * Evaluate PR Context and return a Decision Object
    * @param {object} prContext - Result from DiffAnalyzer
    * @param {object} metadata - { owner, repo, prNumber, baseBranch, prBody, userLogin, enabledPolicyIds }
+   * @param {object} [options] - { onScanProgress?: (scanProgress) => void|Promise<void> }
    * @returns {Promise<object>} DecisionObject
    */
-  async evaluate(prContext, metadata) {
+  async evaluate(prContext, metadata, options = {}) {
     const { enabledPolicyIds = [] } = metadata;
     // --- PREPARE FACT SNAPSHOT ---
     // Mapping DiffAnalyzer output to the Fact Snapshot format expected by EvaluationEngineService
@@ -88,8 +95,70 @@ export class PolicyEngineService {
        });
     }
 
-    // --- EXECUTE EVALUATION ---
-    const evaluation = this.evaluationEngine.evaluate(factSnapshot, appliedPolicies);
+    // Incremental shadow enrichment (no verdict impact when flags off)
+    if (!incrementalFlags.isForcedLegacy() && (incrementalFlags.isParseEnabled() || incrementalFlags.isMerkleEnabled())) {
+      const incr = incrementalAnalyzer.analyzeFiles(prContext.files || []);
+      if (incr?.enabled) {
+        factSnapshot.data.metadata = {
+          ...(factSnapshot.data.metadata || {}),
+          incremental: incr,
+        };
+      }
+    }
+
+    const router = new PolicyRouterService();
+    const skippedRuleTypes = router.buildSkippedRuleTypes(appliedPolicies, prContext.files || []);
+
+    let runningChecks = {};
+    const onSectionComplete = async (partial) => {
+      if (!scanProgressBuilder.shouldEmitProgress() || !options.onScanProgress) return;
+      runningChecks = partial.runningChecks || {};
+      const scanProgress = scanProgressBuilder.buildForPr({
+        owner: metadata.owner,
+        repo: metadata.repo,
+        prNumber: metadata.prNumber,
+        decision: 'PENDING',
+        policyResults: partial.policy_results || [],
+        skippedRuleTypes,
+        scanStatus: 'RUNNING',
+        runningChecks,
+      });
+      await options.onScanProgress(scanProgress);
+    };
+
+    const incrementalContext = {
+      owner: metadata.owner,
+      repo: metadata.repo,
+    };
+
+    let evaluation;
+    if (scanProgressBuilder.shouldEmitProgress() && options.onScanProgress) {
+      evaluation = await this.evaluationEngine.evaluateWithSectionProgress(
+        factSnapshot,
+        appliedPolicies,
+        { onSectionComplete, incrementalContext }
+      );
+    } else {
+      evaluation = this.evaluationEngine.evaluate(factSnapshot, appliedPolicies, { incrementalContext });
+    }
+
+    let shadowParity = null;
+    if (incrementalFlags.isShadowCompareEnabled() && incrementalFlags.isRouterEnabled()) {
+      const shadowComparator = new ShadowComparatorService();
+      const legacyEval = this.evaluationEngine.evaluate(factSnapshot, appliedPolicies, {
+        incrementalContext,
+        disableIncrementalRouter: true,
+      });
+      shadowParity = shadowComparator.compare(legacyEval, evaluation);
+      if (factSnapshot.data.metadata?.incremental) {
+        factSnapshot.data.metadata.incremental.parity = shadowParity;
+        factSnapshot.data.metadata.incremental.fp_delta = shadowParity.fp_delta;
+      }
+    }
+
+    if (scanProgressBuilder.shouldEmitProgress() && options.onScanProgress) {
+      incrementalMetrics.recordScanProgress('policy_engine');
+    }
 
     // --- BRANCH PROTECTION LOGIC (Legacy override) ---
     const isMainBranch = ["main", "master", "prod", "production"].includes(metadata.baseBranch);
@@ -147,6 +216,18 @@ export class PolicyEngineService {
       }
     }
 
+    const scanProgress = scanProgressBuilder.shouldEmitProgress()
+      ? scanProgressBuilder.buildForPr({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          prNumber: metadata.prNumber,
+          decision: finalVerdict,
+          policyResults: evaluation.policy_results,
+          skippedRuleTypes,
+          scanStatus: 'COMPLETED',
+        })
+      : null;
+
     return {
       decision: finalVerdict,
       decisionReason: rationale,
@@ -167,8 +248,17 @@ export class PolicyEngineService {
         message: p.message,
         details: p.details
       })),
-      violations: evaluation.violations, // Pass through the full structured violations from EvaluationEngine
-      advisor: null // Will be enriched by PrAnalysisService
+      policy_results: evaluation.policy_results,
+      violations: evaluation.violations,
+      scan_progress: scanProgress,
+      metadata: {
+        incremental_flags: incrementalFlags.getActiveFlags(),
+        ...(shadowParity && !shadowParity.skipped ? { shadow_parity: shadowParity } : {}),
+        ...(factSnapshot.data.metadata?.incremental
+          ? { incremental: factSnapshot.data.metadata.incremental }
+          : {}),
+      },
+      advisor: null
     };
   }
 }
