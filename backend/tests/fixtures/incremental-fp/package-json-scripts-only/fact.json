@@ -1,0 +1,11 @@
+{
+  "name": "package-json-scripts-only",
+  "policy_type": "supply_chain_integrity",
+  "files": [
+    {
+      "path": "package.json",
+      "content": "{\n  \"name\": \"demo\",\n  \"scripts\": {\n    \"start\": \"node index.js\",\n    \"lint\": \"eslint .\"\n  }\n}\n"
+    }
+  ],
+  "expected_verdict": "PASS"
+}
