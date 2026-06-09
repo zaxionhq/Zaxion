@@ -1,0 +1,11 @@
+{
+  "name": "python-no-console",
+  "policy_type": "code_quality",
+  "files": [
+    {
+      "path": "src/util.py",
+      "content": "def greet(name):\n    print(f'hello {name}')\n"
+    }
+  ],
+  "expected_verdict": "PASS"
+}
