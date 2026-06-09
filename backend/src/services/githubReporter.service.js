@@ -4,12 +4,49 @@
  */
 import env from "../config/env.js";
 import * as logger from "../utils/logger.js";
+import { renderScanProgressMarkdown } from "./incremental/policyReportMapper.service.js";
+import { incrementalFlags } from "./incremental/incrementalFeatureFlags.service.js";
 
 export class GitHubReporterService {
   constructor(octokit) {
     this.octokit = octokit;
     this.CHECK_NAME = env.GITHUB_CHECK_NAME || "Zaxion Governance";
     this.STICKY_MARKER = "<!-- ZAXION_STICKY_COMMENT -->";
+    this._lastProgressCommentAt = 0;
+    this.PROGRESS_COMMENT_THROTTLE_MS = 2000;
+  }
+
+  /**
+   * Update in-progress check run with sectioned scan checklist.
+   * @param {string} owner
+   * @param {string} repo
+   * @param {string} headSha
+   * @param {number} checkRunId
+   * @param {object} scanProgress
+   */
+  async reportProgress(owner, repo, headSha, checkRunId, scanProgress) {
+    if (!incrementalFlags.isScanProgressUiEnabled() || !checkRunId || !scanProgress) {
+      return;
+    }
+
+    const checklist = renderScanProgressMarkdown(scanProgress);
+    const title = scanProgress.overall_label || "Analyzing Risk...";
+
+    try {
+      await this.octokit.rest.checks.update({
+        owner,
+        repo,
+        check_run_id: checkRunId,
+        status: "in_progress",
+        output: {
+          title,
+          summary: checklist,
+          text: checklist,
+        },
+      });
+    } catch (err) {
+      logger.warn(`[GitHubReporter] reportProgress failed: ${err.message}`);
+    }
   }
 
   /**
@@ -102,10 +139,24 @@ export class GitHubReporterService {
 
     summary += `\n---\n*Visit the [Full Report](${deepLink}) for detailed metrics, findings, and interactive remediation.*`;
 
+    const scanProgress =
+      typeof decisionObject === 'object' && decisionObject !== null
+        ? decisionObject.scan_progress
+        : null;
+    const checklistMarkdown =
+      scanProgress && incrementalFlags.isScanProgressUiEnabled()
+        ? renderScanProgressMarkdown(scanProgress)
+        : '';
+
     // Detailed Text for Check Run
     let text = `## 🛡️ Zaxion Policy Evaluation Report\n`;
     text += `**Decision:** ${decisionState}\n`;
     text += `**Timestamp:** ${new Date().toISOString()}\n\n`;
+
+    if (checklistMarkdown) {
+      text += `${checklistMarkdown}\n\n---\n\n`;
+      summary = `${summary}\n\n${checklistMarkdown}`;
+    }
     
     if (typeof decisionObject === 'object' && decisionObject !== null && decisionObject.decision) {
       text += `**Policy Version:** \`${decisionObject.policy_version || 'unknown'}\`\n\n`;
@@ -171,7 +222,18 @@ export class GitHubReporterService {
     if (prNumber) {
       try {
         // USE THE CONCISE SUMMARY for the comment body
-        const commentBody = `${this.STICKY_MARKER}\n## 🛡️ Zaxion Policy Status: ${badge} **${decisionState}**\n\n${summary}`;
+        const now = Date.now();
+        const isProgressOnly = decisionState === 'PENDING' && checklistMarkdown;
+        const shouldUpdateComment =
+          !isProgressOnly ||
+          now - this._lastProgressCommentAt >= this.PROGRESS_COMMENT_THROTTLE_MS;
+        if (shouldUpdateComment && isProgressOnly) {
+          this._lastProgressCommentAt = now;
+        }
+
+        const commentBody = checklistMarkdown && incrementalFlags.isScanProgressUiEnabled()
+          ? `${this.STICKY_MARKER}\n${checklistMarkdown}\n\n---\n**Status:** ${badge} ${decisionState}`
+          : `${this.STICKY_MARKER}\n## 🛡️ Zaxion Policy Status: ${badge} **${decisionState}**\n\n${summary}`;
 
         // 1. List comments to find existing sticky
         const { data: comments } = await this.octokit.rest.issues.listComments({
@@ -182,24 +244,24 @@ export class GitHubReporterService {
 
         const existingComment = comments.find(c => c.body.includes(this.STICKY_MARKER));
 
-        if (existingComment) {
-          // 2. Update existing comment
-          await this.octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: existingComment.id,
-            body: commentBody
-          });
-          logger.log(`[GitHubReporter] Sticky comment updated for PR #${prNumber}`);
-        } else {
-          // 3. Create new comment if none exists
-          await this.octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: prNumber,
-            body: commentBody
-          });
-          logger.log(`[GitHubReporter] New sticky comment created for PR #${prNumber}`);
+        if (shouldUpdateComment) {
+          if (existingComment) {
+            await this.octokit.rest.issues.updateComment({
+              owner,
+              repo,
+              comment_id: existingComment.id,
+              body: commentBody
+            });
+            logger.log(`[GitHubReporter] Sticky comment updated for PR #${prNumber}`);
+          } else if (!isProgressOnly || decisionState !== 'PENDING') {
+            await this.octokit.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: commentBody
+            });
+            logger.log(`[GitHubReporter] New sticky comment created for PR #${prNumber}`);
+          }
         }
       } catch (commentErr) {
         logger.warn(`[GitHubReporter] Failed to manage sticky comment: ${commentErr.message}`);
