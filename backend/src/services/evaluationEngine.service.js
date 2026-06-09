@@ -7,6 +7,15 @@ import { PatternMatcherService } from './patternMatcher.service.js';
 import { ComplexityMetricsService } from './complexityMetrics.service.js';
 import { DependencyScannerService } from './dependencyScanner.service.js';
 import { evaluateSupplyChainIntegrity } from '../utils/supplyChainIntegrity.js';
+import { routePolicy } from './incremental/policyRouter.service.js';
+import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
+import { filterFilesForPolicy } from './incremental/incrementalFileGate.service.js';
+import { parseFile } from './incremental/treeSitterParser.service.js';
+import { extractShallowFacts } from './incremental/nodeFactExtractor.service.js';
+import { validateDeep } from './incremental/deepAstAdapter.service.js';
+import { isIncrementalAuthorityActive } from './incremental/incrementalCanary.service.js';
+import { incrementalMetrics } from './incremental/incrementalMetrics.service.js';
+import { REPORT_SECTIONS, POLICY_APPLICABILITY_DEFAULTS } from '../config/policyReportSections.js';
 
 /** Documentation base (production). */
 const DOCS_BASE = 'https://zaxion.dev/docs';
@@ -702,9 +711,12 @@ export class EvaluationEngineService {
   getRequiredDataDepth(appliedPolicies) {
     let requiresContent = false;
     let requiresAst = false;
+    let requiresIncremental = false;
+    let requiresDeepAst = false;
 
     for (const policy of appliedPolicies) {
-      const type = policy.rules_logic?.type;
+      const rules = policy.rules_logic || {};
+      const type = rules.type;
       if (!type) continue;
 
       if ([
@@ -722,9 +734,55 @@ export class EvaluationEngineService {
       ].includes(type)) {
         requiresAst = true;
       }
+
+      const depth = rules.required_depth || POLICY_APPLICABILITY_DEFAULTS[type]?.required_depth;
+      if (incrementalFlags.isParseEnabled() || incrementalFlags.isMerkleEnabled()) {
+        if (depth === 'shallow' || depth === 'selective_deep') {
+          requiresIncremental = true;
+        }
+      }
+      if (incrementalFlags.isDeepAstEnabled() && depth === 'selective_deep') {
+        requiresDeepAst = true;
+      }
     }
 
-    return { requiresContent, requiresAst };
+    return { requiresContent, requiresAst, requiresIncremental, requiresDeepAst };
+  }
+
+  _evaluationContext(facts) {
+    return facts.metadata?.evaluation_context || {};
+  }
+
+  _scannableFiles(facts, rules, policyType) {
+    const files = facts.changes?.files || [];
+    const singleContent = facts.file_content;
+    const base = files.filter((f) => f.content).length
+      ? files
+      : singleContent
+        ? [{ path: facts.file_path || 'file', content: singleContent }]
+        : [];
+    return filterFilesForPolicy(base, policyType, rules, this._evaluationContext(facts));
+  }
+
+  _applyDeepAstGate(violations, file, policyType, facts) {
+    if (!incrementalFlags.isDeepAstEnabled()) return violations;
+    if (!isIncrementalAuthorityActive(this._evaluationContext(facts))) return violations;
+
+    const content = typeof file.content === 'string' ? file.content : '';
+    const path = file.path || file.filePath || 'file';
+    const parseResult = parseFile(content, path);
+    const shallowFacts = extractShallowFacts(parseResult, path, content);
+    const deep = validateDeep({ parseResult, filePath: path, policyType, shallowFacts });
+
+    if (deep.use_legacy) {
+      incrementalMetrics.recordFallback('deep_ast_gate');
+      return violations;
+    }
+
+    if (deep.confidence < 0.85 && (!deep.confirmed_violations || deep.confirmed_violations.length === 0)) {
+      return violations.filter((v) => (v.file || path) !== path);
+    }
+    return violations;
   }
 
   /** Priority order for resolving policy conflicts (Higher value = Higher priority) */
@@ -748,12 +806,73 @@ export class EvaluationEngineService {
   ]);
 
   /**
+   * Evaluate policies section-by-section with progress callbacks (scan UI).
+   * @param {object} factSnapshot
+   * @param {Array} appliedPolicies
+   * @param {{ onSectionComplete?: (partial: object) => void|Promise<void> }} [options]
+   */
+  async evaluateWithSectionProgress(factSnapshot, appliedPolicies, options = {}) {
+    if (!incrementalFlags.isScanProgressUiEnabled() || !options.onSectionComplete) {
+      return this.evaluate(factSnapshot, appliedPolicies, options);
+    }
+
+    const allResults = [];
+    const seenPolicyIds = new Set();
+
+    for (const section of REPORT_SECTIONS) {
+      const ruleTypes = new Set(section.checks.flatMap((c) => c.rule_types));
+      const sectionPolicies = appliedPolicies.filter((p) => {
+        const t = p.rules_logic?.type;
+        return t && ruleTypes.has(t) && !seenPolicyIds.has(p.policy_version_id);
+      });
+
+      const runningChecks = {};
+      for (const check of section.checks) {
+        runningChecks[check.id] = 'running';
+      }
+      await options.onSectionComplete({
+        section_id: section.id,
+        phase: 'running',
+        runningChecks,
+        policy_results: [...allResults],
+      });
+
+      if (sectionPolicies.length > 0) {
+        const partial = this.evaluate(factSnapshot, sectionPolicies, options);
+        for (const pr of partial.policy_results || []) {
+          if (!seenPolicyIds.has(pr.policy_version_id)) {
+            seenPolicyIds.add(pr.policy_version_id);
+            allResults.push(pr);
+          }
+        }
+      }
+
+      await options.onSectionComplete({
+        section_id: section.id,
+        phase: 'complete',
+        runningChecks: {},
+        policy_results: [...allResults],
+      });
+    }
+
+    const remaining = appliedPolicies.filter((p) => !seenPolicyIds.has(p.policy_version_id));
+    if (remaining.length > 0) {
+      const partial = this.evaluate(factSnapshot, remaining, options);
+      for (const pr of partial.policy_results || []) {
+        allResults.push(pr);
+      }
+    }
+
+    return this.evaluate(factSnapshot, appliedPolicies, options);
+  }
+
+  /**
    * Evaluate a Fact Snapshot against applied policies
    * @param {object} factSnapshot - The fact snapshot to evaluate
    * @param {Array} appliedPolicies - The policies to apply
    * @returns {object} Evaluation Result
    */
-  evaluate(factSnapshot, appliedPolicies) {
+  evaluate(factSnapshot, appliedPolicies, options = {}) {
     // V4: Enforce evaluation mode (STRICT vs BEST_EFFORT)
     const evalMode = factSnapshot.evaluation_mode || 'STRICT';
     
@@ -788,6 +907,12 @@ export class EvaluationEngineService {
       // We don't throw anymore. We just proceed and flag it in system_health.
     }
     const factData = factSnapshot?.data ?? {};
+    if (options.incrementalContext) {
+      factData.metadata = {
+        ...(factData.metadata || {}),
+        evaluation_context: options.incrementalContext,
+      };
+    }
     const violatedPolicies = [];
     const policyResults = [];
 
@@ -834,6 +959,22 @@ export class EvaluationEngineService {
           details: { bypassed: true, reason: bypassMap.get(policyType) }
         });
         continue;
+      }
+
+      if (incrementalFlags.isRouterEnabled() && !options.disableIncrementalRouter) {
+        const files = factData?.changes?.files || [];
+        const routing = routePolicy({ policyType, files, metadata: rules });
+        if (routing.path === 'skip') {
+          policyResults.push({
+            policy_version_id: policy.policy_version_id,
+            level: policy.level,
+            policy_type: policyType,
+            verdict: 'PASS',
+            message: `Skipped (${routing.skip_reason || 'inapplicable'}).`,
+            details: { skipped: true, skip_reason: routing.skip_reason, routing_path: 'skip' },
+          });
+          continue;
+        }
       }
 
       const checker = this.checkers.get(policyType);
@@ -1281,21 +1422,17 @@ export class EvaluationEngineService {
    * Returns violations with line numbers and file path.
    */
   _checkSecurityPatterns(facts, rules) {
-    const files = facts.changes?.files || [];
-    const singleContent = facts.file_content;
-    const toScan = files.filter(f => f.content).length
-      ? files
-      : singleContent ? [{ path: facts.file_path || 'file', content: singleContent }] : [];
-    if (!toScan.length) return { verdict: 'PASS', message: 'No file content to scan.' };
+    const toScan = this._scannableFiles(facts, rules, 'security_patterns');
+    if (!toScan.length) return { verdict: 'PASS', message: 'No applicable file content to scan.' };
 
     const violations = [];
     for (const file of toScan) {
       const content = typeof file.content === 'string' ? file.content : '';
       const path = file.path || file.filePath || 'file';
       
-      // Use PatternMatcherService
       const matches = this.patternMatcher.analyzeCode(content, path);
-      violations.push(...matches);
+      const gated = this._applyDeepAstGate(matches, file, 'security_patterns', facts);
+      violations.push(...gated);
     }
 
     if (violations.length === 0) return { verdict: 'PASS', message: 'No security patterns detected.' };
@@ -1418,29 +1555,16 @@ export class EvaluationEngineService {
    * Code quality checker: uses PatternMatcherService for console logs, debugging etc.
    */
   _checkCodeQuality(facts, rules) {
-    const files = facts.changes?.files || [];
-    const singleContent = facts.file_content;
-    const toScan = files.filter(f => f.content).length
-      ? files
-      : singleContent ? [{ path: facts.file_path || 'file', content: singleContent, ast: null }] : [];
-    
-    // We can reuse PatternMatcherService here too if we define the patterns in yaml
-    // For now, let's keep the existing logic OR switch to PatternMatcher if we added console-logs patterns.
-    // We DID add no-console-logs-production to yaml.
-    
+    const toScan = this._scannableFiles(facts, rules, 'code_quality');
+    if (!toScan.length) return { verdict: 'PASS', message: 'No applicable file content to scan.' };
+
     const violations = [];
     for (const file of toScan) {
       const content = typeof file.content === 'string' ? file.content : '';
       const path = file.path || file.filePath || 'file';
       
-      // Use PatternMatcherService for code quality patterns
-      // Note: analyzeCode runs ALL enabled patterns. 
-      // Ideally we would want to run only specific patterns.
-      // But running all is fine, we just filter the results for the current checker.
-      
       const allMatches = this.patternMatcher.analyzeCode(content, path);
       
-      // Filter for code quality policies
       const qualityMatches = allMatches.filter(m => 
           m.policy === 'no-console-logs-production' || 
           m.policy === 'no-magic-numbers' || 
@@ -1448,7 +1572,8 @@ export class EvaluationEngineService {
           m.policy === 'no-debug-mode-production'
       );
       
-      violations.push(...qualityMatches);
+      const gated = this._applyDeepAstGate(qualityMatches, file, 'code_quality', facts);
+      violations.push(...gated);
     }
 
     if (violations.length === 0) return { verdict: 'PASS', message: 'No code quality issues detected.' };
