@@ -1,0 +1,11 @@
+{
+  "name": "rust-await-no-trycatch",
+  "policy_type": "reliability",
+  "files": [
+    {
+      "path": "src/main.rs",
+      "content": "async fn run() {\n    let x = fetch().await;\n    println!(\"{:?}\", x);\n}\n"
+    }
+  ],
+  "expected_verdict": "PASS"
+}
