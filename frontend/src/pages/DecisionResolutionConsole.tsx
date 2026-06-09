@@ -15,6 +15,7 @@ import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
 import { usePRGate, PRDecision, PolicyResult } from '@/hooks/usePRGate';
+import { GovernanceScanProgress } from '@/components/governance/GovernanceScanProgress';
 
 const DecisionResolutionConsole = () => {
   const { owner, repo: repoName, prNumber: prNumStr } = useParams<{ owner: string; repo: string; prNumber: string }>();
@@ -85,6 +86,23 @@ const DecisionResolutionConsole = () => {
       }
     }
   }, [pOwner, pRepo, pPr, fetchLatestDecision]);
+
+  const isScanPending =
+    decisionData?.evaluationStatus === 'PENDING' ||
+    decisionData?.decision === 'PENDING' ||
+    decisionData?.scan_progress?.scan_status === 'RUNNING';
+
+  useEffect(() => {
+    if (!pOwner || !pRepo || !pPr || !isScanPending) return;
+    const prNumber = parseInt(pPr);
+    if (isNaN(prNumber)) return;
+
+    const interval = setInterval(() => {
+      fetchLatestDecision(pOwner, pRepo, prNumber);
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [pOwner, pRepo, pPr, isScanPending, fetchLatestDecision]);
 
   const handleGitHubConnect = () => {
     const currentUrl = window.location.pathname + window.location.search;
@@ -265,6 +283,10 @@ const DecisionResolutionConsole = () => {
                 </div>
               </div>
             </div>
+
+            {(decisionData?.scan_progress || isScanPending) && (
+              <GovernanceScanProgress scanProgress={decisionData?.scan_progress} />
+            )}
 
             {/* POLICY VIOLATION BREAKDOWN (MAPPING CARD) */}
             {(isBlocked || isOverridden) && (
