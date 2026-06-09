@@ -1,4 +1,5 @@
 // backend/src/utils/policyMapper.js
+import { enrichRulesWithApplicability } from '../services/incremental/incrementalPolicyMetadata.js';
 
 /**
  * Maps static Core Policy IDs (e.g. SEC-001) to the structured rule logic 
@@ -53,9 +54,9 @@ export function mapCorePolicyToRules(policyId, severity = 'BLOCK') {
   
   const rules = policyMap[policyId]; // eslint-disable-line security/detect-object-injection
 
-  return {
+  return enrichRulesWithApplicability({
     ...rules,
     id: policyId,
-    severity: severity || 'BLOCK'
-  };
+    severity: severity || 'BLOCK',
+  });
 }
