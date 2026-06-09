@@ -7,6 +7,8 @@ import traverse from '@babel/traverse';
 import crypto from 'crypto';
 import { astCache } from '../utils/lruCache.js';
 import logger from '../logger.js';
+import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
+import { incrementalAnalyzer } from './incremental/incrementalAnalyzer.service.js';
 
 const PARSER_OPTIONS = {
   sourceType: 'module',
@@ -503,6 +505,20 @@ export async function enrichSnapshotWithAstAsync(factSnapshot) {
   if (!factSnapshot.metadata) factSnapshot.metadata = {};
   factSnapshot.metadata.ast_by_path = astData;
   factSnapshot.metadata.parser_success_rate = parserSuccessRate;
+
+  if (!incrementalFlags.isForcedLegacy() && (incrementalFlags.isParseEnabled() || incrementalFlags.isMerkleEnabled())) {
+    try {
+      const incremental = incrementalAnalyzer.analyzeFiles(files);
+      if (incremental?.enabled) {
+        factSnapshot.metadata.incremental = {
+          ...incremental,
+          analysis_mode: incrementalFlags.isEnforcementEnabled() ? 'incremental' : 'hybrid',
+        };
+      }
+    } catch (incrErr) {
+      logger.warn({ err: incrErr.message }, 'Incremental analyzer shadow pass failed (non-fatal)');
+    }
+  }
 }
 
 export function enrichSnapshotWithAst(factData) {
