@@ -9,6 +9,14 @@ Use this page when **Mermaid diagrams** in other files do not render in your vie
 - Technical: [ZAXION_OPS_001_TECHNICAL_PLAN.md](../Incremental%20Architecture/ZAXION_OPS_001_TECHNICAL_PLAN.md)
 - Non-technical: [ZAXION_OPS_001_NON_TECHNICAL_PLAN.md](../Incremental%20Architecture/ZAXION_OPS_001_NON_TECHNICAL_PLAN.md)
 
+**Incremental architecture (Merkle, Tree-sitter, FP reduction, PR scan UI)**:
+
+- Implementation plan: [ZAXION_INCREMENTAL_IMPLEMENTATION_PLAN.md](../Incremental%20Architecture/ZAXION_INCREMENTAL_IMPLEMENTATION_PLAN.md)
+- Analysis design: [ZAXION_INCREMENTAL_ANALYSIS_DESIGN.md](../Incremental%20Architecture/ZAXION_INCREMENTAL_ANALYSIS_DESIGN.md)
+- File-by-file map: [ZAXION_INCREMENTAL_FILE_BY_FILE_EXECUTION_MAP.md](../Incremental%20Architecture/ZAXION_INCREMENTAL_FILE_BY_FILE_EXECUTION_MAP.md)
+- Manual PR test fixtures: [manual-test-pr-fixtures/README.md](../Incremental%20Architecture/manual-test-pr-fixtures/README.md)
+- PR scan progress UI: [ZAXION_PR_SCAN_PROGRESS_AND_REPORT_UI.md](../Incremental%20Architecture/ZAXION_PR_SCAN_PROGRESS_AND_REPORT_UI.md)
+
 ---
 
 ## Folder roles (text diagram)
@@ -16,7 +24,7 @@ Use this page when **Mermaid diagrams** in other files do not render in your vie
 ```text
 Zaxion/
 ├── docs/                      Phase specs, governance, operations guides
-├── Incremental Architecture/  Incremental delivery plans, OPS-001, system overview
+├── Incremental Architecture/  Incremental plans, OPS-001, PR scan progress UI, system overview
 ├── frontend/                  React app; src/Docs = product-facing markdown
 ├── backend/                   Node API, policy engine, evaluation, ingestion
 ├── PITCH/                     Investor and challenge materials
