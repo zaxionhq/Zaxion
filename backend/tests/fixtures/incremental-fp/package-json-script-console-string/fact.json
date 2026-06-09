@@ -1,0 +1,11 @@
+{
+  "name": "package-json-script-console-string",
+  "policy_type": "code_quality",
+  "files": [
+    {
+      "path": "package.json",
+      "content": "{\n  \"scripts\": {\n    \"echo\": \"node -e console.log('hi')\"\n  }\n}\n"
+    }
+  ],
+  "expected_verdict": "PASS"
+}
