@@ -4,6 +4,7 @@ import { Op } from 'sequelize';
 import { FactIngestorService } from './factIngestor.service.js';
 import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
 import { ShadowComparatorService } from './incremental/shadowComparator.service.js';
+import { evaluatePolicyApplicability } from './policyPathScope.service.js';
 
 /**
  * Phase 6 Pillar 3: Policy Evolution & Simulation (The Blast Radius)
@@ -40,7 +41,8 @@ export class PolicySimulationService {
       target_branch,
       days_back,
       is_sandbox = false, // Default to false, but should be enforced by controller
-      github_token = null // Wave 4: Optional token for on-demand enrichment
+      github_token = null,
+      include_ai_explanations = false,
     } = payload;
 
     // SANDBOX ENFORCEMENT
@@ -172,6 +174,22 @@ export class PolicySimulationService {
       // 4. Execute Simulation (The Snapshot Replayer)
       const results = await this._executeSimulation(simulation, snapshots, rules, target_repo_full_name, github_token);
 
+      if (include_ai_explanations && results.violations?.length > 0) {
+        const { ViolationExplainerService } = await import('./violationExplainer.service.js');
+        const { LlmService } = await import('./llm.service.js');
+        const explainer = new ViolationExplainerService(new LlmService());
+        const explained = await explainer.explainViolations({
+          decision: { decision: results.summary?.policy_would_block ? 'BLOCK' : 'WARN', violations: results.violations },
+          prContext: {},
+          violations: results.violations,
+        });
+        if (explained.enriched) {
+          results.violations = explained.violations;
+          results.decision_summary = explained.decision_summary;
+          results.ai_explanations_enriched = true;
+        }
+      }
+
       // 5. Update Record
       if (isUuid) {
         await simulation.update({
@@ -259,6 +277,27 @@ export class PolicySimulationService {
         ...plainSnapshot,
         data: factData
       };
+
+      const changedPaths = (factData.changes?.files || []).map((f) => f.path || f.filePath).filter(Boolean);
+      const pathApplicability = evaluatePolicyApplicability({ rules: draftRules, changedPaths });
+
+      if (!pathApplicability.applicable && changedPaths.length > 0) {
+        consistent += 1;
+        perPrResults.push({
+          pr_number: snapshot.pr_number,
+          repo: snapshot.repo_full_name,
+          historical_result: historicalDecision ? historicalDecision.result : 'UNKNOWN',
+          simulated_result: 'NOT_APPLICABLE',
+          verdict: 'NOT_APPLICABLE',
+          violations: [],
+          path_scope: {
+            include_paths: draftRules.include_paths,
+            exclude_paths: draftRules.exclude_paths,
+            skip_reasons: pathApplicability.skipReasons,
+          },
+        });
+        continue;
+      }
 
       const repoParts = (snapshot.repo_full_name || '').split('/');
       const incrementalContext = { owner: repoParts[0], repo: repoParts[1] };
