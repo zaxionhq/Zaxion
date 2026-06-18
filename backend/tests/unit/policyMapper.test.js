@@ -53,4 +53,23 @@ describe('PolicyMapper', () => {
     const rules = mapCorePolicyToRules('SEC-001', 'WARN');
     expect(rules.severity).toBe('WARN');
   });
+
+  test('COD-002 includes scripts/** in exclude_paths with path_exclusions reasons', () => {
+    const rules = mapCorePolicyToRules('COD-002');
+    expect(rules.exclude_paths).toContain('scripts/**');
+    expect(rules.path_exclusions?.some((e) => e.pattern === 'scripts/**' && e.reason)).toBe(true);
+  });
+
+  test('OPS-001 excludes src/** for supply chain scope', () => {
+    const rules = mapCorePolicyToRules('OPS-001');
+    expect(rules.exclude_paths).toContain('src/**');
+    expect(rules.include_paths).toContain('.github/workflows/**');
+  });
+
+  test('SEC-004 includes only manifest lockfile paths', () => {
+    const rules = mapCorePolicyToRules('SEC-004');
+    expect(rules.include_paths).toContain('package.json');
+    expect(rules.include_paths).toContain('package-lock.json');
+    expect(rules.include_paths).not.toContain('*');
+  });
 });
