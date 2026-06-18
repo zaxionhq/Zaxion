@@ -28,6 +28,9 @@ export interface PRDecision {
       riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     };
     rationale: string;
+    decision_summary?: string;
+    developer_next_steps?: string[];
+    explanations_enriched?: boolean;
     suggestedTestIntents?: {
       file: string;
       intent: string;
@@ -55,6 +58,8 @@ export interface Violation {
   current_value?: unknown;
   required_value?: unknown;
   explanation?: string;
+  ai_explanation?: string;
+  ai_fix_steps?: string[];
   remediation?: string | {
     steps: string[];
     example?: string;
