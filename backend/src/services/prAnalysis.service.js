@@ -5,6 +5,7 @@ import { DiffAnalyzerService } from "./diffAnalyzer.service.js";
 import { PolicyEngineService } from "./policyEngine.service.js";
 import { AdvisorService } from "./advisor.service.js";
 import { LlmService } from "./llm.service.js";
+import { ViolationExplainerService } from "./violationExplainer.service.js";
 import { GitHubReporterService } from "./githubReporter.service.js";
 import githubAppService from "./githubApp.service.js";
 import env from "../config/env.js";
@@ -30,7 +31,8 @@ export class PrAnalysisService {
     // Initialize sub-services with the dynamic token/octokit
     const diffAnalyzer = new DiffAnalyzerService(token);
     const policyEngine = new PolicyEngineService(octokit, db);
-    const advisor = new AdvisorService(new LlmService()); // Pass LlmService for Phase 2 Refiner
+    const advisor = new AdvisorService(new LlmService());
+    const violationExplainer = new ViolationExplainerService(new LlmService());
     const reporter = new GitHubReporterService(octokit);
 
     // Transaction for DB operations
@@ -188,12 +190,26 @@ export class PrAnalysisService {
       try {
         const decisionSnapshot = structuredClone(decisionObject);
         const advisorContext = await advisor.enrich(decisionSnapshot, prContext);
-        
-        // Advisor output is stored under its own explicit namespace
-        // to keep it separate from the deterministic 'facts'
+
+        const explained = await violationExplainer.explainViolations({
+          decision: decisionSnapshot,
+          prContext,
+          violations: decisionSnapshot.violations,
+        });
+
+        if (explained.enriched) {
+          decisionObject.violations = explained.violations;
+          if (explained.decision_summary) {
+            decisionObject.decisionReason = explained.decision_summary;
+          }
+        }
+
         decisionObject.advisor = {
           ...advisorContext,
-          non_authoritative: true // Explicitly marked as non-authoritative
+          ...(explained.decision_summary ? { decision_summary: explained.decision_summary } : {}),
+          ...(explained.developer_next_steps?.length ? { developer_next_steps: explained.developer_next_steps } : {}),
+          explanations_enriched: explained.enriched,
+          non_authoritative: true,
         };
       } catch (advisorErr) {
         logger.warn(`[PrAnalysisService] [trace:${traceId}] Advisor enrichment failed: ${advisorErr.message}`);
