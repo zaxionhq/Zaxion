@@ -10,6 +10,7 @@ import { evaluateSupplyChainIntegrity } from '../utils/supplyChainIntegrity.js';
 import { routePolicy } from './incremental/policyRouter.service.js';
 import { incrementalFlags } from './incremental/incrementalFeatureFlags.service.js';
 import { filterFilesForPolicy } from './incremental/incrementalFileGate.service.js';
+import { filterFilesByScope } from '../utils/pathScope.utils.js';
 import { parseFile } from './incremental/treeSitterParser.service.js';
 import { extractShallowFacts } from './incremental/nodeFactExtractor.service.js';
 import { validateDeep } from './incremental/deepAstAdapter.service.js';
@@ -761,7 +762,12 @@ export class EvaluationEngineService {
       : singleContent
         ? [{ path: facts.file_path || 'file', content: singleContent }]
         : [];
-    return filterFilesForPolicy(base, policyType, rules, this._evaluationContext(facts));
+    const kindFiltered = filterFilesForPolicy(base, policyType, rules, this._evaluationContext(facts));
+    const { files: scoped, skipReasons } = filterFilesByScope(kindFiltered, rules);
+    if (skipReasons.length > 0) {
+      this._pathSkipAudit = skipReasons;
+    }
+    return scoped;
   }
 
   _applyDeepAstGate(violations, file, policyType, facts) {
