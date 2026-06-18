@@ -1,6 +1,7 @@
 {
   "name": "scripts-console-mjs",
   "policy_type": "code_quality",
+  "expected_verdict": "PASS",
   "files": [
     {
       "path": "scripts/auto-submit.mjs",
