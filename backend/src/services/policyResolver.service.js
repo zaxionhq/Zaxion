@@ -1,47 +1,49 @@
 import { Op } from 'sequelize';
 import logger from '../logger.js';
+import { evaluatePolicyApplicability, normalizePath, pathMatchesGlob } from '../utils/pathScope.utils.js';
 
 /**
- * Phase 5 Pillar 2: Policy Resolution Service
- * Responsible for identifying which policies apply to a specific PR
- * based on its facts and the hierarchical resolution rules.
+ * Resolves which custom DB policies apply to a PR based on scope, status, and path rules.
  */
 export class PolicyResolverService {
-  /**
-   * @param {object} db - Sequelize db object containing models
-   */
   constructor(db) {
     this.db = db;
   }
 
   /**
-   * Resolve applicable policies for a given PR context
-   * @param {string} orgId - UUID of the organization
-   * @param {string} repoId - UUID of the repository
-   * @param {string[]} changedPaths - List of raw changed file paths
-   * @param {Date} snapshotTimestamp - Timestamp from FactSnapshot
-   * @returns {Promise<object[]>} List of resolved policies
+   * @param {object} params
+   * @param {string} params.owner - GitHub org/user login
+   * @param {string} params.repo - Full repo name owner/repo
+   * @param {string[]} params.changedPaths
+   * @param {Date} params.timestamp
+   * @param {string[]} [params.enabledPolicyIds] - Optional UUID filter (founder audit)
    */
-  async resolve(orgId, repoId, changedPaths, snapshotTimestamp) {
-    logger.info({ orgId, repoId, snapshotTimestamp }, "PolicyResolver: Resolving policies for PR");
+  async resolve({ owner, repo, changedPaths, timestamp, enabledPolicyIds = [] }) {
+    logger.info({ owner, repo, timestamp }, 'PolicyResolver: Resolving policies for PR');
 
-    // Invariant 7: Path Normalization
-    const normalizedPaths = changedPaths.map(p => this._normalizePath(p));
+    const normalizedPaths = (changedPaths || []).map((p) => normalizePath(p));
 
-    // 1. Fetch Org-level Policies active at snapshot time
-    const orgPolicies = await this._getApplicablePolicies(orgId, 'ORG', snapshotTimestamp);
-    
-    // 2. Fetch Repo-level Policies active at snapshot time
-    const repoPolicies = await this._getApplicablePolicies(repoId, 'REPO', snapshotTimestamp);
+    const orgPolicies = await this._getApplicablePolicies(owner, 'ORG', timestamp);
+    const globalPolicies = await this._getApplicablePolicies('GLOBAL', 'ORG', timestamp);
+    const repoPolicies = await this._getApplicablePolicies(repo, 'REPO', timestamp);
 
-    // 3. Combine and Filter by Path
-    const allPolicies = [...orgPolicies, ...repoPolicies];
+    const allPolicies = [...globalPolicies, ...orgPolicies, ...repoPolicies];
     const applicablePolicies = [];
 
     for (const policy of allPolicies) {
-      const match = this._matchPaths(policy, normalizedPaths);
-      if (match.isApplicable) {
-        // Handle potentially multiple versions (though limit 1 is used in query)
+      if (!policy.versions?.length) continue;
+
+      if (enabledPolicyIds.length > 0 && !enabledPolicyIds.includes(policy.id)) {
+        continue;
+      }
+
+      const rules = policy.versions[0].rules_logic || {};
+      const applicability = evaluatePolicyApplicability({
+        rules,
+        changedPaths: normalizedPaths,
+      });
+
+      if (applicability.applicable) {
         const version = policy.versions[0];
         applicablePolicies.push({
           policy_id: policy.id,
@@ -49,114 +51,86 @@ export class PolicyResolverService {
           name: policy.name,
           level: version.enforcement_level,
           scope: policy.scope,
-          resolution_path: match.triggerPath,
+          resolution_path: applicability.triggerPath,
           reason: policy.scope === 'ORG' ? 'Org-level policy' : 'Repo-level policy',
-          rules_logic: version.rules_logic
+          rules_logic: version.rules_logic,
+          policy_scope: 'custom',
         });
       }
     }
 
-    // 4. Deterministic Conflict Resolution (Pillar 5.2 Invariants)
     return this._resolveConflicts(applicablePolicies);
   }
 
   /**
-   * Invariant 7: Path Normalization
-   * Removes ./, handles case sensitivity consistently.
+   * @deprecated Use normalizePath from pathScope.utils
    */
   _normalizePath(p) {
-    let normalized = p.trim().replace(/\\/g, '/'); // Convert windows to posix
-    if (normalized.startsWith('./')) {
-      normalized = normalized.slice(2);
-    }
-    return normalized.toLowerCase(); // Case-insensitive matching as per design
+    return normalizePath(p);
   }
 
-  /**
-   * Fetch policies for a specific target and scope, including the version active at the timestamp.
-   */
   async _getApplicablePolicies(targetId, scope, timestamp) {
-    return await this.db.Policy.findAll({
+    const rows = await this.db.Policy.findAll({
       where: {
         target_id: targetId,
-        scope: scope
+        scope,
+        status: 'APPROVED',
+        is_enabled: true,
+        deleted_at: null,
       },
       include: [{
         model: this.db.PolicyVersion,
         as: 'versions',
         where: {
-          createdAt: {
-            [Op.lte]: timestamp
-          }
+          createdAt: { [Op.lte]: timestamp },
         },
+        required: false,
         order: [['version_number', 'DESC']],
-        limit: 1
-      }]
+        limit: 1,
+      }],
     });
+
+    return rows.filter((p) => p.versions?.length > 0);
   }
 
   /**
-   * Matches changed paths against policy rules (include/exclude).
+   * Matches changed paths against policy rules (include/exclude) via shared util.
    */
   _matchPaths(policy, changedPaths) {
-    const rules = policy.versions[0].rules_logic;
-    const includePaths = (rules.include_paths || ['*']).map(p => this._normalizePath(p));
-    const excludePaths = (rules.exclude_paths || []).map(p => this._normalizePath(p));
-
-    // Check each changed path
-    for (const path of changedPaths) {
-      const isIncluded = includePaths.some(pattern => this._pathMatches(path, pattern));
-      const isExcluded = excludePaths.some(pattern => this._pathMatches(path, pattern));
-
-      if (isIncluded && !isExcluded) {
-        return { isApplicable: true, triggerPath: path };
-      }
-    }
-
-    return { isApplicable: false };
+    const rules = policy.versions[0].rules_logic || {};
+    const result = evaluatePolicyApplicability({ rules, changedPaths });
+    return {
+      isApplicable: result.applicable,
+      triggerPath: result.triggerPath,
+      skipReasons: result.skipReasons,
+    };
   }
 
-  /**
-   * Basic glob-like matching (deterministic as per Step 3.1)
-   */
   _pathMatches(path, pattern) {
-    if (pattern === '*') return true;
-    if (pattern.endsWith('/*')) {
-      const prefix = pattern.slice(0, -2);
-      return path.startsWith(prefix);
-    }
-    return path === pattern;
+    return pathMatchesGlob(path, pattern);
   }
 
-  /**
-   * Resolves conflicts between policies (Step 3.4)
-   */
   _resolveConflicts(policies) {
     const resolved = new Map();
 
-    policies.forEach(p => {
+    policies.forEach((p) => {
       const existing = resolved.get(p.policy_id);
       if (!existing) {
         resolved.set(p.policy_id, p);
         return;
       }
 
-      // Conflict Resolution (Step 3.4):
-      // 1. Hierarchy: Org-level takes precedence over Repo-level
       if (p.scope === 'ORG' && existing.scope === 'REPO') {
         resolved.set(p.policy_id, p);
         return;
       }
-      
+
       if (p.scope === existing.scope) {
-        // 2. Strictness: MANDATORY > OVERRIDABLE > ADVISORY
-        const levels = { 'MANDATORY': 3, 'OVERRIDABLE': 2, 'ADVISORY': 1 };
+        const levels = { MANDATORY: 3, OVERRIDABLE: 2, ADVISORY: 1 };
         if (levels[p.level] > levels[existing.level]) {
           resolved.set(p.policy_id, p);
           return;
         }
-
-        // 3. Tie-breaker: Deterministic fallback using Policy UUID (alphabetical)
         if (levels[p.level] === levels[existing.level]) {
           if (p.policy_id.localeCompare(existing.policy_id) < 0) {
             resolved.set(p.policy_id, p);
@@ -165,7 +139,6 @@ export class PolicyResolverService {
       }
     });
 
-    // Return sorted by policy_id for determinism
     return Array.from(resolved.values()).sort((a, b) => a.policy_id.localeCompare(b.policy_id));
   }
 }
