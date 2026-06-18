@@ -16,6 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  STANDARD_SECURITY_EXCLUDE_PATHS,
+  applyTemplatePathDefaults,
+} from '@/lib/policyPathDefaults';
 
 interface Repository {
   id: number;
@@ -79,6 +83,10 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
   const [owningRole, setOwningRole] = useState('admin'); // Default role
   const [description, setDescription] = useState(''); // Plain English description
   const [rulesLogic, setRulesLogic] = useState('{\n  "type": "mandatory_review",\n  "count": 1\n}');
+  const [includePaths, setIncludePaths] = useState<string[]>(['*']);
+  const [excludePaths, setExcludePaths] = useState<string[]>([]);
+  const [pathScopeTouched, setPathScopeTouched] = useState(false);
+  const [pathScopeInput, setPathScopeInput] = useState('');
 
   // Dropdown Data
   const [repositories, setRepositories] = useState<Repository[]>([]);
@@ -100,7 +108,50 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
     setBranchName('');
     setDescription('');
     setRulesLogic('{\n  "type": "mandatory_review",\n  "count": 1\n}');
+    setIncludePaths(['*']);
+    setExcludePaths([]);
+    setPathScopeTouched(false);
+    setPathScopeInput('');
     setValidationReport(null);
+  };
+
+  const syncPathFieldsFromRules = (json: string) => {
+    try {
+      const parsed = JSON.parse(json) as { include_paths?: string[]; exclude_paths?: string[]; type?: string };
+      if (Array.isArray(parsed.include_paths)) setIncludePaths(parsed.include_paths);
+      if (Array.isArray(parsed.exclude_paths)) setExcludePaths(parsed.exclude_paths);
+    } catch {
+      /* ignore parse errors while typing */
+    }
+  };
+
+  const mergePathsIntoRulesLogic = (nextInclude: string[], nextExclude: string[]) => {
+    try {
+      const parsed = JSON.parse(rulesLogic) as Record<string, unknown>;
+      const merged = {
+        ...parsed,
+        include_paths: nextInclude.length ? nextInclude : ['*'],
+        ...(nextExclude.length ? { exclude_paths: nextExclude } : {}),
+      };
+      if (!nextExclude.length) delete merged.exclude_paths;
+      setRulesLogic(JSON.stringify(merged, null, 2));
+    } catch {
+      /* keep editor as-is if invalid JSON */
+    }
+  };
+
+  const applySecurityTemplateDefaults = () => {
+    try {
+      const parsed = JSON.parse(rulesLogic) as Record<string, unknown> & { type?: string };
+      const type = typeof parsed.type === 'string' ? parsed.type : 'code_quality';
+      const withDefaults = applyTemplatePathDefaults(type, parsed, pathScopeTouched);
+      setIncludePaths((withDefaults.include_paths as string[]) || ['*']);
+      setExcludePaths((withDefaults.exclude_paths as string[]) || []);
+      setRulesLogic(JSON.stringify(withDefaults, null, 2));
+    } catch {
+      setExcludePaths([...STANDARD_SECURITY_EXCLUDE_PATHS]);
+      setIncludePaths(['src/**', 'lib/**', 'app/**']);
+    }
   };
 
   const fetchRepositories = useCallback(async () => {
@@ -515,13 +566,80 @@ export function CreatePolicyModal({ open, onOpenChange, onPolicyCreated }: Creat
             )}
 
             <div className="space-y-2">
+              <Label>Policy path scope</Label>
+              <p className="text-xs text-muted-foreground">
+                Limit which changed files trigger this policy. Pre-configured excludes reduce false positives in scripts, docs, and tests.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPathScopeTouched(false);
+                    applySecurityTemplateDefaults();
+                  }}
+                >
+                  Security / quality defaults
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const next = [...STANDARD_SECURITY_EXCLUDE_PATHS];
+                    setExcludePaths(next);
+                    setPathScopeTouched(true);
+                    mergePathsIntoRulesLogic(includePaths, next);
+                  }}
+                >
+                  Exclude tooling &amp; tests
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Include paths</span>
+                  <Input
+                    className="mt-1 font-mono text-[11px]"
+                    value={includePaths.join(', ')}
+                    onChange={(e) => {
+                      const next = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+                      setIncludePaths(next.length ? next : ['*']);
+                      setPathScopeTouched(true);
+                      mergePathsIntoRulesLogic(next.length ? next : ['*'], excludePaths);
+                    }}
+                    placeholder="src/**, lib/** or *"
+                  />
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Exclude paths</span>
+                  <Input
+                    className="mt-1 font-mono text-[11px]"
+                    value={excludePaths.join(', ')}
+                    onChange={(e) => {
+                      const next = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+                      setExcludePaths(next);
+                      setPathScopeTouched(true);
+                      mergePathsIntoRulesLogic(includePaths, next);
+                    }}
+                    placeholder="scripts/**, **/*.md"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Rules Logic (JSON)</Label>
               <div className="h-[300px] border rounded-md overflow-hidden">
                 <Editor
                   height="100%"
                   defaultLanguage="json"
                   value={rulesLogic}
-                  onChange={(value) => setRulesLogic(value || '')}
+                  onChange={(value) => {
+                    const v = value || '';
+                    setRulesLogic(v);
+                    syncPathFieldsFromRules(v);
+                  }}
                   theme="vs-dark" // Assuming dark mode or handle based on theme
                   options={{
                     minimap: { enabled: false },
