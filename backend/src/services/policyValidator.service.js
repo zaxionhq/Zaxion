@@ -61,6 +61,8 @@ export class PolicyValidatorService {
         break;
     }
 
+    this._validatePathScope(logic, errors);
+
     return {
       isValid: errors.length === 0,
       errors
@@ -91,5 +93,19 @@ export class PolicyValidatorService {
     }
 
     return { isConsistent, warning };
+  }
+
+  _validatePathScope(logic, errors) {
+    for (const field of ['include_paths', 'exclude_paths']) {
+      if (logic[field] === undefined) continue;
+      if (!Array.isArray(logic[field])) {
+        errors.push(`${field} must be an array of glob strings.`);
+      } else if (logic[field].some((p) => typeof p !== 'string' || !p.trim())) {
+        errors.push(`${field} entries must be non-empty strings.`);
+      }
+    }
+    if (Array.isArray(logic.include_paths) && logic.include_paths.length === 0) {
+      errors.push('include_paths must not be empty when provided; use ["*"] for all paths.');
+    }
   }
 }
