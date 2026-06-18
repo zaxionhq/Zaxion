@@ -194,6 +194,7 @@ export default function policyControllerFactory(db) {
         'path',
         'paths',
         'exclude_paths',
+        'include_paths',
         'file_types',
         'severity',
         'message',
@@ -526,7 +527,8 @@ export default function policyControllerFactory(db) {
         target_branch,
         days_back,
         is_sandbox: true, // FORCE SANDBOX
-        github_token: req.user?.github_token // Wave 4: Pass token for on-demand enrichment
+        github_token: req.user?.github_token,
+        include_ai_explanations: req.body.include_ai_explanations === true,
       });
 
       // Generate HTML Report immediately
