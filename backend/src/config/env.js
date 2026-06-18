@@ -88,6 +88,11 @@ const schema = z.object({
   INCR_CANARY_ORGS: z.string().optional(),
   INCR_CANARY_REPOS: z.string().optional(),
   INCR_CANARY_PERCENT: z.coerce.number().optional(),
+
+  // --- AI explanation overlay (non-authoritative) ---
+  ADVISOR_ENRICH_EXPLANATIONS: z.string().optional(),
+  ADVISOR_EXPLAIN_MAX_VIOLATIONS: z.coerce.number().optional(),
+  ADVISOR_EXPLAIN_TIMEOUT_MS: z.coerce.number().optional(),
 })
 .superRefine((env, ctx) => {
   // DB is required only in non-test environments
