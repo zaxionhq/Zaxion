@@ -171,7 +171,7 @@ export class GitHubReporterService {
           const file = v.file || "N/A";
           const policy = v.rule_id || "N/A";
           const line = v.line || "N/A";
-          const description = v.message || "N/A";
+          const description = v.ai_explanation || v.message || "N/A";
           const requiredAction = v.remediation?.steps ? v.remediation.steps.join("<br>") : (v.remediation || "N/A");
           const observedChange = v.current_value ? (typeof v.current_value === 'object' ? JSON.stringify(v.current_value) : v.current_value) : "N/A";
           
@@ -181,8 +181,10 @@ export class GitHubReporterService {
       }
 
       // 2. Plain English Rationale (Requirement 4)
-      text += `### 💡 Plain English Rationale\n`;
-      if (decisionObject.violations && decisionObject.violations.length > 0) {
+      text += `### Plain English Rationale\n`;
+      if (decisionObject.advisor?.decision_summary) {
+        text += `> ${decisionObject.advisor.decision_summary}\n\n`;
+      } else if (decisionObject.violations && decisionObject.violations.length > 0) {
         // Collect unique explanations from all violations
         const uniqueExplanations = [...new Set(decisionObject.violations.map(v => v.explanation).filter(Boolean))];
         if (uniqueExplanations.length > 0) {
