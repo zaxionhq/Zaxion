@@ -3,6 +3,14 @@ policies:
   no-hardcoded-secrets:
     enabled: true
     severity: HIGH
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "AWS Access Key"
         regex: "AKIA[0-9A-Z]{16}"
@@ -37,6 +45,14 @@ policies:
   no-sql-injection:
     enabled: true
     severity: HIGH
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "String Concatenation in Query"
         regex: "(query|sql|execute)\\s*\\(\\s*[\"`].*\\$\\{.*\\}.*[\"`]"
@@ -55,6 +71,14 @@ policies:
   no-unencrypted-data-transit:
     enabled: true
     severity: HIGH
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "HTTP Request for Sensitive Data"
         regex: "fetch\\s*\\(\\s*[\"`]http://.*auth.*[\"`]"
@@ -70,6 +94,14 @@ policies:
   no-insecure-cryptography:
     enabled: true
     severity: HIGH
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "MD5 Hashing"
         regex: "(md5|MD5)\\s*\\("
@@ -91,6 +123,14 @@ policies:
   no-exposed-admin-endpoints:
     enabled: true
     severity: HIGH
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "Admin Endpoint Without Auth"
         regex: "app\\.(get|post|put|delete)\\s*\\(\\s*[\"`]/admin/.*[\"`]\\s*,\\s*\\([^)]*\\)\\s*=>\\s*\\{"
@@ -149,6 +189,14 @@ policies:
   no-hardcoded-configuration:
     enabled: true
     severity: MEDIUM
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "Hardcoded URL"
         regex: "[\"`](https?://[^\"'\\s]+)[\"`]"
