@@ -594,9 +594,11 @@ const DecisionResolutionConsole = () => {
                       <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Plain English Rationale</h4>
                       <div className="text-lg md:text-xl font-medium text-foreground/70 leading-relaxed max-w-3xl space-y-4">
                         {decisionData?.violations && decisionData.violations.length > 0 ? (
-                          [...new Set(decisionData.violations.map(v => v.explanation).filter(Boolean))].map((exp, i) => (
+                          [...new Set(decisionData.violations.map(v => v.ai_explanation || v.explanation).filter(Boolean))].map((exp, i) => (
                             <p key={i}>"{exp}"</p>
                           ))
+                        ) : decisionData?.advisor?.decision_summary ? (
+                          <p>"{decisionData.advisor.decision_summary}"</p>
                         ) : decisionData?.advisor?.rationale ? (
                           <p>"{decisionData.advisor.rationale}"</p>
                         ) : (
