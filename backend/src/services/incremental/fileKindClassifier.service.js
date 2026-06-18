@@ -3,7 +3,9 @@
  */
 import path from 'path';
 
-/** @typedef {'source'|'test'|'manifest'|'workflow'|'lockfile'|'infrastructure'|'unknown'} FileKind */
+/** @typedef {'source'|'test'|'manifest'|'workflow'|'lockfile'|'infrastructure'|'cli'|'unknown'} FileKind */
+
+const CLI_PATH_RE = /(^|\/)(scripts|bin|tools|cmd)(\/|$)/i;
 
 const MANIFEST_NAMES = new Set([
   'package.json',
@@ -53,6 +55,10 @@ export function classifyFileKind(filePath) {
     /^test_.*\.py$/i.test(lower)
   ) {
     return 'test';
+  }
+
+  if (CLI_PATH_RE.test(norm)) {
+    return 'cli';
   }
 
   const ext = path.extname(norm).toLowerCase();
