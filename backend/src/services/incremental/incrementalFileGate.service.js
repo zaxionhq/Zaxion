@@ -5,6 +5,7 @@ import { classifyFileKind, detectLanguageFromPath } from './fileKindClassifier.s
 import { getApplicabilityDefaults } from './policyApplicability.service.js';
 import { isIncrementalAuthorityActive } from './incrementalCanary.service.js';
 import { incrementalFlags } from './incrementalFeatureFlags.service.js';
+import { pathInScope } from '../../utils/pathScope.utils.js';
 
 /**
  * @param {string} filePath
@@ -25,6 +26,12 @@ export function shouldScanFileForPolicy(filePath, policyType, rules = {}, contex
 
   if (!kinds.includes('*') && !kinds.includes(kind)) return false;
   if (!langs.includes('*') && !langs.includes(lang)) return false;
+
+  const hasPathScope =
+    (Array.isArray(rules.include_paths) && rules.include_paths.length > 0 && rules.include_paths[0] !== '*') ||
+    (Array.isArray(rules.exclude_paths) && rules.exclude_paths.length > 0);
+  if (hasPathScope && !pathInScope(filePath, rules)) return false;
+
   return true;
 }
 
