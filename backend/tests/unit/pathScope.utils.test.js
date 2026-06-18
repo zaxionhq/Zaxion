@@ -41,6 +41,21 @@ describe('pathScope.utils', () => {
       expect(r.reason).toContain('exclude_paths');
     });
 
+    it('returns human-readable reason from path_exclusions', () => {
+      const r = getReasonForSkip('scripts/foo.mjs', {
+        exclude_paths: ['scripts/**'],
+        path_exclusions: [
+          {
+            pattern: 'scripts/**',
+            reason: 'CLI and build tooling legitimately uses console output',
+          },
+        ],
+      });
+      expect(r.inScope).toBe(false);
+      expect(r.reason).toBe('CLI and build tooling legitimately uses console output');
+      expect(r.reason).not.toBe('Excluded by exclude_paths');
+    });
+
     it('returns include_paths miss', () => {
       const r = getReasonForSkip('docs/readme.md', { include_paths: ['src/**'] });
       expect(r.inScope).toBe(false);
