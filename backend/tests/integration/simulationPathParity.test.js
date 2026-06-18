@@ -63,4 +63,17 @@ describe('simulation path parity', () => {
     }]);
     expect((result.violations || []).length).toBeGreaterThan(0);
   });
+
+  it('core COD-002 excludes scripts but flags src console.log', () => {
+    const coreRules = mapCorePolicyToRules('COD-002', 'WARN');
+    const result = engine.evaluate(fixture, [{
+      policy_id: 'COD-002',
+      policy_version_id: 'core-COD-002-v1',
+      level: 'MANDATORY',
+      rules_logic: coreRules,
+    }]);
+    const files = (result.violations || []).map((v) => v.file);
+    expect(files).not.toContain('scripts/foo.mjs');
+    expect(files).toContain('src/app.ts');
+  });
 });
