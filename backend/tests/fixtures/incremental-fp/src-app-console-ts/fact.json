@@ -1,0 +1,10 @@
+{
+  "name": "src-app-console-ts",
+  "policy_type": "code_quality",
+  "files": [
+    {
+      "path": "src/app.ts",
+      "content": "export function run() {\n  console.log('hello');\n}\n"
+    }
+  ]
+}
