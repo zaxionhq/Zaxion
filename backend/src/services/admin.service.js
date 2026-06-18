@@ -255,11 +255,14 @@ export class AdminService {
     const { PolicyEngineService } = await import("./policyEngine.service.js");
     const { AdvisorService } = await import("./advisor.service.js");
     const { LlmService } = await import("./llm.service.js");
+    const { ViolationExplainerService } = await import("./violationExplainer.service.js");
 
     const octokit = new Octokit({ auth: customToken });
     const diffAnalyzer = new DiffAnalyzerService(customToken);
     const policyEngine = new PolicyEngineService(octokit, db);
-    const advisor = new AdvisorService(new LlmService());
+    const llm = new LlmService();
+    const advisor = new AdvisorService(llm);
+    const violationExplainer = new ViolationExplainerService(llm);
 
     // 1. Extract Facts
     const prContext = await diffAnalyzer.analyze(owner, repo, prNumber);
@@ -278,11 +281,21 @@ export class AdminService {
 
     // 3. Evaluate with Policy Injection
     const result = await policyEngine.evaluate(prContext, metadata);
+
+    const explained = await violationExplainer.explainViolations({
+      decision: result,
+      prContext,
+      violations: result.violations,
+    });
+    if (explained.enriched) {
+      result.violations = explained.violations;
+      if (explained.decision_summary) result.decisionReason = explained.decision_summary;
+    }
     
     // 4. Transform to Frontend-friendly format
     const violations = (result.violations || []).map(v => ({
       rule_id: v.rule_id,
-      explanation: v.message || v.explanation,
+      explanation: v.ai_explanation || v.message || v.explanation,
       file: v.file,
       line: v.line,
       severity: v.severity,
