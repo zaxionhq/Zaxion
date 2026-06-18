@@ -143,6 +143,7 @@ interface Violation {
   current_value?: string;
   required_value?: string;
   explanation?: string;
+  ai_explanation?: string;
   remediation?: { steps: string[]; example?: string };
   documentation_link?: string;
   pr_number?: number;
@@ -205,6 +206,7 @@ export const PolicySimulation: React.FC = () => {
   // Sample size / time range for simulation (Task 4)
   const [sampleSizeOption, setSampleSizeOption] = useState<'last_10' | 'last_20' | 'last_50' | 'last_30_days'>('last_20');
   const [fetchFromGitHub, setFetchFromGitHub] = useState(false);
+  const [includeAiExplanations, setIncludeAiExplanations] = useState(false);
   const [isFetchingPrs, setIsFetchingPrs] = useState(false);
 
   // Input mode: repository (historical PRs) | upload | paste | github_url
@@ -623,6 +625,7 @@ export const PolicySimulation: React.FC = () => {
         scope_override: simulationScope,
         target_repo_full_name: simulationScope !== 'GLOBAL' ? simulationRepo : undefined,
         target_branch: simulationScope === 'BRANCH' ? simulationBranch : undefined,
+        include_ai_explanations: includeAiExplanations,
       });
 
       const summary = data?.results?.summary || {};
@@ -1064,6 +1067,19 @@ export const PolicySimulation: React.FC = () => {
             </div>
           )}
 
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="include-ai-explanations"
+              checked={includeAiExplanations}
+              onChange={(e) => setIncludeAiExplanations(e.target.checked)}
+              className="rounded border-border"
+            />
+            <Label htmlFor="include-ai-explanations" className="text-xs font-medium text-muted-foreground cursor-pointer">
+              Generate AI explanations (opt-in; requires LLM API key on server)
+            </Label>
+          </div>
+
           {selectedPolicy && (
             <div className="p-3 rounded border border-border/50 bg-muted/20 space-y-2">
               <div className="flex justify-between items-center">
@@ -1417,8 +1433,10 @@ export const PolicySimulation: React.FC = () => {
 
                             {v.explanation && (
                               <div className="space-y-1.5">
-                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">Explanation</p>
-                                <p className="text-muted-foreground leading-relaxed">{v.explanation}</p>
+                                <p className="font-semibold text-muted-foreground uppercase text-[10px]">
+                                  Explanation{v.ai_explanation ? ' (AI-assisted)' : ''}
+                                </p>
+                                <p className="text-muted-foreground leading-relaxed">{v.ai_explanation || v.explanation}</p>
                               </div>
                             )}
 
