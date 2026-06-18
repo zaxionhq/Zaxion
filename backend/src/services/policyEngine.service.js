@@ -13,6 +13,9 @@ import { PolicyRouterService } from "./incremental/policyRouter.service.js";
 import { incrementalAnalyzer } from "./incremental/incrementalAnalyzer.service.js";
 import { ShadowComparatorService } from "./incremental/shadowComparator.service.js";
 import { incrementalMetrics } from "./incremental/incrementalMetrics.service.js";
+import { PolicyResolverService } from "./policyResolver.service.js";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class PolicyEngineService {
   constructor(octokit, db) {
@@ -88,11 +91,46 @@ export class PolicyEngineService {
          policy_id: corePolicy.id,
          policy_version_id: `core-${corePolicy.id}-v1`,
          level: corePolicy.severity === 'CRITICAL' ? 'MANDATORY' : 'ADVISORY',
+         policy_scope: 'core',
          rules_logic: {
            ...rules,
            severity: corePolicy.severity,
          }
        });
+    }
+
+    const uuidFilter = enabledPolicyIds.filter((id) => UUID_RE.test(id));
+    const hasExplicitSelection = enabledPolicyIds.length > 0;
+    const shouldLoadCustom = this.db && (!hasExplicitSelection || uuidFilter.length > 0);
+
+    if (shouldLoadCustom) {
+      try {
+        const resolver = new PolicyResolverService(this.db);
+        const changedPaths = (prContext.files || []).map((f) => f.path || f.filename || f).filter(Boolean);
+        const customPolicies = await resolver.resolve({
+          owner: metadata.owner,
+          repo: `${metadata.owner}/${metadata.repo}`,
+          changedPaths,
+          timestamp: new Date(),
+          enabledPolicyIds: uuidFilter,
+        });
+
+        for (const cp of customPolicies) {
+          appliedPolicies.push({
+            policy_id: cp.policy_id,
+            policy_version_id: cp.policy_version_id,
+            level: cp.level || 'MANDATORY',
+            policy_scope: 'custom',
+            resolution_path: cp.resolution_path,
+            rules_logic: {
+              ...cp.rules_logic,
+              severity: cp.rules_logic?.severity || 'WARN',
+            },
+          });
+        }
+      } catch (resolverErr) {
+        logger.error('[PolicyEngine] PolicyResolver failed:', resolverErr);
+      }
     }
 
     // Incremental shadow enrichment (no verdict impact when flags off)
