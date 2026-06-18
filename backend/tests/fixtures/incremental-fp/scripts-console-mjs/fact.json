@@ -1,0 +1,10 @@
+{
+  "name": "scripts-console-mjs",
+  "policy_type": "code_quality",
+  "files": [
+    {
+      "path": "scripts/auto-submit.mjs",
+      "content": "console.log('deploy');\nexport default {};\n"
+    }
+  ]
+}
