@@ -4,6 +4,7 @@ import yaml from 'js-yaml';
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
 import logger from '../logger.js';
+import { getReasonForSkip } from '../utils/pathScope.utils.js';
 
 export class PatternMatcherService {
   constructor(configPath) {
@@ -56,6 +57,11 @@ export class PatternMatcherService {
     // We can trigger them based on policy enablement
     const magicNumbersPolicy = this.policies.get('no-magic-numbers');
     if (magicNumbersPolicy?.enabled) {
+      const scopeCheck = getReasonForSkip(filePath, {
+        include_extensions: magicNumbersPolicy.include_extensions,
+        exclude_path_substrings: magicNumbersPolicy.exclude_path_substrings,
+      });
+      if (scopeCheck.inScope) {
         const magicNumbers = this.detectMagicNumbers(code);
         if (magicNumbers.length > 0) {
             magicNumbers.forEach(m => {
@@ -72,6 +78,7 @@ export class PatternMatcherService {
                 });
             });
         }
+      }
     }
 
     return this.violations;
@@ -83,33 +90,15 @@ export class PatternMatcherService {
    * Policy-level keys apply when not set on the pattern.
    */
   _patternAppliesToFile(filePath, policy, pattern) {
-    const pathNorm = (filePath || '').replace(/\\/g, '/');
-    const lowerPath = pathNorm.toLowerCase();
-
-    const exclude =
-      pattern.exclude_path_substrings ||
-      policy.exclude_path_substrings ||
-      pattern.exclude_path_patterns ||
-      policy.exclude_path_patterns;
-    if (exclude && Array.isArray(exclude)) {
-      for (const sub of exclude) {
-        if (sub != null && String(sub).length > 0 && lowerPath.includes(String(sub).toLowerCase())) {
-          return false;
-        }
-      }
-    }
-
-    const include = pattern.include_extensions || policy.include_extensions;
-    if (include && Array.isArray(include) && include.length > 0) {
-      const extList = include.map((e) => {
-        const s = String(e).toLowerCase();
-        return s.startsWith('.') ? s : `.${s}`;
-      });
-      const matches = extList.some((ext) => lowerPath.endsWith(ext));
-      if (!matches) return false;
-    }
-
-    return true;
+    const scopeRules = {
+      include_extensions: pattern.include_extensions || policy.include_extensions,
+      exclude_path_substrings:
+        pattern.exclude_path_substrings ||
+        policy.exclude_path_substrings ||
+        pattern.exclude_path_patterns ||
+        policy.exclude_path_patterns,
+    };
+    return getReasonForSkip(filePath, scopeRules).inScope;
   }
 
   /**
