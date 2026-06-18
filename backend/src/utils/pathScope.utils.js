@@ -127,10 +127,15 @@ export function getReasonForSkip(filePath, scopeRules = {}, context = {}) {
 
   for (const pat of exclude_paths) {
     if (pat != null && String(pat).length > 0 && pathMatchesGlob(norm, String(pat))) {
+      const patStr = String(pat);
+      const pathExclusions = scopeRules.path_exclusions;
+      const entry =
+        Array.isArray(pathExclusions) &&
+        pathExclusions.find((e) => e?.pattern && pathMatchesGlob(norm, String(e.pattern)));
       return {
         inScope: false,
-        reason: 'Excluded by exclude_paths',
-        matchedPattern: String(pat),
+        reason: entry?.reason ?? 'Excluded by exclude_paths',
+        matchedPattern: patStr,
         matchType: 'exclude',
       };
     }
