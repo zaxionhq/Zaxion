@@ -103,6 +103,18 @@ policies:
   no-debug-mode-production:
     enabled: true
     severity: MEDIUM
+    include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+    exclude_path_substrings:
+      - "/scripts/"
+      - "/bin/"
+      - "/tools/"
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "Debug Flag Enabled in Production"
         regex: "if\\s*\\(\\s*process\\.env\\.NODE_ENV\\s*===\\s*[\"`]production[\"`]\\s*\\)\\s*\\{[^}]*debug\\s*:\\s*true"
@@ -116,6 +128,17 @@ policies:
   no-magic-numbers:
     enabled: true
     severity: LOW
+    include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+    exclude_path_substrings:
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/scripts/"
+      - "/bin/"
+      - "/tools/"
     # AST-based check (implemented in PatternMatcherService)
     # patterns:
     #   - name: "Numeric Literal Outside Constant"
@@ -186,6 +209,18 @@ policies:
   no-console-logs-production:
     enabled: true
     severity: MEDIUM
+    include_extensions: [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+    exclude_path_substrings:
+      - "/scripts/"
+      - "/bin/"
+      - "/tools/"
+      - "/test/"
+      - "/tests/"
+      - "/__tests__/"
+      - ".test."
+      - ".spec."
+      - "/mock/"
+      - "/docs/"
     patterns:
       - name: "Console Log in Production Code"
         regex: "console\\.(log|error|warn|info|debug)\\s*\\("
