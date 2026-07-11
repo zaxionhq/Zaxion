@@ -2,50 +2,73 @@
 import { AdminService } from "../services/admin.service.js";
 import * as logger from "../utils/logger.js";
 
-/**
- * Controller for Admin/Founder operations.
- */
 const adminControllerFactory = (db) => {
   const adminService = new AdminService();
 
   async function bulkAnalyzeRepo(req, res) {
     try {
-      const { repoUrl, prCount = 5, policyIds = [] } = req.body;
+      const {
+        targetMode = "repository",
+        repoUrl,
+        prCount = 5,
+        prNumbers = [],
+        prUrls = [],
+        policyIds = [],
+      } = req.body;
       const user = req.user;
-      const token = req.githubToken; // From auth middleware
+      const token = req.githubToken;
 
-      if (!repoUrl) {
-        return res.status(400).json({ error: "Repository URL is required." });
+      if (targetMode === "repository" || targetMode === "repo_prs") {
+        if (!repoUrl) {
+          return res.status(400).json({ error: "Repository URL is required." });
+        }
       }
 
-      logger.log(`[AdminController] User ${user.username} initiated bulk analysis for ${repoUrl}`);
+      if (targetMode === "repo_prs") {
+        const numbers = adminService.parsePrNumbers(prNumbers);
+        if (numbers.length === 0) {
+          return res.status(400).json({ error: "At least one valid PR number is required." });
+        }
+      }
 
-      const results = await adminService.analyzeRepoPrs(repoUrl, prCount, policyIds, token);
-      
+      if (targetMode === "pr_urls") {
+        const parsed = adminService.parsePrUrlsList(prUrls);
+        if (parsed.length === 0) {
+          return res.status(400).json({ error: "At least one valid GitHub PR URL is required." });
+        }
+      }
+
+      logger.log(`[AdminController] User ${user.username} initiated bulk analysis (mode: ${targetMode})`);
+
+      const results = await adminService.bulkAnalyze(
+        { targetMode, repoUrl, prCount, prNumbers, prUrls, policyIds },
+        token
+      );
+
       return res.status(200).json({
         success: true,
-        data: results
+        data: results,
       });
     } catch (err) {
       logger.error("[AdminController] bulkAnalyzeRepo error:", err);
-      return res.status(500).json({ 
-        error: "Bulk analysis failed.", 
-        message: err.message 
+      const status = err.message?.includes("required") || err.message?.includes("Invalid") ? 400 : 500;
+      return res.status(status).json({
+        error: "Bulk analysis failed.",
+        message: err.message,
       });
     }
   }
 
   async function getAdminStatus(req, res) {
     try {
-      // If they reach here, they've passed the authorizeFounder middleware
       return res.status(200).json({
         success: true,
         admin: {
           username: req.user.username,
           role: req.user.role,
           is_founder: true,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
     } catch (err) {
       logger.error("[AdminController] getAdminStatus error:", err);
@@ -55,7 +78,7 @@ const adminControllerFactory = (db) => {
 
   return {
     bulkAnalyzeRepo,
-    getAdminStatus
+    getAdminStatus,
   };
 };
 
