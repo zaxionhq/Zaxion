@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
@@ -16,18 +16,21 @@ import {
   History,
   Scale,
   Ban,
-  FileText
+  FileText,
+  Menu
 } from 'lucide-react';
 import { GovernanceAuditTrail } from '@/components/governance/GovernanceAuditTrail';
 import { ProofImageLightbox } from '@/components/landing/ProofImageLightbox';
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Handle deep link redirects from GitHub "Fix with Zaxion" button
   useEffect(() => {
@@ -75,12 +78,56 @@ const LandingPage = () => {
               <NeonButton variant="glass" color="cyan" className="px-6 py-2 text-sm" onClick={() => navigate('/governance')}>
                 Login
               </NeonButton>
-              <ThemeToggle />
             </div>
           </div>
           
-          <div className="md:hidden flex items-center gap-4">
-            <ThemeToggle />
+          <div className="md:hidden">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open menu">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px]">
+                <SheetHeader>
+                  <SheetTitle className="text-left">Menu</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-8">
+                  <Link
+                    to="/docs"
+                    className="text-base font-medium text-foreground hover:text-primary transition-colors"
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    Documentation
+                  </Link>
+                  <a
+                    href="#problem"
+                    className="text-base font-medium text-foreground hover:text-primary transition-colors"
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    The Problem
+                  </a>
+                  <a
+                    href="#use-cases"
+                    className="text-base font-medium text-foreground hover:text-primary transition-colors"
+                    onClick={() => setMobileNavOpen(false)}
+                  >
+                    Use Cases
+                  </a>
+                  <NeonButton
+                    variant="glass"
+                    color="cyan"
+                    className="w-full mt-4"
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      navigate('/governance');
+                    }}
+                  >
+                    Login
+                  </NeonButton>
+                </nav>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </nav>
