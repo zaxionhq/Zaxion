@@ -222,7 +222,7 @@ const SetupGuide = () => {
         <div className="space-y-6">
           <h3 className="text-xl font-bold text-foreground/80">Frontend Implementation</h3>
           <p className="text-muted-foreground text-sm">
-            You can display Zaxion policy status directly in your internal admin dashboards or developer tools using our API.
+            You can display Zaxion policy status in your own dashboards or developer tools using our API.
           </p>
           
           <div className="bg-muted/30 rounded-2xl border border-border overflow-hidden">
