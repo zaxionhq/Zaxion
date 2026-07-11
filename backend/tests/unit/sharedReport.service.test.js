@@ -2,6 +2,7 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import {
   createSharedReport,
   getSharedReportByToken,
+  listReportsByUser,
 } from '../../src/services/sharedReport.service.js';
 
 jest.unstable_mockModule('../../src/config/env.js', () => ({
@@ -13,6 +14,7 @@ describe('sharedReport.service', () => {
     SharedReport: {
       create: jest.fn(),
       findOne: jest.fn(),
+      findAll: jest.fn(),
     },
   };
 
@@ -48,5 +50,31 @@ describe('sharedReport.service', () => {
 
     const out = await getSharedReportByToken(mockDb, 'tok');
     expect(out.expired).toBe(true);
+  });
+
+  it('listReportsByUser returns mapped reports with share_url', async () => {
+    const future = new Date();
+    future.setDate(future.getDate() + 7);
+    mockDb.SharedReport.findAll.mockResolvedValue([
+      {
+        share_token: 'abc'.repeat(21).slice(0, 64),
+        type: 'policy_simulation',
+        meta: { repo: 'o/r' },
+        created_at: new Date(),
+        expires_at: future,
+        revoked_at: null,
+      },
+    ]);
+
+    const out = await listReportsByUser(mockDb, 'user-1');
+    expect(out).toHaveLength(1);
+    expect(out[0].share_url).toContain('/reports/');
+    expect(out[0].is_active).toBe(true);
+    expect(mockDb.SharedReport.findAll).toHaveBeenCalled();
+  });
+
+  it('listReportsByUser returns empty without userId', async () => {
+    const out = await listReportsByUser(mockDb, null);
+    expect(out).toEqual([]);
   });
 });
