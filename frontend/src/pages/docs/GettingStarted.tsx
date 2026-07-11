@@ -297,9 +297,12 @@ const DocsGettingStarted = () => {
             Use the policy library and configuration guides to match your risk tolerance. Start from core policies or templates.
           </DocsStep>
           <DocsStep number="03" title="Run a simulation" to="/governance">
-            Use the policy simulator where available to see how a rule would affect sample PRs or uploads before you block merges.
+            Use the Policy Impact Simulator to test rules against historical PRs, a GitHub PR URL, uploaded files, pasted code, or a zip — then optionally share a read-only link with your team.
           </DocsStep>
-          <DocsStep number="04" title="Track decisions" to="/governance">
+          <DocsStep number="04" title="Share results (optional)" to="/docs/shared-reports">
+            Copy a time-limited share link from simulation results. Manage active links under Governance Settings.
+          </DocsStep>
+          <DocsStep number="05" title="Track decisions" to="/governance">
             Review outcomes and overrides so your team keeps a clear record of what shipped and why.
           </DocsStep>
         </div>
