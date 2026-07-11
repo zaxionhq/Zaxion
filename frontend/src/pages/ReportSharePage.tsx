@@ -1,10 +1,10 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Shield } from 'lucide-react';
+import { Loader2, AlertCircle, Shield, Eye } from 'lucide-react';
 import { api } from '@/lib/api';
 import { InteractiveAuditReport } from '@/components/governance/InteractiveAuditReport';
-import { BulkAnalysisData } from '@/components/governance/SocialAuditTerminal';
+import { SocialAuditTerminal, BulkAnalysisData } from '@/components/governance/SocialAuditTerminal';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -16,6 +16,16 @@ interface SharedReportResponse {
   generated_at?: string;
   expires_at?: string;
 }
+
+const ReadOnlyBanner = () => (
+  <Alert className="mb-6 border-primary/20 bg-primary/5">
+    <Eye className="h-4 w-4 text-primary" />
+    <AlertTitle className="text-sm font-semibold">Shared report — view only</AlertTitle>
+    <AlertDescription className="text-xs text-muted-foreground">
+      This is a read-only snapshot. Export and share controls are disabled.
+    </AlertDescription>
+  </Alert>
+);
 
 const ReportSharePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -62,6 +72,7 @@ const ReportSharePage: React.FC = () => {
   }
 
   if (data.type === 'founder_audit') {
+    const viewMode = data.meta?.view_mode;
     return (
       <div className="min-h-screen p-6 md:p-10 max-w-6xl mx-auto">
         <header className="mb-8 flex items-center gap-3 border-b border-border/60 pb-6">
@@ -73,18 +84,26 @@ const ReportSharePage: React.FC = () => {
             </p>
           </div>
         </header>
-        <InteractiveAuditReport data={data.payload as BulkAnalysisData} />
+        <ReadOnlyBanner />
+        {viewMode === 'SOCIAL' ? (
+          <SocialAuditTerminal data={data.payload as BulkAnalysisData} readOnly />
+        ) : (
+          <InteractiveAuditReport data={data.payload as BulkAnalysisData} readOnly />
+        )}
       </div>
     );
   }
 
   if (data.report_html) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen flex flex-col">
+        <div className="p-4 border-b border-border/60 bg-card/40">
+          <ReadOnlyBanner />
+        </div>
         <iframe
           title="Zaxion policy simulation report"
           srcDoc={data.report_html}
-          className="w-full min-h-screen border-0"
+          className="w-full flex-1 min-h-[calc(100vh-120px)] border-0"
           sandbox="allow-same-origin"
         />
       </div>
