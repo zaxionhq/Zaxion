@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, RotateCcw, ShieldCheck, AlertCircle, Loader2, Plus, Search, GitBranch, CheckCircle2, Download, ExternalLink, FileJson, HelpCircle, Upload, Link2 } from 'lucide-react';
-import { createShareableReportLink } from '@/lib/shareReport';
+import { createShareableReportLink, ShareExpiryDays } from '@/lib/shareReport';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -500,6 +500,7 @@ export const PolicySimulation: React.FC = () => {
 
   const [htmlReport, setHtmlReport] = useState<string | null>(null);
   const [sharingReport, setSharingReport] = useState(false);
+  const [shareExpiryDays, setShareExpiryDays] = useState<ShareExpiryDays>(30);
 
   const handleShareReportLink = async () => {
     if (!result) return;
@@ -515,10 +516,11 @@ export const PolicySimulation: React.FC = () => {
           per_pr_results: result.per_pr_results,
         },
         reportHtml: result.report_html || htmlReport || undefined,
-        meta: { policy_id: selectedPolicyId, repo: simulationRepo },
+        meta: { policy_id: selectedPolicyId, repo: simulationRepo, input_mode: inputMode },
+        expiresInDays: shareExpiryDays,
       });
       await navigator.clipboard.writeText(url);
-      toast({ title: 'Share link copied', description: 'Anyone with the link can view this report (30-day expiry).' });
+      toast({ title: 'Share link copied', description: `Anyone with the link can view this report (${shareExpiryDays}-day expiry).` });
     } catch (error) {
       toast({
         title: 'Share failed',
@@ -1600,24 +1602,40 @@ export const PolicySimulation: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    {result && (inputMode === 'repository' || inputMode === 'github_url') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-primary/30 text-primary hover:bg-primary/10"
-                        onClick={handleShareReportLink}
-                        disabled={sharingReport}
-                      >
-                        {sharingReport ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Link2 className="mr-2 h-4 w-4" />
-                        )}
-                        Copy Share Link
-                      </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {result && (
+                      <>
+                        <Select
+                          value={String(shareExpiryDays)}
+                          onValueChange={(v) => setShareExpiryDays(Number(v) as ShareExpiryDays)}
+                        >
+                          <SelectTrigger className="w-[130px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 day</SelectItem>
+                            <SelectItem value="7">7 days</SelectItem>
+                            <SelectItem value="30">30 days</SelectItem>
+                            <SelectItem value="90">90 days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-primary/30 text-primary hover:bg-primary/10"
+                          onClick={handleShareReportLink}
+                          disabled={sharingReport}
+                        >
+                          {sharingReport ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Link2 className="mr-2 h-4 w-4" />
+                          )}
+                          Copy Share Link
+                        </Button>
+                      </>
                     )}
-                    {result?.report_html && (inputMode === 'repository' || inputMode === 'github_url') && (
+                    {result?.report_html && (
                       <Button
                         variant="outline"
                         size="sm"
