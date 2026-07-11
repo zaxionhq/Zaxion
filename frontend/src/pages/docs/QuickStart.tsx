@@ -67,6 +67,7 @@ const DocsQuickStart = () => {
         <DocsStep number="04" title="See results">
           <ul className="list-disc list-inside space-y-2 text-slate-400 text-sm ml-4">
             <li>After <strong>Analyze</strong>, the simulator shows PASS/BLOCK, a short rationale, and any violations with file and line.</li>
+            <li>Use <strong>Copy Share Link</strong> to send a read-only report (choose 1–90 day expiry).</li>
             <li>Use <strong>Decisions</strong> and <strong>Analytics</strong> in the sidebar to see past runs, override history, and active policies with full details.</li>
           </ul>
         </DocsStep>
