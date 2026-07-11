@@ -55,6 +55,8 @@ export interface AnalysisResult {
 export interface BulkAnalysisData {
   owner: string;
   repo: string;
+  targetMode?: 'repository' | 'repo_prs' | 'pr_urls';
+  repos?: string[];
   totalAnalyzed: number;
   results: AnalysisResult[];
   summary?: {
@@ -89,10 +91,19 @@ export interface BulkAnalysisData {
 interface SocialAuditTerminalProps {
   data: BulkAnalysisData;
   isCaptureMode?: boolean;
+  readOnly?: boolean;
 }
 
-export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, isCaptureMode = false }) => {
+function formatScopeLabel(data: BulkAnalysisData): string {
+  if (data.repos && data.repos.length > 1) {
+    return `Multi-repo audit (${data.totalAnalyzed} PRs)`;
+  }
+  return `${data.owner}/${data.repo}`;
+}
+
+export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, isCaptureMode = false, readOnly = false }) => {
   const { owner, repo, results, summary } = data;
+  const scopeLabel = formatScopeLabel(data);
   const blockedPrs = useMemo(
     () => results.filter((pr) => pr.status === 'BLOCKED' || pr.status === 'BLOCK'),
     [results]
@@ -202,9 +213,11 @@ export const SocialAuditTerminal: React.FC<SocialAuditTerminalProps> = ({ data, 
             Founder Console — audit receipt
           </div>
           <div className="flex gap-2">
+            {!readOnly && (
             <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-100" onClick={copyAsAscii}>
               <Copy className="h-3 w-3" />
             </Button>
+            )}
           </div>
         </div>
       )}
