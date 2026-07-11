@@ -57,7 +57,7 @@ const PrivacyPolicy = () => {
             <h2 className="text-xl font-bold">3. Security Standards</h2>
           </div>
           <p className="text-slate-400 leading-relaxed">
-            All stored metadata is encrypted at rest using <strong>AES-256</strong>. Data in transit is secured via <strong>TLS 1.3</strong>. Access to our internal databases is strictly limited to the core infrastructure components.
+            Stored metadata is encrypted at rest using <strong>AES-256</strong>. Data in transit is secured via <strong>TLS 1.3</strong>. Access to stored data is restricted to authorized service components only.
           </p>
         </section>
 
