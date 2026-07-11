@@ -48,6 +48,16 @@ const DocsFAQ = () => {
             answer:
               'Use your documented override flow (for example PR body markers or maintainer actions, depending on how your org configured governance). Signed overrides and audit context are described under Audit & Ledger in the docs.',
           },
+          {
+            question: 'Can I share simulation or audit reports with others?',
+            answer:
+              'Yes. Use Copy Share Link after a Policy Impact Simulation or audit run. Viewers open a read-only page without logging in. Links expire after 1–90 days (you choose). Manage and revoke links under Governance Settings → Shared Reports. See the Shared Reports doc for details.',
+          },
+          {
+            question: 'How is Zaxion different from CodeRabbit or SonarQube?',
+            answer:
+              'Zaxion is built for deterministic pass/warn/block PR governance and policy simulation, with shareable audit reports. CodeRabbit focuses on AI-assisted review; SonarQube on quality metrics and gates. Many teams use complementary tools. See How Zaxion Compares for a feature table.',
+          },
         ].map((item, i) => (
           <div key={i} className="space-y-2">
             <h3 className="text-lg font-bold text-foreground">{item.question}</h3>
