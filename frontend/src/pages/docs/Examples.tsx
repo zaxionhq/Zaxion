@@ -38,6 +38,18 @@ const DocsExamples = () => {
         </div>
       </div>
 
+      <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-4 flex items-start gap-3">
+        <FileCheck className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
+        <div>
+          <h3 className="text-sm font-semibold text-indigo-200">Share simulation results</h3>
+          <p className="text-sm text-slate-400 mt-1">
+            After you run a simulation, use <strong className="text-slate-200">Copy Share Link</strong> to send a read-only
+            report to stakeholders. See{' '}
+            <Link to="/docs/shared-reports" className="text-indigo-400 hover:underline">Shared Reports</Link>.
+          </p>
+        </div>
+      </div>
+
       <section className="space-y-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <FileCheck className="h-5 w-5 text-indigo-400" />
