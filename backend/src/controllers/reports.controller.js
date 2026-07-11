@@ -42,6 +42,15 @@ export default function reportsControllerFactory(db) {
     }
   }
 
+  async function listReports(req, res, next) {
+    try {
+      const reports = await sharedReportService.listReportsByUser(db, req.user?.id);
+      return res.json({ reports });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async function revokeReport(req, res, next) {
     try {
       const { token } = req.params;
@@ -54,5 +63,5 @@ export default function reportsControllerFactory(db) {
     }
   }
 
-  return { createReport, getReport, revokeReport };
+  return { createReport, listReports, getReport, revokeReport };
 }
