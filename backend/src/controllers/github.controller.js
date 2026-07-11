@@ -11,6 +11,9 @@ import { log, error, warn } from "../utils/logger.js";
 import * as policyService from "../services/policy.service.js";
 import * as codeAnalysis from "../services/codeAnalysis.service.js";
 import { EvaluationEngineService } from "../services/evaluationEngine.service.js";
+import { ReportGeneratorService } from "../services/reportGenerator.service.js";
+
+const reportGenerator = new ReportGeneratorService();
 
 /**
  * Helper: create Octokit client with token
@@ -968,10 +971,32 @@ export default function githubControllerFactory(db) {
         const evaluationEngine = new EvaluationEngineService();
         const result = codeAnalysis.runCodeAnalysis(snapshot, draftRules, evaluationEngine);
 
+        const simulationLike = {
+          summary: {
+            total_snapshots: 1,
+            total_blocked_count: result.result === "BLOCK" ? 1 : 0,
+            fail_rate_change: result.result === "BLOCK" ? "100%" : "0%",
+            policy_would_block: result.result === "BLOCK",
+            policy_would_pass: result.result === "PASS",
+            violations_by_severity: { [result.result]: (result.violations || []).length },
+          },
+          per_pr_results: [{
+            pr_number: prNumber,
+            repo: repoFullName,
+            pr_title: pr.title,
+            verdict: result.result,
+            violations: result.violations || [],
+          }],
+          violations: result.violations || [],
+        };
+
+        const htmlReport = reportGenerator.generateHtmlReport(simulationLike, policy);
+
         res.status(200).json({
           id: `pr-${repoFullName}-${prNumber}-${Date.now()}`,
           status: "COMPLETED",
           ...result,
+          report_html: htmlReport,
           pr_title: pr.title,
           pr_number: prNumber,
           repo_full_name: repoFullName,
