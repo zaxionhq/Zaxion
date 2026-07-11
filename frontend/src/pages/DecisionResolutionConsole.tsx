@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { Shield, History, ExternalLink, AlertTriangle, CheckCircle2, FileText, Scale, Info, Lock, Loader2, AlertCircle, ListChecks, FileCode, Fingerprint, Activity, HelpCircle, ChevronRight } from 'lucide-react';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { GitHubButton } from '@/components/ui/github-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -185,9 +184,6 @@ const DecisionResolutionConsole = () => {
                 <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-tighter leading-none">Governance System</span>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-            </div>
           </div>
         </header>
         <div className="flex items-center justify-center p-6 mt-20">
@@ -243,7 +239,6 @@ const DecisionResolutionConsole = () => {
                 Log in <span className="hidden sm:inline ml-1">to Resolve</span>
               </Button>
             )}
-            <ThemeToggle />
           </div>
         </div>
       </header>
