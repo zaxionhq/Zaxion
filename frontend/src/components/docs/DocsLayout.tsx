@@ -22,7 +22,6 @@ import {
   Settings
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const DocsLayout = () => {
   const location = useLocation();
@@ -39,6 +38,8 @@ const DocsLayout = () => {
         { title: "Product overview", path: "/docs/overview", icon: Info },
         { title: "Quick Start (5 min)", path: "/docs/quick-start", icon: Terminal },
         { title: "Use Cases", path: "/docs/use-cases", icon: CheckCircle2 },
+        { title: "How Zaxion Compares", path: "/docs/comparison", icon: Scale },
+        { title: "Shared Reports", path: "/docs/shared-reports", icon: ExternalLink },
         { title: "Examples", path: "/docs/examples", icon: Code2 },
         { title: "FAQ", path: "/docs/faq", icon: HelpCircle },
         { title: "Troubleshooting", path: "/docs/troubleshooting", icon: Wrench },
@@ -138,11 +139,10 @@ const DocsLayout = () => {
             </span>
           </Link>
           
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-[10px] font-mono text-muted-foreground font-medium tracking-wider bg-muted px-2 py-0.5 rounded border border-border">
+          <div className="mt-4">
+            <div className="text-[10px] font-mono text-muted-foreground font-medium tracking-wider bg-muted px-2 py-0.5 rounded border border-border inline-block">
               v1.0.0-BETA
             </div>
-            <ThemeToggle />
           </div>
         </div>
 
