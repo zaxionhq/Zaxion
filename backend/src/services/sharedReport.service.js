@@ -74,3 +74,23 @@ export async function revokeSharedReport(db, token, userId) {
   await row.update({ revoked_at: new Date() });
   return true;
 }
+
+export async function listReportsByUser(db, userId) {
+  if (!userId) return [];
+  const rows = await db.SharedReport.findAll({
+    where: { created_by: userId },
+    order: [['created_at', 'DESC']],
+    attributes: ['share_token', 'type', 'meta', 'created_at', 'expires_at', 'revoked_at'],
+  });
+
+  return rows.map((row) => ({
+    share_token: row.share_token,
+    share_url: buildShareUrl(row.share_token),
+    type: row.type,
+    meta: row.meta,
+    created_at: row.created_at,
+    expires_at: row.expires_at,
+    revoked_at: row.revoked_at,
+    is_active: !row.revoked_at && (!row.expires_at || new Date(row.expires_at) >= new Date()),
+  }));
+}
