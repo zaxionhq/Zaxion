@@ -6,6 +6,7 @@ export default function reportsRoutesFactory(db) {
   const router = Router();
   const controller = reportsControllerFactory(db);
 
+  router.get('/', authenticateJWT, controller.listReports);
   router.get('/:token', controller.getReport);
   router.post('/', authenticateJWT, controller.createReport);
   router.delete('/:token', authenticateJWT, controller.revokeReport);
