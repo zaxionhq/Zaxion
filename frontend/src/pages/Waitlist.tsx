@@ -10,7 +10,6 @@ import { NeonButton } from '@/components/ui/neon-button';
 import { Input } from '@/components/ui/input';
 import { api, ApiError } from '@/lib/api';
 import { toast } from 'sonner';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const Waitlist = () => {
   const navigate = useNavigate();
@@ -50,7 +49,6 @@ const Waitlist = () => {
             ZAXION<span className="text-neon-cyan">.</span>
           </span>
         </div>
-        <ThemeToggle />
       </div>
 
       <div className="relative z-10 w-full max-w-md text-center">
