@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Github, Shield, ArrowLeft, Loader2 } from 'lucide-react';
 import { NeonButton } from '@/components/ui/neon-button';
 import { GlassCard } from '@/components/ui/glass-card';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useSession } from '@/hooks/useSession';
 import { api } from '@/lib/api';
 
@@ -50,7 +49,6 @@ const LoginPage: React.FC = () => {
             ZAXION<span className="text-neon-cyan">.</span>
           </span>
         </div>
-        <ThemeToggle />
       </div>
 
       <GlassCard className="max-w-md w-full p-8 md:p-12 relative z-10 border-border shadow-2xl bg-card/50">
