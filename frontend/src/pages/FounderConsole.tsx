@@ -18,13 +18,15 @@ import {
   Terminal,
   X
 } from 'lucide-react';
-import { createShareableReportLink } from '@/lib/shareReport';
+import { createShareableReportLink, ShareExpiryDays } from '@/lib/shareReport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { api, ApiError } from '@/lib/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -45,11 +47,25 @@ interface Policy {
   type: 'CORE' | 'CUSTOM';
 }
 
+type TargetMode = 'repository' | 'repo_prs' | 'pr_urls';
+
+const PR_URL_PATTERN = /github\.com\/\w[-.\w]*\/[^/\s]+\/pull\/\d+/i;
+
+function formatAuditScope(data: BulkAnalysisData): string {
+  if (data.repos && data.repos.length > 1) {
+    return `Multi-repo audit (${data.totalAnalyzed} PRs)`;
+  }
+  return `${data.owner}/${data.repo}`;
+}
+
 const FounderConsole = () => {
   const navigate = useNavigate();
   const { user, loading: sessionLoading } = useSession();
   const [repoUrl, setRepoUrl] = useState('');
   const [prCount, setPrCount] = useState(5);
+  const [targetMode, setTargetMode] = useState<TargetMode>('repository');
+  const [prNumbersInput, setPrNumbersInput] = useState('');
+  const [prUrlsInput, setPrUrlsInput] = useState('');
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [selectedPolicies, setSelectedPolicies] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -58,6 +74,7 @@ const FounderConsole = () => {
   const [isCaptureMode, setIsCaptureMode] = useState(false);
   const [viewMode, setViewMode] = useState<'INTERACTIVE' | 'SOCIAL'>('INTERACTIVE');
   const [sharing, setSharing] = useState(false);
+  const [shareExpiryDays, setShareExpiryDays] = useState<ShareExpiryDays>(30);
 
   // Identity Gating
   useEffect(() => {
@@ -107,31 +124,65 @@ const FounderConsole = () => {
   }, [user]);
 
   const handleAnalyze = async () => {
-    if (!repoUrl) {
-      toast.error("Please provide a repository URL.");
-      return;
+    if (targetMode === 'repository' || targetMode === 'repo_prs') {
+      if (!repoUrl.trim()) {
+        toast.error('Please provide a repository URL.');
+        return;
+      }
+    }
+
+    if (targetMode === 'repo_prs') {
+      const numbers = prNumbersInput.split(/[\s,]+/).map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
+      if (numbers.length === 0) {
+        toast.error('Enter at least one valid PR number (e.g. 42, 56, 101).');
+        return;
+      }
+    }
+
+    if (targetMode === 'pr_urls') {
+      const urls = prUrlsInput.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const valid = urls.filter((u) => PR_URL_PATTERN.test(u));
+      if (valid.length === 0) {
+        toast.error('Enter at least one valid GitHub PR URL.');
+        return;
+      }
     }
 
     setIsAnalyzing(true);
     setResults(null);
 
     try {
-      // Long-running bulk analysis requires a higher timeout (120s)
-      const response = await api.post<{ success: boolean; data: BulkAnalysisData }>('/v1/admin/bulk-analyze', {
-        repoUrl,
-        prCount,
-        policyIds: selectedPolicies
-      }, undefined, 120000);
+      const body: Record<string, unknown> = {
+        targetMode,
+        policyIds: selectedPolicies,
+      };
+
+      if (targetMode === 'repository') {
+        body.repoUrl = repoUrl;
+        body.prCount = prCount;
+      } else if (targetMode === 'repo_prs') {
+        body.repoUrl = repoUrl;
+        body.prNumbers = prNumbersInput.split(/[\s,]+/).map((s) => parseInt(s.trim(), 10)).filter((n) => Number.isFinite(n) && n > 0);
+      } else {
+        body.prUrls = prUrlsInput.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      }
+
+      const response = await api.post<{ success: boolean; data: BulkAnalysisData }>(
+        '/v1/admin/bulk-analyze',
+        body,
+        undefined,
+        120000
+      );
 
       if (response && response.success && response.data) {
         setResults(response.data);
-        toast.success(`Analysis complete for ${response.data.owner}/${response.data.repo}`);
+        toast.success(`Analysis complete — ${formatAuditScope(response.data)}`);
       } else {
-        throw new Error("Invalid response format from server");
+        throw new Error('Invalid response format from server');
       }
     } catch (err) {
       const error = err as ApiError;
-      toast.error(error.message || "Bulk analysis failed.");
+      toast.error(error.message || 'Bulk analysis failed.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -148,7 +199,11 @@ const FounderConsole = () => {
           owner: results.owner,
           repo: results.repo,
           totalAnalyzed: results.totalAnalyzed,
+          targetMode: results.targetMode ?? targetMode,
+          repos: results.repos,
+          view_mode: viewMode,
         },
+        expiresInDays: shareExpiryDays,
       });
       await navigator.clipboard.writeText(url);
       toast.success('Share link copied — anyone with the link can view this report.');
@@ -372,32 +427,80 @@ const FounderConsole = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase">Repository URL</label>
-                  <Input 
-                    placeholder="https://github.com/owner/repo" 
-                    value={repoUrl}
-                    onChange={(e) => setRepoUrl(e.target.value)}
-                    className="bg-background/50 border-border focus:ring-primary/20"
-                  />
+                  <label className="text-xs font-bold text-muted-foreground uppercase">Target mode</label>
+                  <Select value={targetMode} onValueChange={(v) => setTargetMode(v as TargetMode)}>
+                    <SelectTrigger className="bg-background/50 border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="repository">Repository / recent PRs</SelectItem>
+                      <SelectItem value="repo_prs">Repository + PR numbers</SelectItem>
+                      <SelectItem value="pr_urls">GitHub PR URLs</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-muted-foreground uppercase">PR Sample Size</label>
-                    <Badge variant="secondary" className="font-mono">{prCount} PRs</Badge>
+                {(targetMode === 'repository' || targetMode === 'repo_prs') && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Repository URL</label>
+                    <Input
+                      placeholder="https://github.com/owner/repo"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                      className="bg-background/50 border-border focus:ring-primary/20"
+                    />
                   </div>
-                  <Slider 
-                    value={[prCount]} 
-                    onValueChange={(v) => setPrCount(v[0])} 
-                    max={50} 
-                    min={1} 
-                    step={1}
-                    className="py-4"
-                  />
-                  <p className="text-[10px] text-muted-foreground italic text-center">
-                    Higher counts may take longer due to GitHub API rate limits.
-                  </p>
-                </div>
+                )}
+
+                {targetMode === 'repository' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-muted-foreground uppercase">PR Sample Size</label>
+                      <Badge variant="secondary" className="font-mono">{prCount} PRs</Badge>
+                    </div>
+                    <Slider
+                      value={[prCount]}
+                      onValueChange={(v) => setPrCount(v[0])}
+                      max={50}
+                      min={1}
+                      step={1}
+                      className="py-4"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic text-center">
+                      Higher counts may take longer due to GitHub API rate limits.
+                    </p>
+                  </div>
+                )}
+
+                {targetMode === 'repo_prs' && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">PR numbers</label>
+                    <Input
+                      placeholder="42, 56, 101"
+                      value={prNumbersInput}
+                      onChange={(e) => setPrNumbersInput(e.target.value)}
+                      className="bg-background/50 border-border focus:ring-primary/20 font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Comma or space separated. Max 50 PRs.
+                    </p>
+                  </div>
+                )}
+
+                {targetMode === 'pr_urls' && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">GitHub PR URLs</label>
+                    <Textarea
+                      placeholder={'https://github.com/owner/repo/pull/123\nhttps://github.com/other/repo/pull/456'}
+                      value={prUrlsInput}
+                      onChange={(e) => setPrUrlsInput(e.target.value)}
+                      className="bg-background/50 border-border focus:ring-primary/20 font-mono min-h-[120px]"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      One URL per line. Cross-repo supported. Max 50 PRs.
+                    </p>
+                  </div>
+                )}
 
                 <Button 
                   className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest shadow-lg shadow-primary/20"
@@ -529,7 +632,7 @@ const FounderConsole = () => {
                             {results.summary?.grade || '?'}
                           </div>
                           <div>
-                            <h4 className="text-sm font-bold uppercase tracking-wider">{results.owner} / {results.repo}</h4>
+                            <h4 className="text-sm font-bold uppercase tracking-wider">{formatAuditScope(results)}</h4>
                             <p className="text-[10px] text-muted-foreground font-mono">
                               Score: {results.summary?.score || 0}% • {results.totalAnalyzed} PRs
                             </p>
@@ -564,11 +667,25 @@ const FounderConsole = () => {
                         onClick={handleShareLink}
                         disabled={sharing}
                         variant="outline"
-                        className="h-full border-border hover:bg-muted/30 font-bold uppercase tracking-wider text-xs gap-2 rounded-2xl col-span-2 md:col-span-4"
+                        className="h-full border-border hover:bg-muted/30 font-bold uppercase tracking-wider text-xs gap-2 rounded-2xl col-span-2 md:col-span-2"
                       >
                         {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
                         Copy Share Link
                       </Button>
+                      <Select
+                        value={String(shareExpiryDays)}
+                        onValueChange={(v) => setShareExpiryDays(Number(v) as ShareExpiryDays)}
+                      >
+                        <SelectTrigger className="h-full col-span-2 md:col-span-2 text-xs font-bold uppercase tracking-wider rounded-2xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 day</SelectItem>
+                          <SelectItem value="7">7 days</SelectItem>
+                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="90">90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="py-2">
@@ -577,7 +694,21 @@ const FounderConsole = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex justify-end">
+                    <div className="flex justify-end items-center gap-2">
+                      <Select
+                        value={String(shareExpiryDays)}
+                        onValueChange={(v) => setShareExpiryDays(Number(v) as ShareExpiryDays)}
+                      >
+                        <SelectTrigger className="w-[120px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 day</SelectItem>
+                          <SelectItem value="7">7 days</SelectItem>
+                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="90">90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         onClick={handleShareLink}
                         disabled={sharing}
