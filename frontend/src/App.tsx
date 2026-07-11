@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import React, { Suspense, lazy } from 'react';
 import { Loader2 } from "lucide-react";
@@ -49,6 +48,8 @@ const DocsSignedOverrides = lazy(() => import("./pages/docs/SignedOverrides"));
 const DocsPolicyCreationGuide = lazy(() => import("./pages/docs/PolicyCreationGuide"));
 const DocsSetupGuide = lazy(() => import("./pages/docs/SetupGuide"));
 const DocsPrivacyPolicy = lazy(() => import("./pages/docs/PrivacyPolicy"));
+const DocsComparison = lazy(() => import("./pages/docs/Comparison"));
+const DocsSharedReports = lazy(() => import("./pages/docs/SharedReports"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -83,12 +84,6 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        enableSystem
-        disableTransitionOnChange
-      >
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -141,6 +136,8 @@ const App = () => (
                   <Route path="audit-trail" element={<DocsAuditTrail />} />
                   <Route path="signed-overrides" element={<DocsSignedOverrides />} />
                   <Route path="policy-creation" element={<DocsPolicyCreationGuide />} />
+                  <Route path="comparison" element={<DocsComparison />} />
+                  <Route path="shared-reports" element={<DocsSharedReports />} />
                   <Route path="privacy" element={<DocsPrivacyPolicy />} />
                 </Route>
 
@@ -150,7 +147,6 @@ const App = () => (
             </div>
           </BrowserRouter>
         </TooltipProvider>
-      </ThemeProvider>
       </SessionProvider>
     </QueryClientProvider>
   </ErrorBoundary>
