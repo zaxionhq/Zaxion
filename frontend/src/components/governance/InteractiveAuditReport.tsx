@@ -42,10 +42,19 @@ import { toast } from 'sonner';
 
 interface InteractiveAuditReportProps {
   data: BulkAnalysisData;
+  readOnly?: boolean;
 }
 
-export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ data }) => {
+function formatScopeLabel(data: BulkAnalysisData): string {
+  if (data.repos && data.repos.length > 1) {
+    return `Multi-repo audit (${data.totalAnalyzed} PRs)`;
+  }
+  return `${data.owner}/${data.repo}`;
+}
+
+export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ data, readOnly = false }) => {
   const { owner, repo, results, summary } = data;
+  const scopeLabel = formatScopeLabel(data);
   const [filter, setStatusFilter] = useState<'ALL' | 'BLOCK' | 'PASS' | 'WARN'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const blockedPrs = useMemo(
@@ -279,6 +288,7 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
               <AlertCircle className="h-4 w-4 text-cyan-500" />
               Governance Enforcement Insights
             </div>
+            {!readOnly && (
             <Button 
               onClick={generateHtmlReport}
               size="sm"
@@ -287,10 +297,11 @@ export const InteractiveAuditReport: React.FC<InteractiveAuditReportProps> = ({ 
               <Download className="h-3 w-3" />
               Export Interactive Report
             </Button>
+            )}
           </div>
           <div className="text-sm text-slate-400 leading-relaxed max-w-3xl">
             Sample: <span className="font-bold text-white">{summary?.total_scanned ?? results.length}</span> recent pull request(s) from{' '}
-            <span className="font-bold text-white">{owner}/{repo}</span> evaluated against your selected policies. Outcomes:{' '}
+            <span className="font-bold text-white">{scopeLabel}</span> evaluated against your selected policies. Outcomes:{' '}
             <span className="font-bold text-green-400">{summary?.passed ?? 0}</span> pass,{' '}
             <span className="font-bold text-red-500">{summary?.blocked ?? 0}</span> block,{' '}
             <span className="font-bold text-amber-500">{summary?.warned ?? 0}</span> warn. Block rate:{' '}
