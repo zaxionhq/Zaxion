@@ -1,9 +1,6 @@
 import React from 'react';
 import { DashboardLayout } from '@/components/governance/DashboardLayout';
-import { useSession } from '@/hooks/useSession';
 import { GlassCard } from '@/components/ui/glass-card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 
   Users, 
@@ -17,10 +14,9 @@ import {
   Fingerprint
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SharedReportsManager } from '@/components/governance/SharedReportsManager';
 
 const GovernanceSettings: React.FC = () => {
-  const { user } = useSession();
-
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-8 p-8 pt-6">
@@ -52,7 +48,7 @@ const GovernanceSettings: React.FC = () => {
             <p className="text-xs text-muted-foreground mb-4">Manage entity details, governance domain, and legal contacts.</p>
             <div className="mt-auto pt-4 border-t border-border/50 flex items-center gap-2">
               <Globe className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-tight">zaxion.internal</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-tight">your-org.example</span>
             </div>
           </GlassCard>
 
@@ -104,6 +100,8 @@ const GovernanceSettings: React.FC = () => {
             </div>
           </GlassCard>
         </div>
+
+        <SharedReportsManager />
 
         {/* Enterprise Compliance Banner */}
         <Alert className="bg-primary/5 border-primary/20 mt-12">
